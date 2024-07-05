@@ -1,0 +1,7 @@
+{
+  "[solidity]": {
+    "editor.rulers": [100],
+    "editor.defaultFormatter": "NomicFoundation.hardhat-solidity"
+  },
+  "solidity.formatter": "forge"
+}
