@@ -1,0 +1,4 @@
+@openzeppelin/contracts@4.8.1/=lib/avalanche-interchain-token-transfer/contracts/lib/teleporter/contracts/lib/openzeppelin-contracts/contracts/
+@avalabs/avalanche-ictt/=lib/avalanche-interchain-token-transfer/contracts/src/
+@avalabs/subnet-evm-contracts@1.2.0/=lib/avalanche-interchain-token-transfer/contracts/lib/teleporter/contracts/lib/subnet-evm/contracts/
+@teleporter/=lib/avalanche-interchain-token-transfer/contracts/lib/teleporter/contracts/src/Teleporter/
