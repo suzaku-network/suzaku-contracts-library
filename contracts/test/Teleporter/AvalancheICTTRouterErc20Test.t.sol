@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {TokenBridgeRouter} from "../../src/Teleporter/TokenBridgeRouter.sol";
+import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
 import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
@@ -11,7 +11,7 @@ import {SafeMath} from "@openzeppelin/contracts@4.8.1/utils/math/SafeMath.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract TokenBridgeRouterErc20Test is Test {
+contract AvalancheICTTRouterErc20Test is Test {
     address private constant TOKEN_HOME = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
 
     event BridgeERC20(
@@ -22,7 +22,7 @@ contract TokenBridgeRouterErc20Test is Test {
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME);
-    TokenBridgeRouter tokenBridgeRouter;
+    AvalancheICTTRouter tokenBridgeRouter;
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
     uint256 secondaryRelayerFeeBips;

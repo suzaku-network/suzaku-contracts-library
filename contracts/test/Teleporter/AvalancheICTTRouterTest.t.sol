@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {TokenBridgeRouter} from "../../src/Teleporter/TokenBridgeRouter.sol";
-import {RemoteBridge} from "../../src/Teleporter/TokenBridgeRouter.sol";
+import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
+import {RemoteBridge} from "../../src/Teleporter/AvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -10,7 +10,7 @@ import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract TokenBridgeRouterTest is Test {
+contract AvalancheICTTRouterTest is Test {
     event ChangeRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
     event RegisterHomeTokenBridge(address indexed tokenAddress, address indexed bridgeAddress);
     event RegisterRemoteTokenBridge(
@@ -22,7 +22,7 @@ contract TokenBridgeRouterTest is Test {
     event RemoveRemoteTokenBridge(address indexed tokenAddress, bytes32 indexed remoteChainID);
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(address(0));
-    TokenBridgeRouter tokenBridgeRouter;
+    AvalancheICTTRouter tokenBridgeRouter;
     uint256 deployerKey;
     ERC20Mock erc20Token;
     ERC20TokenHome tokenHome;

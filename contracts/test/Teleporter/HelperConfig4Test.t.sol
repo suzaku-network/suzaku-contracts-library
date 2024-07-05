@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.18;
 
-import {TokenBridgeRouter} from "../../src/Teleporter/TokenBridgeRouter.sol";
+import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
@@ -34,7 +34,7 @@ contract HelperConfig4Test is Script {
         ERC20TokenHome erc20TokenHome;
         NativeTokenHome nativeTokenHome;
         address tokenRemote;
-        TokenBridgeRouter tokenBridgeRouter;
+        AvalancheICTTRouter tokenBridgeRouter;
         bytes32 homeChainID;
         bytes32 remoteChainID;
         address owner;
@@ -90,8 +90,8 @@ contract HelperConfig4Test is Script {
         ERC20Mock _erc20Token = new ERC20Mock("ERC20Mock", "ERC20M", makeAddr("mockRecipient"), 0);
         WrappedNativeToken _wrappedToken = new WrappedNativeToken("WNTT"); // WNTT for Wrapped Native Token Test
 
-        TokenBridgeRouter _tokenBridgeRouter =
-            new TokenBridgeRouter(_primaryRelayerFeeBips, _secondaryRelayerFeeBips);
+        AvalancheICTTRouter _tokenBridgeRouter =
+            new AvalancheICTTRouter(_primaryRelayerFeeBips, _secondaryRelayerFeeBips);
 
         ERC20TokenHome _erc20TokenHome =
             new ERC20TokenHome(address(teleporterRegistry), _owner, address(_erc20Token), 18);

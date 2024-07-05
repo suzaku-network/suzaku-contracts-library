@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {TokenBridgeRouter} from "../../src/Teleporter/TokenBridgeRouter.sol";
+import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
 import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
@@ -11,7 +11,7 @@ import {SafeMath} from "@openzeppelin/contracts@4.8.1/utils/math/SafeMath.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract TokenBridgeRouterNativeTokenTest is Test {
+contract AvalancheICTTRouterNativeTokenTest is Test {
     address private constant TOKEN_HOME = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
 
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
@@ -24,7 +24,7 @@ contract TokenBridgeRouterNativeTokenTest is Test {
     WrappedNativeToken wrappedToken;
     NativeTokenHome tokenHome;
     address tokenRemote;
-    TokenBridgeRouter tokenBridgeRouter;
+    AvalancheICTTRouter tokenBridgeRouter;
     bytes32 homeChainID;
     bytes32 remoteChainID;
     address owner;

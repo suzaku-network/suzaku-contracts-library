@@ -28,7 +28,7 @@ struct RemoteBridge {
 }
 
 /// @custom:security-contact security@e36knots.com
-contract TokenBridgeRouter is Ownable, ReentrancyGuard {
+contract AvalancheICTTRouter is Ownable, ReentrancyGuard {
     using Address for address;
 
     /**
