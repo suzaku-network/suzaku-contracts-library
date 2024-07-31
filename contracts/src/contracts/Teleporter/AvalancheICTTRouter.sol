@@ -112,7 +112,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
+    function removeSourceTokenBridge(
+        address tokenAddress
+    ) external onlyOwner {
         delete tokenToSourceBridge[tokenAddress];
         _removeToken(tokenAddress);
 
@@ -310,7 +312,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function getSourceBridge(address token) external view returns (address) {
+    function getSourceBridge(
+        address token
+    ) external view returns (address) {
         return tokenToSourceBridge[token];
     }
 
@@ -328,7 +332,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory) {
+    function getDestinationChainsForToken(
+        address token
+    ) external view returns (bytes32[] memory) {
         return (tokenToDestinationChainsIDList[token]);
     }
 
@@ -336,7 +342,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      * @notice Remove a token from the tokensList array (internal function)
      * @param token The address of the token
      */
-    function _removeToken(address token) internal {
+    function _removeToken(
+        address token
+    ) internal {
         uint256 tokensNumber = tokensList.length;
         for (uint256 i; i < tokensNumber; ++i) {
             if (tokensList[i] == token) {

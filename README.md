@@ -10,9 +10,9 @@ This library provides utility contracts for different blockchain ecosystems, not
 
 #### Contracts
 
-- The [AvalancheICTTRouter](contracts/src/Teleporter/AvalancheICTTRouter.sol) contract is a router contract that can be used as backend for bridge UIs built on top of [Avalanche ICTT](https://github.com/ava-labs/avalanche-interchain-token-transfer).  
+- The [AvalancheICTTRouter](contracts/src/contracts/Teleporter/AvalancheICTTRouter.sol) contract is a router contract that can be used as backend for bridge UIs built on top of [Avalanche ICTT](https://github.com/ava-labs/avalanche-interchain-token-transfer).  
   It tracks the Home and Remote `TokenTransferrer` contracts on multiple chains to initiate transfers by only providing the token to transfer, the destination chain ID and the recipient address.  
-  [Read more](contracts/src/Teleporter/README.md)
+  [Read more](contracts/src/contracts/Teleporter/README.md)
 
 #### Scripts
 
