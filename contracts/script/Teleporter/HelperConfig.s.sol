@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 
 import {WarpMessengerMock} from "../../src/mocks/WarpMessengerMock.sol";
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig {

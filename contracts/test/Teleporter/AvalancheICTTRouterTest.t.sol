@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {RemoteBridge} from "../../src/Teleporter/AvalancheICTTRouter.sol";
+import {
+    AvalancheICTTRouter,
+    RemoteBridge
+} from "../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
