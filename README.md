@@ -25,6 +25,14 @@ Foundry deployment scripts for [Avalanche ICTT](https://github.com/ava-labs/aval
 
 Those scripts make use of environment variables to deploy the contracts. See [HelperConfig.s.sol](contracts/script/Teleporter/HelperConfig.s.sol) for more details.
 
+### ValidatorSetManager library
+
+#### Contracts, libraries and interfaces
+
+- The [SubnetValidatorMessages](contracts/src/contracts/ValidatorSetManager/SubnetValidatorMessages.sol) library provides utility functions to encode and decode validator set update Warp messages.
+- The [ValidatorSetManager](contracts/src/contracts/ValidatorSetManager/ValidatorSetManager.sol) contract can be set as the `SubnetManager` address of a Subnet to manage a its validator set. It follows the [ACP-99](https://github.com/Nuttymoon/ACPs/blob/validatorsetmanager-solidity-contract/ACPs/99-validatorsetmanager-contract/README.md) standard.
+- The [IValidatorSetManager](contracts/src/interfaces/ValidatorSetManager/IValidatorSetManager.sol) interface defines the functions that a contract must implement to be a `ValidatorSetManager`.
+
 ## Usage
 
 To use the library in your project, you can install it with `forge`:
