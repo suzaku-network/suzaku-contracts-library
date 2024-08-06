@@ -18,8 +18,6 @@ import {
 import {Script, console} from "forge-std/Script.sol";
 
 contract HelperConfig4Test is Script {
-    address private constant TELEPORTER_MESSENGER_ADDRESS =
-        0xF2E246BB76DF876Cef8b38ae84130F4F55De395b;
     bytes32 private constant ANVIL_CHAIN_HEX =
         0x7a69000000000000000000000000000000000000000000000000000000000000;
     bytes32 private constant DEST_CHAIN_HEX =
@@ -28,6 +26,8 @@ contract HelperConfig4Test is Script {
         0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
     address private constant WARP_PRECOMPILE = 0x0200000000000000000000000000000000000005;
     uint256 private constant DEPLOYER_PRIV_KEY = 1;
+    uint256 private constant PRIMARY_RELAYER_FEE_BIPS = 20;
+    uint256 private constant SECONDARY_RELAYER_FEE_BIPS = 0;
 
     struct NetworkConfigTest {
         uint256 deployerKey;
@@ -57,7 +57,6 @@ contract HelperConfig4Test is Script {
     bytes32 private _destinationChainID = DEST_CHAIN_HEX;
     address private _owner = vm.addr(DEPLOYER_PRIV_KEY);
     address private _bridger = makeAddr("bridger");
-    bytes32 private _messageID = MESSAGE_ID;
     address private _warpPrecompileAddress = WARP_PRECOMPILE;
 
     uint256 private _initialReserveImbalance = 0;
@@ -180,7 +179,7 @@ contract HelperConfig4Test is Script {
             deployerKey: _deployerKey,
             owner: _owner,
             bridger: _bridger,
-            messageID: _messageID,
+            messageID: MESSAGE_ID,
             warpPrecompileAddress: _warpPrecompileAddress,
             warpMessengerTestMock: warpMessengerTestMock,
             erc20Token: _erc20Token,
