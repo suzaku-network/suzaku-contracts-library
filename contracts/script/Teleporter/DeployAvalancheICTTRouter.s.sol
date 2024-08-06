@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouter} from "../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerMock} from "../../src/mocks/WarpMessengerMock.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 contract DeployAvalancheICTTRouter is Script {
     function run() external returns (AvalancheICTTRouter) {
