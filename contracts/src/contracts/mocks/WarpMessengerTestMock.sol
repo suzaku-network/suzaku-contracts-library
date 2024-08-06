@@ -14,43 +14,33 @@ import {
 import {TeleporterMessage, TeleporterMessageReceipt} from "@teleporter/ITeleporterMessenger.sol";
 
 contract WarpMessengerTestMock {
-    bytes32 private immutable homeChainID;
-    bytes32 private immutable remoteChainID;
-    bytes32 private immutable messageID;
-    uint256 private immutable initialReserveImbalance;
-    uint8 private immutable homeTokenDecimals;
-    uint8 private immutable remoteTokenDecimals;
-    address private immutable teleporterMessengerAddress;
+    uint32 internal constant SUBNET_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID = 1;
+    uint32 internal constant SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID = 2;
+    uint32 internal constant VALIDATION_UPTIME_MESSAGE_TYPE_ID = 3;
+
+    address private constant TELEPORTER_MESSENGER_ADDRESS =
+        0xF2E246BB76DF876Cef8b38ae84130F4F55De395b;
+    bytes32 private constant P_CHAIN_ID_HEX = bytes32(0);
+    bytes32 private constant ANVIL_CHAIN_ID_HEX =
+        0x7a69000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private constant DEST_CHAIN_ID_HEX =
+        0x1000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private constant MESSAGE_ID =
+        0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
+    bytes32 private constant VALIDATION_ID =
+        0x8f1e3878d6f56add95f8f62db483fcb58b75a7c8b15064135d207828be5dbf6b;
+    uint64 private constant VALIDATION_UPTIME_SECONDS = uint64(2_544_480);
+
     address private immutable tokenHomeAddress;
     address private immutable tokenRemoteAddress;
-    uint256 private immutable requiredGasLimit;
 
-    constructor(
-        bytes32 homeChainID_,
-        bytes32 remoteChainID_,
-        bytes32 messageID_,
-        uint256 initialReserveImbalance_,
-        uint8 homeTokenDecimals_,
-        uint8 remoteTokenDecimals_,
-        address teleporterMessengerAddress_,
-        address tokenHomeAddress_,
-        address tokenRemoteAddress_,
-        uint256 requiredGasLimit_
-    ) {
-        homeChainID = homeChainID_;
-        remoteChainID = remoteChainID_;
-        messageID = messageID_;
-        initialReserveImbalance = initialReserveImbalance_;
-        homeTokenDecimals = homeTokenDecimals_;
-        remoteTokenDecimals = remoteTokenDecimals_;
-        teleporterMessengerAddress = teleporterMessengerAddress_;
+    constructor(address tokenHomeAddress_, address tokenRemoteAddress_) {
         tokenHomeAddress = tokenHomeAddress_;
         tokenRemoteAddress = tokenRemoteAddress_;
-        requiredGasLimit = requiredGasLimit_;
     }
 
-    function getBlockchainID() external view returns (bytes32) {
-        return homeChainID;
+    function getBlockchainID() external pure returns (bytes32) {
+        return ANVIL_CHAIN_ID_HEX;
     }
 
     function sendWarpMessage(
@@ -63,9 +53,9 @@ contract WarpMessengerTestMock {
         uint32
     ) external view returns (WarpMessage memory message, bool valid) {
         RegisterRemoteMessage memory registerMessage = RegisterRemoteMessage({
-            initialReserveImbalance: initialReserveImbalance,
-            homeTokenDecimals: homeTokenDecimals,
-            remoteTokenDecimals: remoteTokenDecimals
+            initialReserveImbalance: 0,
+            homeTokenDecimals: 18,
+            remoteTokenDecimals: 18
         });
         TransferrerMessage memory bridgeMessage = TransferrerMessage({
             messageType: TransferrerMessageType.REGISTER_REMOTE,
@@ -76,17 +66,57 @@ contract WarpMessengerTestMock {
         TeleporterMessage memory teleporterMessage = TeleporterMessage({
             messageNonce: 1,
             originSenderAddress: tokenRemoteAddress,
-            destinationBlockchainID: homeChainID,
+            destinationBlockchainID: ANVIL_CHAIN_ID_HEX,
             destinationAddress: tokenHomeAddress,
-            requiredGasLimit: requiredGasLimit,
+            requiredGasLimit: 10_000_000,
             allowedRelayerAddresses: allowedRelayerAddresses,
             receipts: receipts,
             message: abi.encode(bridgeMessage)
         });
         WarpMessage memory warpMessage = WarpMessage({
-            sourceChainID: remoteChainID,
-            originSenderAddress: teleporterMessengerAddress,
+            sourceChainID: DEST_CHAIN_ID_HEX,
+            originSenderAddress: TELEPORTER_MESSENGER_ADDRESS,
             payload: abi.encode(teleporterMessage)
+        });
+
+        return (warpMessage, true);
+    }
+
+    function _subnetValidatorRegistrationWarpMessage()
+        private
+        pure
+        returns (WarpMessage memory, bool)
+    {
+        WarpMessage memory warpMessage = WarpMessage({
+            sourceChainID: P_CHAIN_ID_HEX,
+            originSenderAddress: address(0),
+            payload: abi.encodePacked(
+                SUBNET_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID, VALIDATION_ID, true
+            )
+        });
+
+        return (warpMessage, true);
+    }
+
+    function _validatorUptimeWarpMessage() private pure returns (WarpMessage memory, bool) {
+        WarpMessage memory warpMessage = WarpMessage({
+            sourceChainID: ANVIL_CHAIN_ID_HEX,
+            originSenderAddress: address(0),
+            payload: abi.encodePacked(
+                VALIDATION_UPTIME_MESSAGE_TYPE_ID, VALIDATION_ID, VALIDATION_UPTIME_SECONDS
+            )
+        });
+
+        return (warpMessage, true);
+    }
+
+    function _validatorWeightUpdateWarpMessage() private pure returns (WarpMessage memory, bool) {
+        WarpMessage memory warpMessage = WarpMessage({
+            sourceChainID: P_CHAIN_ID_HEX,
+            originSenderAddress: address(0),
+            payload: abi.encodePacked(
+                SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID, VALIDATION_ID, uint64(1), uint64(200)
+            )
         });
 
         return (warpMessage, true);
