@@ -68,6 +68,10 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     }
 
     constructor(bytes32 subnetID_, address securityModule_) Ownable() {
+        if (securityModule_ == address(0)) {
+            revert ValidatorSetManager__ZeroAddressSecurityModule();
+        }
+
         warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDRESS);
         subnetID = subnetID_;
         securityModule = securityModule_;
@@ -78,6 +82,10 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
      * @param securityModule_ The address of the security module
      */
     function setSecurityModule(address securityModule_) external onlyOwner {
+        if (securityModule_ == address(0)) {
+            revert ValidatorSetManager__ZeroAddressSecurityModule();
+        }
+
         securityModule = securityModule_;
         emit SetSecurityModule(securityModule_);
     }
@@ -122,14 +130,13 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         );
 
         pendingRegisterValidationMessages[validationID] = registrationMessage;
-        bytes32 registrationMessageID = warpMessenger.sendWarpMessage(registrationMessage);
-
         Validation storage validation = subnetValidations[validationID];
         validation.status = ValidationStatus.Registering;
         validation.nodeID = nodeID;
         validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
-
         subnetValidatorValidations[nodeID].push(validationID);
+
+        bytes32 registrationMessageID = warpMessenger.sendWarpMessage(registrationMessage);
 
         emit InitiateValidatorRegistration(
             nodeID, validationID, registrationMessageID, weight, registrationExpiry
@@ -139,7 +146,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     }
 
     /// @inheritdoc IValidatorSetManager
-    function resendValidatorRegistrationMessage(bytes32 validationID) external {
+    function resendValidatorRegistrationMessage(bytes32 validationID) external returns (bytes32) {
         if (
             pendingRegisterValidationMessages[validationID].length == 0
                 || subnetValidations[validationID].status != ValidationStatus.Registering
@@ -147,7 +154,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             revert ValidatorSetManager__InvalidValidationID(validationID);
         }
 
-        warpMessenger.sendWarpMessage(pendingRegisterValidationMessages[validationID]);
+        return warpMessenger.sendWarpMessage(pendingRegisterValidationMessages[validationID]);
     }
 
     /// @inheritdoc IValidatorSetManager
@@ -234,13 +241,6 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             uptimeSeconds = uptime;
         }
 
-        bytes memory setValidatorWeightPayload = SubnetValidatorMessages
-            .packSetSubnetValidatorWeightMessage(
-            validationID, uint64(validation.periods.length), weight
-        );
-        bytes32 setValidatorWeightMessageID =
-            warpMessenger.sendWarpMessage(setValidatorWeightPayload);
-
         validation.periods[validation.periods.length - 1].endTime = uint64(block.timestamp);
         validation.uptimeSeconds = uptimeSeconds;
 
@@ -253,6 +253,13 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             validation.status = ValidationStatus.Removing;
             validation.endTime = uint64(block.timestamp);
         }
+
+        bytes memory setValidatorWeightPayload = SubnetValidatorMessages
+            .packSetSubnetValidatorWeightMessage(
+            validationID, uint64(validation.periods.length), weight
+        );
+        bytes32 setValidatorWeightMessageID =
+            warpMessenger.sendWarpMessage(setValidatorWeightPayload);
 
         emit InitiateValidatorWeightUpdate(
             nodeID, validationID, setValidatorWeightMessageID, weight
