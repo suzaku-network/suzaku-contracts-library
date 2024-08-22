@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.18;
 
-import {ValidatorSetManager} from "../../src/contracts/ValidatorSetManager/ValidatorSetManager.sol";
+import {ACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {Script} from "forge-std/Script.sol";
 
-contract DeployValidatorSetManager is Script {
-    function run() external returns (ValidatorSetManager) {
+contract DeployACP99Manager is Script {
+    function run() external returns (ACP99Manager) {
         HelperConfig helperConfig = new HelperConfig();
         (uint256 deployerKey, bytes32 subnetID) = helperConfig.activeNetworkConfig();
         address deployerAddress = vm.addr(deployerKey);
 
         vm.startBroadcast(deployerKey);
-        ValidatorSetManager validatorSetManager = new ValidatorSetManager(subnetID, deployerAddress);
+        ACP99Manager validatorSetManager = new ACP99Manager(subnetID, deployerAddress);
         vm.stopBroadcast();
 
         return validatorSetManager;
