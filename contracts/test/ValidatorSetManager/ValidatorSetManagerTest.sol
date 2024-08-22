@@ -236,7 +236,8 @@ contract ValidatorSetManagerTest is Test {
         assert(validation.status == IValidatorSetManager.ValidationStatus.Active);
         assertEq(validation.periods[0].startTime, block.timestamp);
 
-        bytes32 validationID = validatorSetManager.activeValidators(VALIDATOR_NODE_ID);
+        bytes32 validationID =
+            validatorSetManager.getSubnetValidatorActiveValidation(VALIDATOR_NODE_ID);
         assertEq(validationID, VALIDATION_ID);
     }
 
@@ -412,6 +413,10 @@ contract ValidatorSetManagerTest is Test {
         IValidatorSetManager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
         assert(validation.status == IValidatorSetManager.ValidationStatus.Completed);
+
+        vm.expectRevert();
+        bytes32 validationID =
+            validatorSetManager.getSubnetValidatorActiveValidation(VALIDATOR_NODE_ID);
     }
 
     function testCompleteValidatorRemovalEmitsEvent()

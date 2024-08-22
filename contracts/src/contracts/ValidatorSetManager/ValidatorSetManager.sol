@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: BUSL-1.1
 
+// Compatible with OpenZeppelin Contracts ^4.9.0
+
 pragma solidity 0.8.18;
 
 import {IValidatorSetManager} from "../../interfaces/ValidatorSetManager/IValidatorSetManager.sol";
@@ -11,10 +13,13 @@ import {
     IWarpMessenger,
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts@4.9.6/access/Ownable.sol";
+import {EnumerableMap} from "@openzeppelin/contracts@4.9.6/utils/structs/EnumerableMap.sol";
 
 /// @custom:security-contact security@suzaku.network
 contract ValidatorSetManager is Ownable, IValidatorSetManager {
+    using EnumerableMap for EnumerableMap.Bytes32ToBytes32Map;
+
     bytes32 private constant P_CHAIN_ID_HEX = bytes32(0);
     address private constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
 
@@ -27,14 +32,12 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     /// @notice The address of the security module attached to this manager
     address public securityModule;
 
-    /// @notice The current Subnet validator set (list of NodeIDs)
-    bytes32[] private subnetCurrentValidatorSet;
-
     /**
      * @notice The active validators of the Subnet
      * @notice NodeID => validationID
      */
-    mapping(bytes32 => bytes32) public activeValidators;
+    // mapping(bytes32 => bytes32) public activeValidators;
+    EnumerableMap.Bytes32ToBytes32Map private activeValidators;
 
     /// @notice The total weight of the current Subnet validator set
     uint64 public subnetTotalWeight;
@@ -95,7 +98,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         if (nodeID == bytes32(0)) {
             revert ValidatorSetManager__ZeroNodeID();
         }
-        if (activeValidators[nodeID] != bytes32(0)) {
+        if (activeValidators.contains(nodeID)) {
             revert ValidatorSetManager__NodeIDAlreadyValidator(nodeID);
         }
 
@@ -167,29 +170,27 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         if (!validRegistration) {
             revert ValidatorSetManager__InvalidRegistration();
         }
+        Validation storage validation = subnetValidations[validationID];
+
         if (
             pendingRegisterValidationMessages[validationID].length == 0
-                || subnetValidations[validationID].status != ValidationStatus.Registering
+                || validation.status != ValidationStatus.Registering
         ) {
             revert ValidatorSetManager__InvalidValidationID(validationID);
         }
 
         delete pendingRegisterValidationMessages[validationID];
 
-        subnetValidations[validationID].status = ValidationStatus.Active;
-        subnetValidations[validationID].startTime = uint64(block.timestamp);
-        subnetValidations[validationID].periods[0].startTime = uint64(block.timestamp);
-        activeValidators[subnetValidations[validationID].nodeID] = validationID;
-        subnetTotalWeight += subnetValidations[validationID].periods[0].weight;
-        subnetCurrentValidatorSet.push(subnetValidations[validationID].nodeID);
+        validation.status = ValidationStatus.Active;
+        validation.startTime = uint64(block.timestamp);
+        validation.periods[0].startTime = uint64(block.timestamp);
+        activeValidators.set(validation.nodeID, validationID);
+        subnetTotalWeight += validation.periods[0].weight;
 
         // TODO: Notify the SecurityModule of the validator registration
 
         emit CompleteValidatorRegistration(
-            subnetValidations[validationID].nodeID,
-            validationID,
-            subnetValidations[validationID].periods[0].weight,
-            uint64(block.timestamp)
+            validation.nodeID, validationID, validation.periods[0].weight, uint64(block.timestamp)
         );
     }
 
@@ -200,11 +201,11 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         bool includesUptimeProof,
         uint32 messageIndex
     ) external onlySecurityModule {
-        if (activeValidators[nodeID] == bytes32(0)) {
+        if (!activeValidators.contains(nodeID)) {
             revert ValidatorSetManager__NodeIDNotActiveValidator(nodeID);
         }
 
-        bytes32 validationID = activeValidators[nodeID];
+        bytes32 validationID = activeValidators.get(nodeID);
         Validation storage validation = subnetValidations[validationID];
 
         // Verify the uptime proof if it is included
@@ -285,18 +286,9 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             }
 
             // Remove the validator from the active set
-            delete activeValidators[validation.nodeID];
+            activeValidators.remove(validation.nodeID);
             subnetTotalWeight -= validation.periods[nonce - 1].weight;
             validation.status = ValidationStatus.Completed;
-            // Update the current validator set
-            for (uint256 i = 0; i < subnetCurrentValidatorSet.length; i++) {
-                if (subnetCurrentValidatorSet[i] == validation.nodeID) {
-                    subnetCurrentValidatorSet[i] =
-                        subnetCurrentValidatorSet[subnetCurrentValidatorSet.length - 1];
-                    subnetCurrentValidatorSet.pop();
-                    break;
-                }
-            }
         } else {
             if (nonce != (validation.periods.length - 1)) {
                 revert ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
@@ -307,12 +299,19 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             validation.periods[nonce].startTime = uint64(block.timestamp);
         }
 
+        // TODO: Notify the SecurityModule of the validator update
+
         emit CompleteValidatorWeightUpdate(validation.nodeID, validationID, nonce, weight);
     }
 
     /// @inheritdoc IValidatorSetManager
-    function getSubnetCurrentValidatorSet() external view returns (bytes32[] memory) {
-        return subnetCurrentValidatorSet;
+    function getSubnetValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32) {
+        return activeValidators.get(nodeID);
+    }
+
+    /// @inheritdoc IValidatorSetManager
+    function getSubnetActiveValidatorSet() external view returns (bytes32[] memory) {
+        return activeValidators.keys();
     }
 
     function getSubnetValidation(bytes32 validationID) external view returns (Validation memory) {
@@ -327,7 +326,4 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     {
         return subnetValidatorValidations[nodeID];
     }
-
-    // /// @inheritdoc IValidatorSetManager
-    // function setSubnetValidatorManager(bytes32 blockchainID, address managerAddress) external {}
 }
