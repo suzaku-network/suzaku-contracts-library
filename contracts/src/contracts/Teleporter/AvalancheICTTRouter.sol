@@ -1,5 +1,5 @@
 // (c) 2024, ADDPHO All rights reserved.
-// See the file LICENSE for licensing terms.
+// See the file LICENSE_BUSL for licensing terms.
 
 // SPDX-License-Identifier: BUSL-1.1
 // Compatible with OpenZeppelin Contracts ^4.8.0
@@ -27,7 +27,7 @@ struct RemoteBridge {
     bool isMultihop;
 }
 
-/// @custom:security-contact security@e36knots.com
+/// @custom:security-contact security@suzaku.network
 contract AvalancheICTTRouter is Ownable, ReentrancyGuard {
     using Address for address;
 
@@ -49,7 +49,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard {
     /// @notice Relayer fee enforced by the router (in basis points) in case of multihop bridging during the second bridge
     uint256 public secondaryRelayerFeeBips;
 
-    /// @notice  Current chain ID
+    /// @notice Current chain ID
     bytes32 private immutable routerChainID;
 
     /**
