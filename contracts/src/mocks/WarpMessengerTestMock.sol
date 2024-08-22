@@ -48,6 +48,9 @@ contract WarpMessengerTestMock {
     // Mocks valid warp messages for testing
     // messageIndex = 1: RegisterRemoteMessage used for AvalancheICTTRouter tests
     // messageIndex = 2: SubnetValidatorRegistrationMessage used for ValidatorSetManager tests
+    // messageIndex = 3: ValidatorUptimeMessage used for ValidatorSetManager tests
+    // messageIndex = 4: ValidatorWeightUpdateMessage used for ValidatorSetManager tests (weight = 200)
+    // messageIndex = 5: ValidatorWeightUpdateMessage used for ValidatorSetManager tests (weight = 0)
     function getVerifiedWarpMessage(uint32 messageIndex)
         external
         view
@@ -61,6 +64,8 @@ contract WarpMessengerTestMock {
             return _validatorUptimeWarpMessage();
         } else if (messageIndex == 4) {
             return _validatorWeightUpdateWarpMessage();
+        } else if (messageIndex == 5) {
+            return _validatorWeightZeroWarpMessage();
         }
     }
 
@@ -129,6 +134,18 @@ contract WarpMessengerTestMock {
             originSenderAddress: address(0),
             payload: abi.encodePacked(
                 SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID, VALIDATION_ID, uint64(1), uint64(200)
+            )
+        });
+
+        return (warpMessage, true);
+    }
+
+    function _validatorWeightZeroWarpMessage() private pure returns (WarpMessage memory, bool) {
+        WarpMessage memory warpMessage = WarpMessage({
+            sourceChainID: P_CHAIN_ID_HEX,
+            originSenderAddress: address(0),
+            payload: abi.encodePacked(
+                SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID, VALIDATION_ID, uint64(1), uint64(0)
             )
         });
 

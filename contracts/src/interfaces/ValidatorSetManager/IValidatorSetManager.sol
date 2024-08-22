@@ -17,23 +17,6 @@ interface IValidatorSetManager {
         Expired
     }
 
-    // /**
-    //  * @notice Subnet validator
-    //  * @param messageID The Warp message ID corresponding to the RegisterSubnetValidatorTx that added the validator.
-    //  * The message ID is needed to submit subsequent SetSubnetValidatorWeightTx.
-    //  * @param nodeID The NodeID of the validator
-    //  * @param nonce The nonce of the latest validator weight update
-    //  * @param currentWeight The validator current weight
-    //  * @param addTimestamp The timestamp the validator was added
-    //  */
-    // struct Validator {
-    //     bytes32 messageID;
-    //     bytes32 nodeID;
-    //     uint64 nonce;
-    //     uint64 currentWeight;
-    //     uint64 addTimestamp;
-    // }
-
     /**
      * @notice Subnet validation
      * @param status The validation status
@@ -69,14 +52,14 @@ interface IValidatorSetManager {
     event InitiateValidatorRegistration(
         bytes32 indexed nodeID,
         bytes32 indexed validationID,
-        bytes32 indexed registrationMessageID,
+        bytes32 registrationMessageID,
         uint64 weight,
         uint64 registrationExpiry
     );
     /// @notice Emitted when a validator registration to the Subnet is completed
     event CompleteValidatorRegistration(
+        bytes32 indexed nodeID,
         bytes32 indexed validationID,
-        bytes32 nodeID,
         uint64 weight,
         uint64 validationPeriodStartTime
     );
@@ -84,8 +67,12 @@ interface IValidatorSetManager {
     event InitiateValidatorWeightUpdate(
         bytes32 indexed nodeID,
         bytes32 indexed validationID,
-        bytes32 indexed weightUpdateMessageID,
+        bytes32 weightUpdateMessageID,
         uint64 weight
+    );
+    /// @notice Emitted when a validator weight update is completed
+    event CompleteValidatorWeightUpdate(
+        bytes32 indexed nodeID, bytes32 indexed validationID, uint64 nonce, uint64 weight
     );
 
     error ValidatorSetManager__OnlySecurityModule(address sender, address securityModule);
@@ -154,11 +141,13 @@ interface IValidatorSetManager {
      * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message
      * @param nodeID The ID of the node to modify
      * @param weight The new weight of the node on the Subnet
+     * @param includesUptimeProof Whether the uptime proof is included in the message
+     * @param messageIndex The index of the Warp message containing the uptime proof
      */
     function initiateValidatorWeightUpdate(
         bytes32 nodeID,
         uint64 weight,
-        bool includeUptimeProof,
+        bool includesUptimeProof,
         uint32 messageIndex
     ) external;
 
