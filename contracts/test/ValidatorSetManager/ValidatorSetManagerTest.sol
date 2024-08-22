@@ -150,8 +150,7 @@ contract ValidatorSetManagerTest is Test {
         assertEq(validation.periods[0].weight, weight);
         assertEq(validation.periods[0].startTime, 0);
         assertEq(validation.periods[0].endTime, 0);
-        assertEq(validation.periods[0].uptimeSeconds, 0);
-        assertEq(validation.totalUptimeSeconds, 0);
+        assertEq(validation.uptimeSeconds, 0);
     }
 
     function testInitiateValidatorRegistrationEmitsEvent() external {
@@ -276,12 +275,11 @@ contract ValidatorSetManagerTest is Test {
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
         assert(validation.status == IValidatorSetManager.ValidationStatus.Updating);
         assertEq(validation.periods[0].endTime, block.timestamp);
-        assert(validation.periods[0].uptimeSeconds > 0);
+        assert(validation.uptimeSeconds > 0);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, 0);
         assertEq(validation.periods[1].endTime, 0);
-        assertEq(validation.periods[1].uptimeSeconds, 0);
     }
 
     function testInitiateValidatorWeightUpdateEmitsEvent()
@@ -300,6 +298,31 @@ contract ValidatorSetManagerTest is Test {
         validatorSetManager.initiateValidatorWeightUpdate(
             VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
         );
+    }
+
+    function testInitiateValidatorRemovalUpdatesState()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 0;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+
+        // Act
+        vm.prank(deployerAddress);
+        validatorSetManager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
+
+        // Assert
+        IValidatorSetManager.Validation memory validation =
+            validatorSetManager.getSubnetValidation(VALIDATION_ID);
+        assert(validation.status == IValidatorSetManager.ValidationStatus.Removing);
+        assertEq(validation.endTime, block.timestamp);
+        assertEq(validation.periods[0].endTime, block.timestamp);
+        assert(validation.uptimeSeconds > 0);
+        assertEq(validation.periods.length, 1);
     }
 
     function testInitiateValidatorWeightUpdateRevertsInvalidNodeID()
@@ -346,7 +369,6 @@ contract ValidatorSetManagerTest is Test {
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, block.timestamp);
         assertEq(validation.periods[1].endTime, 0);
-        assertEq(validation.periods[1].uptimeSeconds, -3600);
     }
 
     function testCompleteValidatorWeightUpdateEmitsEvent()
@@ -369,7 +391,7 @@ contract ValidatorSetManagerTest is Test {
         validatorSetManager.completeValidatorWeightUpdate(SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_INDEX);
     }
 
-    function testCompleteValidationUpdatesState()
+    function testCompleteValidatorRemovalUpdatesState()
         external
         validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
     {
@@ -392,7 +414,7 @@ contract ValidatorSetManagerTest is Test {
         assert(validation.status == IValidatorSetManager.ValidationStatus.Completed);
     }
 
-    function testCompleteValidationEmitsEvent()
+    function testCompleteValidatorRemovalEmitsEvent()
         external
         validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
     {
