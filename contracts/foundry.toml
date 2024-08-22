@@ -3,7 +3,7 @@ src = "src"
 out = "out"
 libs = ["lib"]
 via_ir = true
-gas_reports = ["ValidatorSetManager", "AvalancheICTTRouter"]
+gas_reports = ["ACP99Manager", "AvalancheICTTRouter"]
 
 [fmt]
 line_length = 100

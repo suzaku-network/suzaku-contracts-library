@@ -6,7 +6,7 @@
 pragma solidity 0.8.18;
 
 /// @custom:security-contact security@suzaku.network
-interface IValidatorSetManager {
+interface IACP99Manager {
     /// @notice Subnet validation status
     enum ValidationStatus {
         Registering,
@@ -75,22 +75,20 @@ interface IValidatorSetManager {
         bytes32 indexed nodeID, bytes32 indexed validationID, uint64 nonce, uint64 weight
     );
 
-    error ValidatorSetManager__ZeroAddressSecurityModule();
-    error ValidatorSetManager__OnlySecurityModule(address sender, address securityModule);
-    error ValidatorSetManager__InvalidExpiry(uint64 expiry, uint256 timestamp);
-    error ValidatorSetManager__ZeroNodeID();
-    error ValidatorSetManager__NodeIDAlreadyValidator(bytes32 nodeID);
-    error ValidatorSetManager__InvalidSignatureLength(uint256 length);
-    error ValidatorSetManager__InvalidValidationID(bytes32 validationID);
-    error ValidatorSetManager__InvalidWarpMessage();
-    error ValidatorSetManager__InvalidSourceChainID(bytes32 sourceChainID);
-    error ValidatorSetManager__InvalidOriginSenderAddress(address originSenderAddress);
-    error ValidatorSetManager__InvalidRegistration();
-    error ValidatorSetManager__NodeIDNotActiveValidator(bytes32 nodeID);
-    error ValidatorSetManager__InvalidUptimeValidationID(bytes32 validationID);
-    error ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
-        uint64 nonce, uint64 currentNonce
-    );
+    error ACP99Manager__ZeroAddressSecurityModule();
+    error ACP99Manager__OnlySecurityModule(address sender, address securityModule);
+    error ACP99Manager__InvalidExpiry(uint64 expiry, uint256 timestamp);
+    error ACP99Manager__ZeroNodeID();
+    error ACP99Manager__NodeIDAlreadyValidator(bytes32 nodeID);
+    error ACP99Manager__InvalidSignatureLength(uint256 length);
+    error ACP99Manager__InvalidValidationID(bytes32 validationID);
+    error ACP99Manager__InvalidWarpMessage();
+    error ACP99Manager__InvalidSourceChainID(bytes32 sourceChainID);
+    error ACP99Manager__InvalidOriginSenderAddress(address originSenderAddress);
+    error ACP99Manager__InvalidRegistration();
+    error ACP99Manager__NodeIDNotActiveValidator(bytes32 nodeID);
+    error ACP99Manager__InvalidUptimeValidationID(bytes32 validationID);
+    error ACP99Manager__InvalidSetSubnetValidatorWeightNonce(uint64 nonce, uint64 currentNonce);
 
     /// @notice Get the ID of the Subnet tied to this manager
     function subnetID() external view returns (bytes32);

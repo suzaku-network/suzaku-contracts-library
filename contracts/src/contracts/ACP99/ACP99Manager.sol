@@ -7,7 +7,7 @@
 
 pragma solidity 0.8.18;
 
-import {IValidatorSetManager} from "../../interfaces/ValidatorSetManager/IValidatorSetManager.sol";
+import {IACP99Manager} from "../../interfaces/ACP99/IACP99Manager.sol";
 import {SubnetValidatorMessages} from "./SubnetValidatorMessages.sol";
 import {
     IWarpMessenger,
@@ -17,7 +17,7 @@ import {Ownable} from "@openzeppelin/contracts@4.9.6/access/Ownable.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@4.9.6/utils/structs/EnumerableMap.sol";
 
 /// @custom:security-contact security@suzaku.network
-contract ValidatorSetManager is Ownable, IValidatorSetManager {
+contract ACP99Manager is Ownable, IACP99Manager {
     using EnumerableMap for EnumerableMap.Bytes32ToBytes32Map;
 
     bytes32 private constant P_CHAIN_ID_HEX = bytes32(0);
@@ -62,14 +62,14 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
 
     modifier onlySecurityModule() {
         if (msg.sender != address(securityModule)) {
-            revert ValidatorSetManager__OnlySecurityModule(msg.sender, securityModule);
+            revert ACP99Manager__OnlySecurityModule(msg.sender, securityModule);
         }
         _;
     }
 
     constructor(bytes32 subnetID_, address securityModule_) Ownable() {
         if (securityModule_ == address(0)) {
-            revert ValidatorSetManager__ZeroAddressSecurityModule();
+            revert ACP99Manager__ZeroAddressSecurityModule();
         }
 
         warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDRESS);
@@ -83,14 +83,14 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
      */
     function setSecurityModule(address securityModule_) external onlyOwner {
         if (securityModule_ == address(0)) {
-            revert ValidatorSetManager__ZeroAddressSecurityModule();
+            revert ACP99Manager__ZeroAddressSecurityModule();
         }
 
         securityModule = securityModule_;
         emit SetSecurityModule(securityModule_);
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function initiateValidatorRegistration(
         bytes32 nodeID,
         uint64 weight,
@@ -99,15 +99,15 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     ) external onlySecurityModule returns (bytes32) {
         // Ensure the registration expiry is in a valid range.
         if (registrationExpiry < block.timestamp || registrationExpiry > block.timestamp + 2 days) {
-            revert ValidatorSetManager__InvalidExpiry(registrationExpiry, block.timestamp);
+            revert ACP99Manager__InvalidExpiry(registrationExpiry, block.timestamp);
         }
 
         // Ensure the nodeID is not the zero address, and is not already an active validator.
         if (nodeID == bytes32(0)) {
-            revert ValidatorSetManager__ZeroNodeID();
+            revert ACP99Manager__ZeroNodeID();
         }
         if (activeValidators.contains(nodeID)) {
-            revert ValidatorSetManager__NodeIDAlreadyValidator(nodeID);
+            revert ACP99Manager__NodeIDAlreadyValidator(nodeID);
         }
 
         // Ensure the signature is the proper length. The EVM does not provide an Ed25519 precompile to
@@ -115,7 +115,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         // the P-Chain will reject the registration, and the stake can be returned to the staker after the registration
         // expiry has passed.
         if (signature.length != 64) {
-            revert ValidatorSetManager__InvalidSignatureLength(signature.length);
+            revert ACP99Manager__InvalidSignatureLength(signature.length);
         }
 
         (bytes32 validationID, bytes memory registrationMessage) = SubnetValidatorMessages
@@ -145,37 +145,37 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         return validationID;
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function resendValidatorRegistrationMessage(bytes32 validationID) external returns (bytes32) {
         if (
             pendingRegisterValidationMessages[validationID].length == 0
                 || subnetValidations[validationID].status != ValidationStatus.Registering
         ) {
-            revert ValidatorSetManager__InvalidValidationID(validationID);
+            revert ACP99Manager__InvalidValidationID(validationID);
         }
 
         return warpMessenger.sendWarpMessage(pendingRegisterValidationMessages[validationID]);
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function completeValidatorRegistration(uint32 messageIndex) external {
         (WarpMessage memory warpMessage, bool valid) =
             warpMessenger.getVerifiedWarpMessage(messageIndex);
         if (!valid) {
-            revert ValidatorSetManager__InvalidWarpMessage();
+            revert ACP99Manager__InvalidWarpMessage();
         }
 
         if (warpMessage.sourceChainID != P_CHAIN_ID_HEX) {
-            revert ValidatorSetManager__InvalidSourceChainID(warpMessage.sourceChainID);
+            revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
         }
         if (warpMessage.originSenderAddress != address(0)) {
-            revert ValidatorSetManager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
+            revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
         }
 
         (bytes32 validationID, bool validRegistration) =
             SubnetValidatorMessages.unpackSubnetValidatorRegistrationMessage(warpMessage.payload);
         if (!validRegistration) {
-            revert ValidatorSetManager__InvalidRegistration();
+            revert ACP99Manager__InvalidRegistration();
         }
         Validation storage validation = subnetValidations[validationID];
 
@@ -183,7 +183,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             pendingRegisterValidationMessages[validationID].length == 0
                 || validation.status != ValidationStatus.Registering
         ) {
-            revert ValidatorSetManager__InvalidValidationID(validationID);
+            revert ACP99Manager__InvalidValidationID(validationID);
         }
 
         delete pendingRegisterValidationMessages[validationID];
@@ -201,7 +201,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         );
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function initiateValidatorWeightUpdate(
         bytes32 nodeID,
         uint64 weight,
@@ -209,7 +209,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         uint32 messageIndex
     ) external onlySecurityModule {
         if (!activeValidators.contains(nodeID)) {
-            revert ValidatorSetManager__NodeIDNotActiveValidator(nodeID);
+            revert ACP99Manager__NodeIDNotActiveValidator(nodeID);
         }
 
         bytes32 validationID = activeValidators.get(nodeID);
@@ -221,22 +221,20 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             (WarpMessage memory warpMessage, bool valid) =
                 warpMessenger.getVerifiedWarpMessage(messageIndex);
             if (!valid) {
-                revert ValidatorSetManager__InvalidWarpMessage();
+                revert ACP99Manager__InvalidWarpMessage();
             }
 
             if (warpMessage.sourceChainID != warpMessenger.getBlockchainID()) {
-                revert ValidatorSetManager__InvalidSourceChainID(warpMessage.sourceChainID);
+                revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
             }
             if (warpMessage.originSenderAddress != address(0)) {
-                revert ValidatorSetManager__InvalidOriginSenderAddress(
-                    warpMessage.originSenderAddress
-                );
+                revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
             }
 
             (bytes32 uptimeValidationID, uint64 uptime) =
                 SubnetValidatorMessages.unpackValidationUptimeMessage(warpMessage.payload);
             if (uptimeValidationID != validationID) {
-                revert ValidatorSetManager__InvalidUptimeValidationID(uptimeValidationID);
+                revert ACP99Manager__InvalidUptimeValidationID(uptimeValidationID);
             }
             uptimeSeconds = uptime;
         }
@@ -266,13 +264,13 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         );
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function completeValidatorWeightUpdate(uint32 messageIndex) external {
         // Get the Warp message.
         (WarpMessage memory warpMessage, bool valid) =
             warpMessenger.getVerifiedWarpMessage(messageIndex);
         if (!valid) {
-            revert ValidatorSetManager__InvalidWarpMessage();
+            revert ACP99Manager__InvalidWarpMessage();
         }
 
         (bytes32 validationID, uint64 nonce, uint64 weight) =
@@ -282,12 +280,12 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             validation.status != ValidationStatus.Updating
                 && validation.status != ValidationStatus.Removing
         ) {
-            revert ValidatorSetManager__InvalidValidationID(validationID);
+            revert ACP99Manager__InvalidValidationID(validationID);
         }
 
         if (weight == 0) {
             if (nonce != (validation.periods.length)) {
-                revert ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
+                revert ACP99Manager__InvalidSetSubnetValidatorWeightNonce(
                     nonce, uint64(validation.periods.length)
                 );
             }
@@ -298,7 +296,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             validation.status = ValidationStatus.Completed;
         } else {
             if (nonce != (validation.periods.length - 1)) {
-                revert ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
+                revert ACP99Manager__InvalidSetSubnetValidatorWeightNonce(
                     nonce, uint64(validation.periods.length - 1)
                 );
             }
@@ -311,12 +309,12 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         emit CompleteValidatorWeightUpdate(validation.nodeID, validationID, nonce, weight);
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function getSubnetValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32) {
         return activeValidators.get(nodeID);
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function getSubnetActiveValidatorSet() external view returns (bytes32[] memory) {
         return activeValidators.keys();
     }
@@ -325,7 +323,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         return subnetValidations[validationID];
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function getSubnetValidatorValidations(bytes32 nodeID)
         external
         view

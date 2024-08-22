@@ -51,10 +51,10 @@ contract WarpMessengerTestMock {
 
     // Mocks valid warp messages for testing
     // messageIndex = 1: RegisterRemoteMessage used for AvalancheICTTRouter tests
-    // messageIndex = 2: SubnetValidatorRegistrationMessage used for ValidatorSetManager tests
-    // messageIndex = 3: ValidatorUptimeMessage used for ValidatorSetManager tests
-    // messageIndex = 4: ValidatorWeightUpdateMessage used for ValidatorSetManager tests (weight = 200)
-    // messageIndex = 5: ValidatorWeightUpdateMessage used for ValidatorSetManager tests (weight = 0)
+    // messageIndex = 2: SubnetValidatorRegistrationMessage used for ACP99Manager tests
+    // messageIndex = 3: ValidatorUptimeMessage used for ACP99Manager tests
+    // messageIndex = 4: ValidatorWeightUpdateMessage used for ACP99Manager tests (weight = 200)
+    // messageIndex = 5: ValidatorWeightUpdateMessage used for ACP99Manager tests (weight = 0)
     function getVerifiedWarpMessage(uint32 messageIndex)
         external
         view
