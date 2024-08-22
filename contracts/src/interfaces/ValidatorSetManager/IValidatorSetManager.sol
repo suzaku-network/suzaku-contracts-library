@@ -75,6 +75,7 @@ interface IValidatorSetManager {
         bytes32 indexed nodeID, bytes32 indexed validationID, uint64 nonce, uint64 weight
     );
 
+    error ValidatorSetManager__ZeroAddressSecurityModule();
     error ValidatorSetManager__OnlySecurityModule(address sender, address securityModule);
     error ValidatorSetManager__InvalidExpiry(uint64 expiry, uint256 timestamp);
     error ValidatorSetManager__ZeroNodeID();
@@ -131,7 +132,7 @@ interface IValidatorSetManager {
      * Only necessary if the original message can't be delivered due to validator churn.
      * @param validationID The validationID attached to the registration message
      */
-    function resendValidatorRegistrationMessage(bytes32 validationID) external;
+    function resendValidatorRegistrationMessage(bytes32 validationID) external returns (bytes32);
 
     /**
      * @notice Completes the validator registration process by returning an acknowledgement of the registration of a
