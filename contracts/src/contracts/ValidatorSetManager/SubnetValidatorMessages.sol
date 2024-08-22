@@ -1,7 +1,12 @@
 // (c) 2023, Ava Labs, Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// See the file LICENSE_ECOSYSTEM for licensing terms.
 
 // SPDX-License-Identifier: Ecosystem
+
+// Modified by the ADDPHO team
+// Original source: https://github.com/ava-labs/teleporter/blob/staking-contracts/contracts/src/Staking/StakingMessages.sol
+// Modifications:
+// - Rename the contract from StakingMessages to SubnetValidatorMessages
 
 pragma solidity 0.8.18;
 
