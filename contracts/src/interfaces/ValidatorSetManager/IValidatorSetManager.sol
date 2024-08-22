@@ -1,5 +1,5 @@
 // (c) 2024, ADDPHO All rights reserved.
-// See the file LICENSE for licensing terms.
+// See the file LICENSE_BUSL for licensing terms.
 
 // SPDX-License-Identifier: BUSL-1.1
 
