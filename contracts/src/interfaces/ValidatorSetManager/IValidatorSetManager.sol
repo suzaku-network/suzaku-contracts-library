@@ -97,8 +97,11 @@ interface IValidatorSetManager {
     /// @notice Get the address of the security module attached to this manager
     function securityModule() external view returns (address);
 
+    /// @notice Get a Subnet validator's active validation ID
+    function getSubnetValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32);
+
     /// @notice Get the current Subnet validator set (list of NodeIDs)
-    function getSubnetCurrentValidatorSet() external view returns (bytes32[] memory);
+    function getSubnetActiveValidatorSet() external view returns (bytes32[] memory);
 
     /// @notice Get the total weight of the current Subnet validator set
     function subnetTotalWeight() external view returns (uint64);
@@ -159,11 +162,4 @@ interface IValidatorSetManager {
      * @param messageIndex The index of the Warp message to be received providing the acknowledgement.
      */
     function completeValidatorWeightUpdate(uint32 messageIndex) external;
-
-    // /**
-    //  * @notice Issue a SetSubnetValidatorManagerTx
-    //  * @param blockchainID The ID of the chain on which the Subnet validator manager is located
-    //  * @param managerAddress The address of the Subnet validator set manager
-    //  */
-    // function setSubnetManager(bytes32 blockchainID, address managerAddress) external;
 }
