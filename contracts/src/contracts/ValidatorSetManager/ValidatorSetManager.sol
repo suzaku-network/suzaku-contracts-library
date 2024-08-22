@@ -124,9 +124,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         Validation storage validation = subnetValidations[validationID];
         validation.status = ValidationStatus.Registering;
         validation.nodeID = nodeID;
-        validation.periods.push(
-            ValidationPeriod({weight: weight, startTime: 0, endTime: 0, uptimeSeconds: 0})
-        );
+        validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
 
         subnetValidatorValidations[nodeID].push(validationID);
 
@@ -179,6 +177,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         delete pendingRegisterValidationMessages[validationID];
 
         subnetValidations[validationID].status = ValidationStatus.Active;
+        subnetValidations[validationID].startTime = uint64(block.timestamp);
         subnetValidations[validationID].periods[0].startTime = uint64(block.timestamp);
         activeValidators[subnetValidations[validationID].nodeID] = validationID;
         subnetTotalWeight += subnetValidations[validationID].periods[0].weight;
@@ -231,7 +230,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             if (uptimeValidationID != validationID) {
                 revert ValidatorSetManager__InvalidUptimeValidationID(uptimeValidationID);
             }
-            uptimeSeconds = uptime - validation.totalUptimeSeconds;
+            uptimeSeconds = uptime;
         }
 
         bytes memory setValidatorWeightPayload = SubnetValidatorMessages
@@ -242,19 +241,16 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             warpMessenger.sendWarpMessage(setValidatorWeightPayload);
 
         validation.periods[validation.periods.length - 1].endTime = uint64(block.timestamp);
-        validation.periods[validation.periods.length - 1].uptimeSeconds += int64(uptimeSeconds);
-        validation.totalUptimeSeconds += uptimeSeconds;
-        validation.status = ValidationStatus.Updating;
+        validation.uptimeSeconds = uptimeSeconds;
 
         if (weight > 0) {
             validation.status = ValidationStatus.Updating;
             // The startTime is set to 0 to indicate that the period is not yet started
-            validation.periods.push(
-                ValidationPeriod({weight: weight, startTime: 0, endTime: 0, uptimeSeconds: 0})
-            );
+            validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
         } else {
             // If the weight is 0, the validator is being removed
             validation.status = ValidationStatus.Removing;
+            validation.endTime = uint64(block.timestamp);
         }
 
         emit InitiateValidatorWeightUpdate(
@@ -309,9 +305,6 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             }
             validation.status = ValidationStatus.Active;
             validation.periods[nonce].startTime = uint64(block.timestamp);
-            // Remove the time between the end of the last period and now from the uptime
-            validation.periods[nonce].uptimeSeconds =
-                int64(validation.periods[nonce - 1].endTime) - int64(uint64(block.timestamp));
         }
 
         emit CompleteValidatorWeightUpdate(validation.nodeID, validationID, nonce, weight);

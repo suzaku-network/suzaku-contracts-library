@@ -21,15 +21,17 @@ interface IValidatorSetManager {
      * @notice Subnet validation
      * @param status The validation status
      * @param nodeID The NodeID of the validator
-     * @param periods The list of validation periods
+     * @param periods The list of validation periods.
      * The index is the nonce associated with the weight update.
-     * @param totalUptimeSeconds The total uptime of the validator
+     * @param uptimeSeconds The uptime of the validator for this validation
      */
     struct Validation {
         ValidationStatus status;
         bytes32 nodeID;
+        uint64 startTime;
+        uint64 endTime;
         ValidationPeriod[] periods;
-        uint64 totalUptimeSeconds;
+        uint64 uptimeSeconds;
     }
 
     /**
@@ -37,13 +39,11 @@ interface IValidatorSetManager {
      * @param weight The weight of the validator during the period
      * @param startTime The start time of the validation period
      * @param endTime The end time of the validation period (only ≠ 0 when the period is over)
-     * @param uptimeSeconds The uptime of the validator during this validation period (only > 0 once the validation period is over)
      */
     struct ValidationPeriod {
         uint64 weight;
         uint64 startTime;
         uint64 endTime;
-        int64 uptimeSeconds;
     }
 
     /// @notice Emitted when the security module address is set
@@ -138,7 +138,9 @@ interface IValidatorSetManager {
     function completeValidatorRegistration(uint32 messageIndex) external;
 
     /**
-     * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message
+     * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message.
+     * If the weight is 0, this initiates the removal of the validator from the Subnet. An uptime proof can be
+     * included. This proof might be required to claim validator rewards (handled by the security module).
      * @param nodeID The ID of the node to modify
      * @param weight The new weight of the node on the Subnet
      * @param includesUptimeProof Whether the uptime proof is included in the message
