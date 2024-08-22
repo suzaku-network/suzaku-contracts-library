@@ -17,20 +17,30 @@ contract ValidatorSetManagerTest is Test {
     event InitiateValidatorRegistration(
         bytes32 indexed nodeID,
         bytes32 indexed validationID,
-        bytes32 indexed registrationMessageID,
+        bytes32 registrationMessageID,
         uint64 weight,
         uint64 registrationExpiry
     );
     event CompleteValidatorRegistration(
+        bytes32 indexed nodeID,
         bytes32 indexed validationID,
-        bytes32 nodeID,
         uint64 weight,
         uint64 validationPeriodStartTime
+    );
+    event InitiateValidatorWeightUpdate(
+        bytes32 indexed nodeID,
+        bytes32 indexed validationID,
+        bytes32 weightUpdateMessageID,
+        uint64 weight
+    );
+    event CompleteValidatorWeightUpdate(
+        bytes32 indexed nodeID, bytes32 indexed validationID, uint64 nonce, uint64 weight
     );
 
     uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 2;
     uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 3;
     uint32 constant SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_INDEX = 4;
+    uint32 constant COMPLETE_VALIDATION_MESSAGE_INDEX = 5;
     address constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
     bytes32 constant VALIDATOR_NODE_ID = bytes32(uint256(1));
     uint64 constant VALIDATOR_WEIGHT = 100;
@@ -151,7 +161,7 @@ contract ValidatorSetManagerTest is Test {
 
         // Act
         vm.prank(deployerAddress);
-        vm.expectEmit(true, false, false, true, address(validatorSetManager));
+        vm.expectEmit(true, false, false, false, address(validatorSetManager));
         emit InitiateValidatorRegistration(
             nodeID, bytes32(0), bytes32(0), weight, registrationExpiry
         );
@@ -235,9 +245,9 @@ contract ValidatorSetManagerTest is Test {
     {
         // Act
         vm.prank(deployerAddress);
-        vm.expectEmit(true, false, false, false, address(validatorSetManager));
+        vm.expectEmit(true, true, false, false, address(validatorSetManager));
         emit CompleteValidatorRegistration(
-            VALIDATION_ID, VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, uint64(block.timestamp)
+            VALIDATOR_NODE_ID, VALIDATION_ID, VALIDATOR_WEIGHT, uint64(block.timestamp)
         );
         validatorSetManager.completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
@@ -262,6 +272,7 @@ contract ValidatorSetManagerTest is Test {
         // Assert
         IValidatorSetManager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
+        assert(validation.status == IValidatorSetManager.ValidationStatus.Updating);
         assertEq(validation.periods[0].endTime, block.timestamp);
         assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 2);
@@ -269,6 +280,24 @@ contract ValidatorSetManagerTest is Test {
         assertEq(validation.periods[1].startTime, 0);
         assertEq(validation.periods[1].endTime, 0);
         assertEq(validation.periods[1].uptimeSeconds, 0);
+    }
+
+    function testInitiateValidatorWeightUpdateEmitsEvent()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 200;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+
+        // Act
+        vm.prank(deployerAddress);
+        vm.expectEmit(true, true, false, false, address(validatorSetManager));
+        emit InitiateValidatorWeightUpdate(VALIDATOR_NODE_ID, VALIDATION_ID, bytes32(0), newWeight);
+        validatorSetManager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
     }
 
     function testInitiateValidatorWeightUpdateRevertsInvalidNodeID()
@@ -311,9 +340,73 @@ contract ValidatorSetManagerTest is Test {
         // Assert
         IValidatorSetManager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
+        assert(validation.status == IValidatorSetManager.ValidationStatus.Active);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, block.timestamp);
         assertEq(validation.periods[1].endTime, 0);
         assertEq(validation.periods[1].uptimeSeconds, -3600);
+    }
+
+    function testCompleteValidatorWeightUpdateEmitsEvent()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 200;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+        vm.startPrank(deployerAddress);
+        validatorSetManager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
+
+        // Act
+        skip(3600);
+        vm.expectEmit(true, true, false, true, address(validatorSetManager));
+        emit CompleteValidatorWeightUpdate(VALIDATOR_NODE_ID, VALIDATION_ID, 1, newWeight);
+        validatorSetManager.completeValidatorWeightUpdate(SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_INDEX);
+    }
+
+    function testCompleteValidationUpdatesState()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 0;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+        vm.startPrank(deployerAddress);
+        validatorSetManager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
+
+        // Act
+        skip(3600);
+        validatorSetManager.completeValidatorWeightUpdate(COMPLETE_VALIDATION_MESSAGE_INDEX);
+
+        // Assert
+        IValidatorSetManager.Validation memory validation =
+            validatorSetManager.getSubnetValidation(VALIDATION_ID);
+        assert(validation.status == IValidatorSetManager.ValidationStatus.Completed);
+    }
+
+    function testCompleteValidationEmitsEvent()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 0;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+        vm.startPrank(deployerAddress);
+        validatorSetManager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
+
+        // Act
+        skip(3600);
+        vm.expectEmit(true, true, false, true, address(validatorSetManager));
+        emit CompleteValidatorWeightUpdate(VALIDATOR_NODE_ID, VALIDATION_ID, 1, newWeight);
+        validatorSetManager.completeValidatorWeightUpdate(COMPLETE_VALIDATION_MESSAGE_INDEX);
     }
 }
