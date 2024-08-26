@@ -31,6 +31,7 @@ interface IACP99Manager {
         uint64 startTime;
         uint64 endTime;
         ValidationPeriod[] periods;
+        uint64 activeSeconds;
         uint64 uptimeSeconds;
     }
 
@@ -61,7 +62,7 @@ interface IACP99Manager {
         bytes32 indexed nodeID,
         bytes32 indexed validationID,
         uint64 weight,
-        uint64 validationPeriodStartTime
+        uint64 validationStartTime
     );
     /// @notice Emitted when a validator weight update is initiated
     event InitiateValidatorWeightUpdate(
@@ -94,22 +95,22 @@ interface IACP99Manager {
     function subnetID() external view returns (bytes32);
 
     /// @notice Get the address of the security module attached to this manager
-    function securityModule() external view returns (address);
+    function getSecurityModule() external view returns (address);
+
+    /// @notice Get the validation details for a given validation ID
+    function getValidation(bytes32 validationID) external view returns (Validation memory);
 
     /// @notice Get a Subnet validator's active validation ID
-    function getSubnetValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32);
+    function getValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32);
 
     /// @notice Get the current Subnet validator set (list of NodeIDs)
-    function getSubnetActiveValidatorSet() external view returns (bytes32[] memory);
+    function getActiveValidatorSet() external view returns (bytes32[] memory);
 
     /// @notice Get the total weight of the current Subnet validator set
     function subnetTotalWeight() external view returns (uint64);
 
     /// @notice Get the list of message IDs associated with a validator of the Subnet
-    function getSubnetValidatorValidations(bytes32 nodeID)
-        external
-        view
-        returns (bytes32[] memory);
+    function getValidatorValidations(bytes32 nodeID) external view returns (bytes32[] memory);
 
     /**
      * @notice Initiate a validator registration by issuing a RegisterSubnetValidatorTx Warp message
