@@ -5,21 +5,17 @@
 
 pragma solidity 0.8.18;
 
-import {WarpMessage} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-
+import {ValidatorMessages} from "../contracts/ACP99/ValidatorMessages.sol";
 import {
     RegisterRemoteMessage,
     TransferrerMessage,
     TransferrerMessageType
 } from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
+import {WarpMessage} from
+    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {TeleporterMessage, TeleporterMessageReceipt} from "@teleporter/ITeleporterMessenger.sol";
 
 contract WarpMessengerTestMock {
-    uint32 internal constant SUBNET_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID = 1;
-    uint32 internal constant SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID = 2;
-    uint32 internal constant VALIDATION_UPTIME_MESSAGE_TYPE_ID = 3;
-
     address private constant TELEPORTER_MESSENGER_ADDRESS =
         0xF2E246BB76DF876Cef8b38ae84130F4F55De395b;
     bytes32 private constant P_CHAIN_ID_HEX = bytes32(0);
@@ -30,7 +26,7 @@ contract WarpMessengerTestMock {
     bytes32 private constant MESSAGE_ID =
         0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
     bytes32 private constant VALIDATION_ID =
-        0x8f1e3878d6f56add95f8f62db483fcb58b75a7c8b15064135d207828be5dbf6b;
+        0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2;
     uint64 private constant VALIDATION_UPTIME_SECONDS = uint64(2_544_480);
 
     address private immutable tokenHomeAddress;
@@ -113,7 +109,10 @@ contract WarpMessengerTestMock {
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
-                SUBNET_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID, VALIDATION_ID, true
+                ValidatorMessages.CODEC_ID,
+                ValidatorMessages.SUBNET_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID,
+                VALIDATION_ID,
+                true
             )
         });
 
@@ -125,7 +124,10 @@ contract WarpMessengerTestMock {
             sourceChainID: ANVIL_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
-                VALIDATION_UPTIME_MESSAGE_TYPE_ID, VALIDATION_ID, VALIDATION_UPTIME_SECONDS
+                ValidatorMessages.CODEC_ID,
+                ValidatorMessages.VALIDATION_UPTIME_MESSAGE_TYPE_ID,
+                VALIDATION_ID,
+                VALIDATION_UPTIME_SECONDS
             )
         });
 
@@ -137,7 +139,11 @@ contract WarpMessengerTestMock {
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
-                SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID, VALIDATION_ID, uint64(1), uint64(200)
+                ValidatorMessages.CODEC_ID,
+                ValidatorMessages.SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID,
+                VALIDATION_ID,
+                uint64(1),
+                uint64(200)
             )
         });
 
@@ -149,7 +155,11 @@ contract WarpMessengerTestMock {
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
-                SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID, VALIDATION_ID, uint64(1), uint64(0)
+                ValidatorMessages.CODEC_ID,
+                ValidatorMessages.SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID,
+                VALIDATION_ID,
+                uint64(1),
+                uint64(0)
             )
         });
 
