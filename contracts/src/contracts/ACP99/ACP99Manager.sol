@@ -3,18 +3,23 @@
 
 // SPDX-License-Identifier: BUSL-1.1
 
+// Compatible with OpenZeppelin Contracts ^4.9.0
+
 pragma solidity 0.8.18;
 
-import {IValidatorSetManager} from "../../interfaces/ValidatorSetManager/IValidatorSetManager.sol";
+import {IACP99Manager} from "../../interfaces/ACP99/IACP99Manager.sol";
 import {SubnetValidatorMessages} from "./SubnetValidatorMessages.sol";
 import {
     IWarpMessenger,
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts@4.9.6/access/Ownable.sol";
+import {EnumerableMap} from "@openzeppelin/contracts@4.9.6/utils/structs/EnumerableMap.sol";
 
 /// @custom:security-contact security@suzaku.network
-contract ValidatorSetManager is Ownable, IValidatorSetManager {
+contract ACP99Manager is Ownable, IACP99Manager {
+    using EnumerableMap for EnumerableMap.Bytes32ToBytes32Map;
+
     bytes32 private constant P_CHAIN_ID_HEX = bytes32(0);
     address private constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
 
@@ -27,14 +32,12 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     /// @notice The address of the security module attached to this manager
     address public securityModule;
 
-    /// @notice The current Subnet validator set (list of NodeIDs)
-    bytes32[] private subnetCurrentValidatorSet;
-
     /**
      * @notice The active validators of the Subnet
      * @notice NodeID => validationID
      */
-    mapping(bytes32 => bytes32) public activeValidators;
+    // mapping(bytes32 => bytes32) public activeValidators;
+    EnumerableMap.Bytes32ToBytes32Map private activeValidators;
 
     /// @notice The total weight of the current Subnet validator set
     uint64 public subnetTotalWeight;
@@ -59,12 +62,16 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
 
     modifier onlySecurityModule() {
         if (msg.sender != address(securityModule)) {
-            revert ValidatorSetManager__OnlySecurityModule(msg.sender, securityModule);
+            revert ACP99Manager__OnlySecurityModule(msg.sender, securityModule);
         }
         _;
     }
 
     constructor(bytes32 subnetID_, address securityModule_) Ownable() {
+        if (securityModule_ == address(0)) {
+            revert ACP99Manager__ZeroAddressSecurityModule();
+        }
+
         warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDRESS);
         subnetID = subnetID_;
         securityModule = securityModule_;
@@ -75,11 +82,15 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
      * @param securityModule_ The address of the security module
      */
     function setSecurityModule(address securityModule_) external onlyOwner {
+        if (securityModule_ == address(0)) {
+            revert ACP99Manager__ZeroAddressSecurityModule();
+        }
+
         securityModule = securityModule_;
         emit SetSecurityModule(securityModule_);
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function initiateValidatorRegistration(
         bytes32 nodeID,
         uint64 weight,
@@ -88,15 +99,15 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     ) external onlySecurityModule returns (bytes32) {
         // Ensure the registration expiry is in a valid range.
         if (registrationExpiry < block.timestamp || registrationExpiry > block.timestamp + 2 days) {
-            revert ValidatorSetManager__InvalidExpiry(registrationExpiry, block.timestamp);
+            revert ACP99Manager__InvalidExpiry(registrationExpiry, block.timestamp);
         }
 
         // Ensure the nodeID is not the zero address, and is not already an active validator.
         if (nodeID == bytes32(0)) {
-            revert ValidatorSetManager__ZeroNodeID();
+            revert ACP99Manager__ZeroNodeID();
         }
-        if (activeValidators[nodeID] != bytes32(0)) {
-            revert ValidatorSetManager__NodeIDAlreadyValidator(nodeID);
+        if (activeValidators.contains(nodeID)) {
+            revert ACP99Manager__NodeIDAlreadyValidator(nodeID);
         }
 
         // Ensure the signature is the proper length. The EVM does not provide an Ed25519 precompile to
@@ -104,7 +115,7 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         // the P-Chain will reject the registration, and the stake can be returned to the staker after the registration
         // expiry has passed.
         if (signature.length != 64) {
-            revert ValidatorSetManager__InvalidSignatureLength(signature.length);
+            revert ACP99Manager__InvalidSignatureLength(signature.length);
         }
 
         (bytes32 validationID, bytes memory registrationMessage) = SubnetValidatorMessages
@@ -119,16 +130,13 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         );
 
         pendingRegisterValidationMessages[validationID] = registrationMessage;
-        bytes32 registrationMessageID = warpMessenger.sendWarpMessage(registrationMessage);
-
         Validation storage validation = subnetValidations[validationID];
         validation.status = ValidationStatus.Registering;
         validation.nodeID = nodeID;
-        validation.periods.push(
-            ValidationPeriod({weight: weight, startTime: 0, endTime: 0, uptimeSeconds: 0})
-        );
-
+        validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
         subnetValidatorValidations[nodeID].push(validationID);
+
+        bytes32 registrationMessageID = warpMessenger.sendWarpMessage(registrationMessage);
 
         emit InitiateValidatorRegistration(
             nodeID, validationID, registrationMessageID, weight, registrationExpiry
@@ -137,75 +145,74 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         return validationID;
     }
 
-    /// @inheritdoc IValidatorSetManager
-    function resendValidatorRegistrationMessage(bytes32 validationID) external {
+    /// @inheritdoc IACP99Manager
+    function resendValidatorRegistrationMessage(bytes32 validationID) external returns (bytes32) {
         if (
             pendingRegisterValidationMessages[validationID].length == 0
                 || subnetValidations[validationID].status != ValidationStatus.Registering
         ) {
-            revert ValidatorSetManager__InvalidValidationID(validationID);
+            revert ACP99Manager__InvalidValidationID(validationID);
         }
 
-        warpMessenger.sendWarpMessage(pendingRegisterValidationMessages[validationID]);
+        return warpMessenger.sendWarpMessage(pendingRegisterValidationMessages[validationID]);
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function completeValidatorRegistration(uint32 messageIndex) external {
         (WarpMessage memory warpMessage, bool valid) =
             warpMessenger.getVerifiedWarpMessage(messageIndex);
         if (!valid) {
-            revert ValidatorSetManager__InvalidWarpMessage();
+            revert ACP99Manager__InvalidWarpMessage();
         }
 
         if (warpMessage.sourceChainID != P_CHAIN_ID_HEX) {
-            revert ValidatorSetManager__InvalidSourceChainID(warpMessage.sourceChainID);
+            revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
         }
         if (warpMessage.originSenderAddress != address(0)) {
-            revert ValidatorSetManager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
+            revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
         }
 
         (bytes32 validationID, bool validRegistration) =
             SubnetValidatorMessages.unpackSubnetValidatorRegistrationMessage(warpMessage.payload);
         if (!validRegistration) {
-            revert ValidatorSetManager__InvalidRegistration();
+            revert ACP99Manager__InvalidRegistration();
         }
+        Validation storage validation = subnetValidations[validationID];
+
         if (
             pendingRegisterValidationMessages[validationID].length == 0
-                || subnetValidations[validationID].status != ValidationStatus.Registering
+                || validation.status != ValidationStatus.Registering
         ) {
-            revert ValidatorSetManager__InvalidValidationID(validationID);
+            revert ACP99Manager__InvalidValidationID(validationID);
         }
 
         delete pendingRegisterValidationMessages[validationID];
 
-        subnetValidations[validationID].status = ValidationStatus.Active;
-        subnetValidations[validationID].periods[0].startTime = uint64(block.timestamp);
-        activeValidators[subnetValidations[validationID].nodeID] = validationID;
-        subnetTotalWeight += subnetValidations[validationID].periods[0].weight;
-        subnetCurrentValidatorSet.push(subnetValidations[validationID].nodeID);
+        validation.status = ValidationStatus.Active;
+        validation.startTime = uint64(block.timestamp);
+        validation.periods[0].startTime = uint64(block.timestamp);
+        activeValidators.set(validation.nodeID, validationID);
+        subnetTotalWeight += validation.periods[0].weight;
 
         // TODO: Notify the SecurityModule of the validator registration
 
         emit CompleteValidatorRegistration(
-            subnetValidations[validationID].nodeID,
-            validationID,
-            subnetValidations[validationID].periods[0].weight,
-            uint64(block.timestamp)
+            validation.nodeID, validationID, validation.periods[0].weight, uint64(block.timestamp)
         );
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function initiateValidatorWeightUpdate(
         bytes32 nodeID,
         uint64 weight,
         bool includesUptimeProof,
         uint32 messageIndex
     ) external onlySecurityModule {
-        if (activeValidators[nodeID] == bytes32(0)) {
-            revert ValidatorSetManager__NodeIDNotActiveValidator(nodeID);
+        if (!activeValidators.contains(nodeID)) {
+            revert ACP99Manager__NodeIDNotActiveValidator(nodeID);
         }
 
-        bytes32 validationID = activeValidators[nodeID];
+        bytes32 validationID = activeValidators.get(nodeID);
         Validation storage validation = subnetValidations[validationID];
 
         // Verify the uptime proof if it is included
@@ -214,24 +221,35 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             (WarpMessage memory warpMessage, bool valid) =
                 warpMessenger.getVerifiedWarpMessage(messageIndex);
             if (!valid) {
-                revert ValidatorSetManager__InvalidWarpMessage();
+                revert ACP99Manager__InvalidWarpMessage();
             }
 
             if (warpMessage.sourceChainID != warpMessenger.getBlockchainID()) {
-                revert ValidatorSetManager__InvalidSourceChainID(warpMessage.sourceChainID);
+                revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
             }
             if (warpMessage.originSenderAddress != address(0)) {
-                revert ValidatorSetManager__InvalidOriginSenderAddress(
-                    warpMessage.originSenderAddress
-                );
+                revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
             }
 
             (bytes32 uptimeValidationID, uint64 uptime) =
                 SubnetValidatorMessages.unpackValidationUptimeMessage(warpMessage.payload);
             if (uptimeValidationID != validationID) {
-                revert ValidatorSetManager__InvalidUptimeValidationID(uptimeValidationID);
+                revert ACP99Manager__InvalidUptimeValidationID(uptimeValidationID);
             }
-            uptimeSeconds = uptime - validation.totalUptimeSeconds;
+            uptimeSeconds = uptime;
+        }
+
+        validation.periods[validation.periods.length - 1].endTime = uint64(block.timestamp);
+        validation.uptimeSeconds = uptimeSeconds;
+
+        if (weight > 0) {
+            validation.status = ValidationStatus.Updating;
+            // The startTime is set to 0 to indicate that the period is not yet started
+            validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
+        } else {
+            // If the weight is 0, the validator is being removed
+            validation.status = ValidationStatus.Removing;
+            validation.endTime = uint64(block.timestamp);
         }
 
         bytes memory setValidatorWeightPayload = SubnetValidatorMessages
@@ -241,34 +259,18 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
         bytes32 setValidatorWeightMessageID =
             warpMessenger.sendWarpMessage(setValidatorWeightPayload);
 
-        validation.periods[validation.periods.length - 1].endTime = uint64(block.timestamp);
-        validation.periods[validation.periods.length - 1].uptimeSeconds += int64(uptimeSeconds);
-        validation.totalUptimeSeconds += uptimeSeconds;
-        validation.status = ValidationStatus.Updating;
-
-        if (weight > 0) {
-            validation.status = ValidationStatus.Updating;
-            // The startTime is set to 0 to indicate that the period is not yet started
-            validation.periods.push(
-                ValidationPeriod({weight: weight, startTime: 0, endTime: 0, uptimeSeconds: 0})
-            );
-        } else {
-            // If the weight is 0, the validator is being removed
-            validation.status = ValidationStatus.Removing;
-        }
-
         emit InitiateValidatorWeightUpdate(
             nodeID, validationID, setValidatorWeightMessageID, weight
         );
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function completeValidatorWeightUpdate(uint32 messageIndex) external {
         // Get the Warp message.
         (WarpMessage memory warpMessage, bool valid) =
             warpMessenger.getVerifiedWarpMessage(messageIndex);
         if (!valid) {
-            revert ValidatorSetManager__InvalidWarpMessage();
+            revert ACP99Manager__InvalidWarpMessage();
         }
 
         (bytes32 validationID, uint64 nonce, uint64 weight) =
@@ -278,55 +280,50 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
             validation.status != ValidationStatus.Updating
                 && validation.status != ValidationStatus.Removing
         ) {
-            revert ValidatorSetManager__InvalidValidationID(validationID);
+            revert ACP99Manager__InvalidValidationID(validationID);
         }
 
         if (weight == 0) {
             if (nonce != (validation.periods.length)) {
-                revert ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
+                revert ACP99Manager__InvalidSetSubnetValidatorWeightNonce(
                     nonce, uint64(validation.periods.length)
                 );
             }
 
             // Remove the validator from the active set
-            delete activeValidators[validation.nodeID];
+            activeValidators.remove(validation.nodeID);
             subnetTotalWeight -= validation.periods[nonce - 1].weight;
             validation.status = ValidationStatus.Completed;
-            // Update the current validator set
-            for (uint256 i = 0; i < subnetCurrentValidatorSet.length; i++) {
-                if (subnetCurrentValidatorSet[i] == validation.nodeID) {
-                    subnetCurrentValidatorSet[i] =
-                        subnetCurrentValidatorSet[subnetCurrentValidatorSet.length - 1];
-                    subnetCurrentValidatorSet.pop();
-                    break;
-                }
-            }
         } else {
             if (nonce != (validation.periods.length - 1)) {
-                revert ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
+                revert ACP99Manager__InvalidSetSubnetValidatorWeightNonce(
                     nonce, uint64(validation.periods.length - 1)
                 );
             }
             validation.status = ValidationStatus.Active;
             validation.periods[nonce].startTime = uint64(block.timestamp);
-            // Remove the time between the end of the last period and now from the uptime
-            validation.periods[nonce].uptimeSeconds =
-                int64(validation.periods[nonce - 1].endTime) - int64(uint64(block.timestamp));
         }
+
+        // TODO: Notify the SecurityModule of the validator update
 
         emit CompleteValidatorWeightUpdate(validation.nodeID, validationID, nonce, weight);
     }
 
-    /// @inheritdoc IValidatorSetManager
-    function getSubnetCurrentValidatorSet() external view returns (bytes32[] memory) {
-        return subnetCurrentValidatorSet;
+    /// @inheritdoc IACP99Manager
+    function getSubnetValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32) {
+        return activeValidators.get(nodeID);
+    }
+
+    /// @inheritdoc IACP99Manager
+    function getSubnetActiveValidatorSet() external view returns (bytes32[] memory) {
+        return activeValidators.keys();
     }
 
     function getSubnetValidation(bytes32 validationID) external view returns (Validation memory) {
         return subnetValidations[validationID];
     }
 
-    /// @inheritdoc IValidatorSetManager
+    /// @inheritdoc IACP99Manager
     function getSubnetValidatorValidations(bytes32 nodeID)
         external
         view
@@ -334,7 +331,4 @@ contract ValidatorSetManager is Ownable, IValidatorSetManager {
     {
         return subnetValidatorValidations[nodeID];
     }
-
-    // /// @inheritdoc IValidatorSetManager
-    // function setSubnetValidatorManager(bytes32 blockchainID, address managerAddress) external {}
 }

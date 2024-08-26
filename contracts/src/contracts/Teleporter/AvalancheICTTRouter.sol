@@ -2,6 +2,7 @@
 // See the file LICENSE_BUSL for licensing terms.
 
 // SPDX-License-Identifier: BUSL-1.1
+
 // Compatible with OpenZeppelin Contracts ^4.8.0
 
 pragma solidity 0.8.18;

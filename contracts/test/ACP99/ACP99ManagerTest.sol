@@ -5,16 +5,14 @@
 
 pragma solidity 0.8.18;
 
-import {DeployValidatorSetManager} from
-    "../../script/ValidatorSetManager/DeployValidatorSetManager.s.sol";
-import {HelperConfig} from "../../script/ValidatorSetManager/HelperConfig.s.sol";
-import {ValidatorSetManager} from "../../src/contracts/ValidatorSetManager/ValidatorSetManager.sol";
-import {IValidatorSetManager} from
-    "../../src/interfaces/ValidatorSetManager/IValidatorSetManager.sol";
+import {DeployACP99Manager} from "../../script/ACP99/DeployACP99Manager.s.sol";
+import {HelperConfig} from "../../script/ACP99/HelperConfig.s.sol";
+import {ACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
+import {IACP99Manager} from "../../src/interfaces/ACP99/IACP99Manager.sol";
 import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
 import {Test, console} from "forge-std/Test.sol";
 
-contract ValidatorSetManagerTest is Test {
+contract ACP99ManagerTest is Test {
     event SetSecurityModule(address indexed securityModule);
     event InitiateValidatorRegistration(
         bytes32 indexed nodeID,
@@ -49,7 +47,7 @@ contract ValidatorSetManagerTest is Test {
     bytes32 constant VALIDATION_ID =
         0x8f1e3878d6f56add95f8f62db483fcb58b75a7c8b15064135d207828be5dbf6b;
 
-    ValidatorSetManager validatorSetManager;
+    ACP99Manager validatorSetManager;
     uint256 deployerKey;
     address deployerAddress;
     bytes32 subnetID;
@@ -63,7 +61,7 @@ contract ValidatorSetManagerTest is Test {
             new WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
         vm.etch(WARP_MESSENGER_ADDRESS, address(warpMessengerTestMock).code);
 
-        DeployValidatorSetManager validatorSetManagerDeployer = new DeployValidatorSetManager();
+        DeployACP99Manager validatorSetManagerDeployer = new DeployACP99Manager();
         (validatorSetManager) = validatorSetManagerDeployer.run();
 
         // Warp to 2024-01-01 00:00:00
@@ -141,17 +139,16 @@ contract ValidatorSetManagerTest is Test {
         );
 
         // Assert
-        IValidatorSetManager.Validation memory validation =
+        IACP99Manager.Validation memory validation =
             validatorSetManager.getSubnetValidation(validationID);
-        assert(validation.status == IValidatorSetManager.ValidationStatus.Registering);
+        assert(validation.status == IACP99Manager.ValidationStatus.Registering);
         assert(validatorSetManager.pendingRegisterValidationMessages(validationID).length > 0);
         assertEq(validation.nodeID, nodeID);
         assertEq(validation.periods.length, 1);
         assertEq(validation.periods[0].weight, weight);
         assertEq(validation.periods[0].startTime, 0);
         assertEq(validation.periods[0].endTime, 0);
-        assertEq(validation.periods[0].uptimeSeconds, 0);
-        assertEq(validation.totalUptimeSeconds, 0);
+        assertEq(validation.uptimeSeconds, 0);
     }
 
     function testInitiateValidatorRegistrationEmitsEvent() external {
@@ -184,7 +181,7 @@ contract ValidatorSetManagerTest is Test {
         vm.startPrank(deployerAddress);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IValidatorSetManager.ValidatorSetManager__InvalidExpiry.selector,
+                IACP99Manager.ACP99Manager__InvalidExpiry.selector,
                 registrationExpiryTooSoon,
                 block.timestamp
             )
@@ -194,7 +191,7 @@ contract ValidatorSetManagerTest is Test {
         );
         vm.expectRevert(
             abi.encodeWithSelector(
-                IValidatorSetManager.ValidatorSetManager__InvalidExpiry.selector,
+                IACP99Manager.ACP99Manager__InvalidExpiry.selector,
                 registrationExpiryTooLate,
                 block.timestamp
             )
@@ -215,7 +212,7 @@ contract ValidatorSetManagerTest is Test {
 
         // Act
         vm.prank(deployerAddress);
-        vm.expectRevert(IValidatorSetManager.ValidatorSetManager__ZeroNodeID.selector);
+        vm.expectRevert(IACP99Manager.ACP99Manager__ZeroNodeID.selector);
         validatorSetManager.initiateValidatorRegistration(
             bytes32(0), weight, registrationExpiry, signature
         );
@@ -232,12 +229,13 @@ contract ValidatorSetManagerTest is Test {
         );
 
         // Assert
-        IValidatorSetManager.Validation memory validation =
+        IACP99Manager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
-        assert(validation.status == IValidatorSetManager.ValidationStatus.Active);
+        assert(validation.status == IACP99Manager.ValidationStatus.Active);
         assertEq(validation.periods[0].startTime, block.timestamp);
 
-        bytes32 validationID = validatorSetManager.activeValidators(VALIDATOR_NODE_ID);
+        bytes32 validationID =
+            validatorSetManager.getSubnetValidatorActiveValidation(VALIDATOR_NODE_ID);
         assertEq(validationID, VALIDATION_ID);
     }
 
@@ -272,16 +270,15 @@ contract ValidatorSetManagerTest is Test {
         );
 
         // Assert
-        IValidatorSetManager.Validation memory validation =
+        IACP99Manager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
-        assert(validation.status == IValidatorSetManager.ValidationStatus.Updating);
+        assert(validation.status == IACP99Manager.ValidationStatus.Updating);
         assertEq(validation.periods[0].endTime, block.timestamp);
-        assert(validation.periods[0].uptimeSeconds > 0);
+        assert(validation.uptimeSeconds > 0);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, 0);
         assertEq(validation.periods[1].endTime, 0);
-        assertEq(validation.periods[1].uptimeSeconds, 0);
     }
 
     function testInitiateValidatorWeightUpdateEmitsEvent()
@@ -302,6 +299,31 @@ contract ValidatorSetManagerTest is Test {
         );
     }
 
+    function testInitiateValidatorRemovalUpdatesState()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 0;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+
+        // Act
+        vm.prank(deployerAddress);
+        validatorSetManager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
+
+        // Assert
+        IACP99Manager.Validation memory validation =
+            validatorSetManager.getSubnetValidation(VALIDATION_ID);
+        assert(validation.status == IACP99Manager.ValidationStatus.Removing);
+        assertEq(validation.endTime, block.timestamp);
+        assertEq(validation.periods[0].endTime, block.timestamp);
+        assert(validation.uptimeSeconds > 0);
+        assertEq(validation.periods.length, 1);
+    }
+
     function testInitiateValidatorWeightUpdateRevertsInvalidNodeID()
         external
         validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
@@ -313,8 +335,7 @@ contract ValidatorSetManagerTest is Test {
         vm.startPrank(deployerAddress);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IValidatorSetManager.ValidatorSetManager__NodeIDNotActiveValidator.selector,
-                bytes32(uint256(2))
+                IACP99Manager.ACP99Manager__NodeIDNotActiveValidator.selector, bytes32(uint256(2))
             )
         );
         validatorSetManager.initiateValidatorWeightUpdate(
@@ -340,13 +361,12 @@ contract ValidatorSetManagerTest is Test {
         validatorSetManager.completeValidatorWeightUpdate(SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_INDEX);
 
         // Assert
-        IValidatorSetManager.Validation memory validation =
+        IACP99Manager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
-        assert(validation.status == IValidatorSetManager.ValidationStatus.Active);
+        assert(validation.status == IACP99Manager.ValidationStatus.Active);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, block.timestamp);
         assertEq(validation.periods[1].endTime, 0);
-        assertEq(validation.periods[1].uptimeSeconds, -3600);
     }
 
     function testCompleteValidatorWeightUpdateEmitsEvent()
@@ -369,7 +389,7 @@ contract ValidatorSetManagerTest is Test {
         validatorSetManager.completeValidatorWeightUpdate(SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_INDEX);
     }
 
-    function testCompleteValidationUpdatesState()
+    function testCompleteValidatorRemovalUpdatesState()
         external
         validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
     {
@@ -387,12 +407,16 @@ contract ValidatorSetManagerTest is Test {
         validatorSetManager.completeValidatorWeightUpdate(COMPLETE_VALIDATION_MESSAGE_INDEX);
 
         // Assert
-        IValidatorSetManager.Validation memory validation =
+        IACP99Manager.Validation memory validation =
             validatorSetManager.getSubnetValidation(VALIDATION_ID);
-        assert(validation.status == IValidatorSetManager.ValidationStatus.Completed);
+        assert(validation.status == IACP99Manager.ValidationStatus.Completed);
+
+        vm.expectRevert();
+        bytes32 validationID =
+            validatorSetManager.getSubnetValidatorActiveValidation(VALIDATOR_NODE_ID);
     }
 
-    function testCompleteValidationEmitsEvent()
+    function testCompleteValidatorRemovalEmitsEvent()
         external
         validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
     {

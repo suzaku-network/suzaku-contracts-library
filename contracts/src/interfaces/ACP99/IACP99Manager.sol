@@ -6,7 +6,7 @@
 pragma solidity 0.8.18;
 
 /// @custom:security-contact security@suzaku.network
-interface IValidatorSetManager {
+interface IACP99Manager {
     /// @notice Subnet validation status
     enum ValidationStatus {
         Registering,
@@ -21,15 +21,17 @@ interface IValidatorSetManager {
      * @notice Subnet validation
      * @param status The validation status
      * @param nodeID The NodeID of the validator
-     * @param periods The list of validation periods
+     * @param periods The list of validation periods.
      * The index is the nonce associated with the weight update.
-     * @param totalUptimeSeconds The total uptime of the validator
+     * @param uptimeSeconds The uptime of the validator for this validation
      */
     struct Validation {
         ValidationStatus status;
         bytes32 nodeID;
+        uint64 startTime;
+        uint64 endTime;
         ValidationPeriod[] periods;
-        uint64 totalUptimeSeconds;
+        uint64 uptimeSeconds;
     }
 
     /**
@@ -37,13 +39,11 @@ interface IValidatorSetManager {
      * @param weight The weight of the validator during the period
      * @param startTime The start time of the validation period
      * @param endTime The end time of the validation period (only ≠ 0 when the period is over)
-     * @param uptimeSeconds The uptime of the validator during this validation period (only > 0 once the validation period is over)
      */
     struct ValidationPeriod {
         uint64 weight;
         uint64 startTime;
         uint64 endTime;
-        int64 uptimeSeconds;
     }
 
     /// @notice Emitted when the security module address is set
@@ -75,21 +75,20 @@ interface IValidatorSetManager {
         bytes32 indexed nodeID, bytes32 indexed validationID, uint64 nonce, uint64 weight
     );
 
-    error ValidatorSetManager__OnlySecurityModule(address sender, address securityModule);
-    error ValidatorSetManager__InvalidExpiry(uint64 expiry, uint256 timestamp);
-    error ValidatorSetManager__ZeroNodeID();
-    error ValidatorSetManager__NodeIDAlreadyValidator(bytes32 nodeID);
-    error ValidatorSetManager__InvalidSignatureLength(uint256 length);
-    error ValidatorSetManager__InvalidValidationID(bytes32 validationID);
-    error ValidatorSetManager__InvalidWarpMessage();
-    error ValidatorSetManager__InvalidSourceChainID(bytes32 sourceChainID);
-    error ValidatorSetManager__InvalidOriginSenderAddress(address originSenderAddress);
-    error ValidatorSetManager__InvalidRegistration();
-    error ValidatorSetManager__NodeIDNotActiveValidator(bytes32 nodeID);
-    error ValidatorSetManager__InvalidUptimeValidationID(bytes32 validationID);
-    error ValidatorSetManager__InvalidSetSubnetValidatorWeightNonce(
-        uint64 nonce, uint64 currentNonce
-    );
+    error ACP99Manager__ZeroAddressSecurityModule();
+    error ACP99Manager__OnlySecurityModule(address sender, address securityModule);
+    error ACP99Manager__InvalidExpiry(uint64 expiry, uint256 timestamp);
+    error ACP99Manager__ZeroNodeID();
+    error ACP99Manager__NodeIDAlreadyValidator(bytes32 nodeID);
+    error ACP99Manager__InvalidSignatureLength(uint256 length);
+    error ACP99Manager__InvalidValidationID(bytes32 validationID);
+    error ACP99Manager__InvalidWarpMessage();
+    error ACP99Manager__InvalidSourceChainID(bytes32 sourceChainID);
+    error ACP99Manager__InvalidOriginSenderAddress(address originSenderAddress);
+    error ACP99Manager__InvalidRegistration();
+    error ACP99Manager__NodeIDNotActiveValidator(bytes32 nodeID);
+    error ACP99Manager__InvalidUptimeValidationID(bytes32 validationID);
+    error ACP99Manager__InvalidSetSubnetValidatorWeightNonce(uint64 nonce, uint64 currentNonce);
 
     /// @notice Get the ID of the Subnet tied to this manager
     function subnetID() external view returns (bytes32);
@@ -97,8 +96,11 @@ interface IValidatorSetManager {
     /// @notice Get the address of the security module attached to this manager
     function securityModule() external view returns (address);
 
+    /// @notice Get a Subnet validator's active validation ID
+    function getSubnetValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32);
+
     /// @notice Get the current Subnet validator set (list of NodeIDs)
-    function getSubnetCurrentValidatorSet() external view returns (bytes32[] memory);
+    function getSubnetActiveValidatorSet() external view returns (bytes32[] memory);
 
     /// @notice Get the total weight of the current Subnet validator set
     function subnetTotalWeight() external view returns (uint64);
@@ -128,7 +130,7 @@ interface IValidatorSetManager {
      * Only necessary if the original message can't be delivered due to validator churn.
      * @param validationID The validationID attached to the registration message
      */
-    function resendValidatorRegistrationMessage(bytes32 validationID) external;
+    function resendValidatorRegistrationMessage(bytes32 validationID) external returns (bytes32);
 
     /**
      * @notice Completes the validator registration process by returning an acknowledgement of the registration of a
@@ -138,7 +140,9 @@ interface IValidatorSetManager {
     function completeValidatorRegistration(uint32 messageIndex) external;
 
     /**
-     * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message
+     * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message.
+     * If the weight is 0, this initiates the removal of the validator from the Subnet. An uptime proof can be
+     * included. This proof might be required to claim validator rewards (handled by the security module).
      * @param nodeID The ID of the node to modify
      * @param weight The new weight of the node on the Subnet
      * @param includesUptimeProof Whether the uptime proof is included in the message
@@ -157,11 +161,4 @@ interface IValidatorSetManager {
      * @param messageIndex The index of the Warp message to be received providing the acknowledgement.
      */
     function completeValidatorWeightUpdate(uint32 messageIndex) external;
-
-    // /**
-    //  * @notice Issue a SetSubnetValidatorManagerTx
-    //  * @param blockchainID The ID of the chain on which the Subnet validator manager is located
-    //  * @param managerAddress The address of the Subnet validator set manager
-    //  */
-    // function setSubnetManager(bytes32 blockchainID, address managerAddress) external;
 }
