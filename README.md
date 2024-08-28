@@ -25,13 +25,15 @@ Foundry deployment scripts for [Avalanche ICTT](https://github.com/ava-labs/aval
 
 Those scripts make use of environment variables to deploy the contracts. See [HelperConfig.s.sol](contracts/script/Teleporter/HelperConfig.s.sol) for more details.
 
-### ACP99Manager library
+### ACP99 contracts library
 
 #### Contracts, libraries and interfaces
 
-- The [SubnetValidatorMessages](contracts/src/contracts/ACP99/SubnetValidatorMessages.sol) library provides utility functions to encode and decode validator set update Warp messages.
-- The [ACP99Manager](contracts/src/contracts/ACP99/ACP99Manager.sol) contract can be set as the `SubnetManager` address of a Subnet to manage a its validator set. It follows the [ACP-99](https://github.com/Nuttymoon/ACPs/blob/validatorsetmanager-solidity-contract/ACPs/99-validatorsetmanager-contract/README.md) standard.
-- The [IACP99Manager](contracts/src/interfaces/ACP99/IACP99Manager.sol) interface defines the functions that a contract must implement to be a `ACP99Manager`.
+- The [ValidatorMessages](contracts/src/contracts/ACP99/ValidatorMessages.sol) library provides utility functions to encode and decode validator set update Warp messages.
+- The [ACP99Manager](contracts/src/contracts/ACP99/ACP99Manager.sol) contract can be set as the `SubnetManager` address of a Subnet to manage its validator set. It follows the [ACP-99](https://github.com/Nuttymoon/ACPs/blob/validatorsetmanager-solidity-contract/ACPs/99-validatorsetmanager-contract/README.md) standard.
+- The [IACP99Manager](contracts/src/interfaces/ACP99/IACP99Manager.sol) interface defines the functions that a contract must implement to be an `ACP99Manager`.
+- The [IACP99SecurityModule](contracts/src/interfaces/ACP99/IACP99SecurityModule.sol) interface defines the functions that a security module must implement to work with the `ACP99Manager`.
+- The [ACP99PoAModule](contracts/src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol) contract is an example implementation of a Proof-of-Authority security module that works with the `ACP99Manager`.
 
 ## Usage
 
