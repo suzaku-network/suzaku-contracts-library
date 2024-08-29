@@ -21,8 +21,11 @@ interface IACP99Manager {
      * @notice Subnet validation
      * @param status The validation status
      * @param nodeID The NodeID of the validator
+     * @param startTime The start time of the validation
+     * @param endTime The end time of the validation
      * @param periods The list of validation periods.
      * The index is the nonce associated with the weight update.
+     * @param activeSeconds The time during which the validator was active during this validation
      * @param uptimeSeconds The uptime of the validator for this validation
      */
     struct Validation {

@@ -12,7 +12,7 @@ import {Ownable2Step} from "@openzeppelin/contracts@4.9.6/access/Ownable2Step.so
 contract ACP99PoAModule is Ownable2Step, IACP99SecurityModule {
     IACP99Manager public manager;
 
-    constructor(address _manager) {
+    constructor(address _manager) Ownable2Step() {
         if (_manager == address(0)) {
             revert ACP99SecurityModule__ZeroAddressManager();
         }
