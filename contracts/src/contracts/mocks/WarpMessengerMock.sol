@@ -1,7 +1,5 @@
-// (c) 2024, ADDPHO All rights reserved.
-// See the file LICENSE_MIT for licensing terms.
-
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
 pragma solidity 0.8.18;
 
