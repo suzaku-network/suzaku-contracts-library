@@ -1,7 +1,5 @@
-// (c) 2024, ADDPHO All rights reserved.
-// See the file LICENSE_BUSL for licensing terms.
-
 // SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
 // Compatible with OpenZeppelin Contracts ^4.9.0
 

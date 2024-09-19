@@ -1,7 +1,5 @@
-// (c) 2023, Ava Labs, Inc. All rights reserved.
-// See the file LICENSE_ECOSYSTEM for licensing terms.
-
 // SPDX-License-Identifier: Ecosystem
+// SPDX-FileCopyrightText: Copyright 2023 Ava Labs, Inc.
 
 pragma solidity 0.8.18;
 
