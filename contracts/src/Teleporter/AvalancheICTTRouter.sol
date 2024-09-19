@@ -1,7 +1,6 @@
-// (c) 2024, ADDPHO All rights reserved.
-// See the file LICENSE for licensing terms.
-
 // SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: Copyright 2024 ADDPHO
+
 // Compatible with OpenZeppelin Contracts ^4.8.0
 
 pragma solidity 0.8.18;
