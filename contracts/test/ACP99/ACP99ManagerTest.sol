@@ -7,11 +7,15 @@ import {HelperConfig} from "../../script/ACP99/HelperConfig.s.sol";
 import {DeployACP99PoAModule} from "../../script/ACP99/SecurityModules/DeployACP99PoAModule.s.sol";
 import {ACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
 import {ACP99PoAModule} from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
+import {ValidatorMessages} from "../../src/contracts/ACP99/ValidatorMessages.sol";
 import {IACP99Manager} from "../../src/interfaces/ACP99/IACP99Manager.sol";
 import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract ACP99ManagerTest is Test {
+    event RegisterInitialValidator(
+        bytes32 indexed nodeID, bytes32 indexed validationID, uint64 weight
+    );
     event SetSecurityModule(address indexed securityModule);
     event InitiateValidatorRegistration(
         bytes32 indexed nodeID,
@@ -21,10 +25,7 @@ contract ACP99ManagerTest is Test {
         uint64 registrationExpiry
     );
     event CompleteValidatorRegistration(
-        bytes32 indexed nodeID,
-        bytes32 indexed validationID,
-        uint64 weight,
-        uint64 validationPeriodStartTime
+        bytes32 indexed nodeID, bytes32 indexed validationID, uint64 weight
     );
     event InitiateValidatorWeightUpdate(
         bytes32 indexed nodeID,
@@ -36,16 +37,19 @@ contract ACP99ManagerTest is Test {
         bytes32 indexed nodeID, bytes32 indexed validationID, uint64 nonce, uint64 weight
     );
 
-    uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 2;
-    uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 3;
-    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 4;
-    uint32 constant COMPLETE_VALIDATION_MESSAGE_INDEX = 5;
+    bytes32 private constant ANVIL_CHAIN_ID_HEX =
+        0x7a69000000000000000000000000000000000000000000000000000000000000;
+    uint32 constant INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX = 2;
+    uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 3;
+    uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
+    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
+    uint32 constant COMPLETE_VALIDATION_MESSAGE_INDEX = 6;
     address constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
     bytes32 constant VALIDATOR_NODE_ID = bytes32(uint256(1));
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 100;
     bytes32 constant VALIDATION_ID =
-        0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2;
+        0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372;
 
     ACP99Manager manager;
     ACP99PoAModule poaModule;
@@ -73,7 +77,7 @@ contract ACP99ManagerTest is Test {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.prank(address(poaModule));
-        // validationID = 0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2
+        // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         manager.initiateValidatorRegistration(
             nodeID, weight, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
         );
@@ -85,7 +89,7 @@ contract ACP99ManagerTest is Test {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.startPrank(address(poaModule));
-        // validationID = 0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2
+        // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         manager.initiateValidatorRegistration(
             nodeID, weight, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
         );
@@ -121,6 +125,83 @@ contract ACP99ManagerTest is Test {
         vm.expectEmit(true, false, false, false, address(manager));
         emit SetSecurityModule(newSecurityModule);
         manager.setSecurityModule(newSecurityModule);
+    }
+
+    function generateSubnetConversionData()
+        private
+        view
+        returns (ValidatorMessages.SubnetConversionData memory)
+    {
+        ValidatorMessages.InitialValidator[] memory initialValidators =
+            new ValidatorMessages.InitialValidator[](2);
+        initialValidators[0] = ValidatorMessages.InitialValidator({
+            nodeID: bytes32(uint256(2)),
+            weight: 100,
+            blsPublicKey: VALIDATOR_BLS_PUBLIC_KEY
+        });
+        initialValidators[1] = ValidatorMessages.InitialValidator({
+            nodeID: bytes32(uint256(3)),
+            weight: 100,
+            blsPublicKey: VALIDATOR_BLS_PUBLIC_KEY
+        });
+        ValidatorMessages.SubnetConversionData memory subnetConversionData = ValidatorMessages
+            .SubnetConversionData({
+            convertSubnetTxID: bytes32(uint256(1)),
+            validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
+            validatorManagerAddress: address(manager),
+            initialValidators: initialValidators
+        });
+        return subnetConversionData;
+    }
+
+    function testInitializeValidatiorSetUpdatesState() external {
+        // Arrange
+        ValidatorMessages.SubnetConversionData memory subnetConversionData =
+            generateSubnetConversionData();
+
+        // Act
+        vm.prank(deployerAddress);
+        manager.initializeValidatorSet(subnetConversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX);
+
+        // Assert
+        assert(manager.initializedValidatorSet());
+        assertEq(manager.subnetTotalWeight(), 200);
+        assertEq(manager.getActiveValidatorSet().length, 2);
+        assertEq(manager.getActiveValidatorSet()[0], bytes32(uint256(2)));
+        assertEq(manager.getActiveValidatorSet()[1], bytes32(uint256(3)));
+        IACP99Manager.Validation memory validation = manager.getValidation(
+            sha256(abi.encodePacked(subnetConversionData.convertSubnetTxID, uint32(0)))
+        );
+        assertEq(validation.nodeID, bytes32(uint256(2)));
+        assertEq(validation.periods[0].weight, 100);
+        assertEq(validation.periods[0].startTime, block.timestamp);
+    }
+
+    function testInitializeValidatorSetEmitsEvent() external {
+        // Arrange
+        ValidatorMessages.SubnetConversionData memory subnetConversionData =
+            generateSubnetConversionData();
+
+        // Act
+        vm.prank(deployerAddress);
+        // We don't check the validationID
+        vm.expectEmit(true, false, false, false, address(manager));
+        emit RegisterInitialValidator(bytes32(uint256(2)), VALIDATION_ID, 100);
+        emit RegisterInitialValidator(bytes32(uint256(3)), VALIDATION_ID, 100);
+        manager.initializeValidatorSet(subnetConversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX);
+    }
+
+    function testInitializeValidatorSetRevertsIfAlreadyInitialized() external {
+        // Arrange
+        ValidatorMessages.SubnetConversionData memory subnetConversionData =
+            generateSubnetConversionData();
+        vm.prank(deployerAddress);
+        manager.initializeValidatorSet(subnetConversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX);
+
+        // Act
+        vm.prank(deployerAddress);
+        vm.expectRevert(IACP99Manager.ACP99Manager__ValidatorSetAlreadyInitialized.selector);
+        manager.initializeValidatorSet(subnetConversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX);
     }
 
     function testInitiateValidatorRegistrationUpdatesState() external {
@@ -230,9 +311,7 @@ contract ACP99ManagerTest is Test {
         // Act
         vm.prank(address(poaModule));
         vm.expectEmit(true, true, false, false, address(manager));
-        emit CompleteValidatorRegistration(
-            VALIDATOR_NODE_ID, VALIDATION_ID, VALIDATOR_WEIGHT, uint64(block.timestamp)
-        );
+        emit CompleteValidatorRegistration(VALIDATOR_NODE_ID, VALIDATION_ID, VALIDATOR_WEIGHT);
         manager.completeValidatorRegistration(COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX);
     }
 

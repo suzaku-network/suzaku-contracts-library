@@ -22,7 +22,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     using EnumerableMap for EnumerableMap.Bytes32ToBytes32Map;
 
     bytes32 private constant P_CHAIN_ID_HEX = bytes32(0);
-    address private constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
+    address private constant WARP_MESSENGER_ADDR = 0x0200000000000000000000000000000000000005;
 
     /// @notice The WarpMessenger contract
     IWarpMessenger private immutable warpMessenger;
@@ -32,6 +32,9 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
     /// @notice The address of the security module attached to this manager
     IACP99SecurityModule private securityModule;
+
+    /// @notice Whether the validator set has been initialized
+    bool public initializedValidatorSet;
 
     /**
      * @notice The active validators of the Subnet
@@ -73,15 +76,12 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             revert ACP99Manager__ZeroAddressSecurityModule();
         }
 
-        warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDRESS);
+        warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDR);
         subnetID = subnetID_;
         securityModule = IACP99SecurityModule(securityModule_);
     }
 
-    /**
-     * @notice Set the address of the security module attached to this manager
-     * @param securityModule_ The address of the security module
-     */
+    /// @inheritdoc IACP99Manager
     function setSecurityModule(address securityModule_) external onlyOwner {
         if (securityModule_ == address(0)) {
             revert ACP99Manager__ZeroAddressSecurityModule();
@@ -89,6 +89,82 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         securityModule = IACP99SecurityModule(securityModule_);
         emit SetSecurityModule(securityModule_);
+    }
+
+    /// @inheritdoc IACP99Manager
+    function initializeValidatorSet(
+        ValidatorMessages.SubnetConversionData calldata subnetConversionData,
+        uint32 messageIndex
+    ) external {
+        if (initializedValidatorSet) {
+            revert ACP99Manager__ValidatorSetAlreadyInitialized();
+        }
+        // Check that the blockchainID and validator manager address in the subnetConversionData correspond to this contract.
+        if (subnetConversionData.validatorManagerBlockchainID != warpMessenger.getBlockchainID()) {
+            revert ACP99Manager__InvalidManagerBlockchainID(
+                subnetConversionData.validatorManagerBlockchainID, warpMessenger.getBlockchainID()
+            );
+        }
+        if (address(subnetConversionData.validatorManagerAddress) != address(this)) {
+            revert ACP99Manager__InvalidManagerAddress(
+                subnetConversionData.validatorManagerAddress, address(this)
+            );
+        }
+
+        uint256 numInitialValidators = subnetConversionData.initialValidators.length;
+
+        uint64 totalWeight;
+        for (uint32 i; i < numInitialValidators; ++i) {
+            ValidatorMessages.InitialValidator memory initialValidator =
+                subnetConversionData.initialValidators[i];
+            bytes32 nodeID = initialValidator.nodeID;
+
+            if (activeValidators.contains(nodeID)) {
+                revert ACP99Manager__NodeAlreadyValidator(nodeID);
+            }
+
+            // Validation ID of the initial validators is the sha256 hash of the
+            // convert Subnet tx ID and the index of the initial validator.
+            bytes32 validationID =
+                sha256(abi.encodePacked(subnetConversionData.convertSubnetTxID, i));
+
+            // Save the initial validator as an active validator.
+
+            activeValidators.set(nodeID, validationID);
+            Validation storage validation = subnetValidations[validationID];
+            validation.status = ValidationStatus.Active;
+            validation.nodeID = initialValidator.nodeID;
+            validation.startTime = uint64(block.timestamp);
+            validation.periods.push(
+                IACP99Manager.ValidationPeriod({
+                    weight: initialValidator.weight,
+                    startTime: uint64(block.timestamp),
+                    endTime: 0
+                })
+            );
+            totalWeight += initialValidator.weight;
+
+            emit RegisterInitialValidator(
+                initialValidator.nodeID, validationID, initialValidator.weight
+            );
+        }
+        subnetTotalWeight = totalWeight;
+
+        // Verify that the sha256 hash of the Subnet conversion data matches with the Warp message's subnetConversionID.
+        WarpMessage memory warpMessage = _getPChainWarpMessage(messageIndex);
+        // Parse the Warp message into SubnetConversionMessage
+        bytes32 messageSubnetConversionID =
+            ValidatorMessages.unpackSubnetConversionMessage(warpMessage.payload);
+        bytes memory encodedConversion =
+            ValidatorMessages.packSubnetConversionData(subnetConversionData);
+        bytes32 subnetConversionID = sha256(encodedConversion);
+        if (subnetConversionID != messageSubnetConversionID) {
+            revert ACP99Manager__InvalidSubnetConversionID(
+                subnetConversionID, messageSubnetConversionID
+            );
+        }
+
+        initializedValidatorSet = true;
     }
 
     /// @inheritdoc IACP99Manager
@@ -108,7 +184,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             revert ACP99Manager__ZeroNodeID();
         }
         if (activeValidators.contains(nodeID)) {
-            revert ACP99Manager__NodeIDAlreadyValidator(nodeID);
+            revert ACP99Manager__NodeAlreadyValidator(nodeID);
         }
 
         // Ensure the signature is the proper length. The EVM does not provide an Ed25519 precompile to
@@ -121,7 +197,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         (bytes32 validationID, bytes memory registrationMessage) = ValidatorMessages
             .packRegisterSubnetValidatorMessage(
-            ValidatorMessages.ValidationInfo({
+            ValidatorMessages.ValidationPeriod({
                 subnetID: subnetID,
                 nodeID: nodeID,
                 weight: weight,
@@ -160,18 +236,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
     /// @inheritdoc IACP99Manager
     function completeValidatorRegistration(uint32 messageIndex) external {
-        (WarpMessage memory warpMessage, bool valid) =
-            warpMessenger.getVerifiedWarpMessage(messageIndex);
-        if (!valid) {
-            revert ACP99Manager__InvalidWarpMessage();
-        }
-
-        if (warpMessage.sourceChainID != P_CHAIN_ID_HEX) {
-            revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
-        }
-        if (warpMessage.originSenderAddress != address(0)) {
-            revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
-        }
+        WarpMessage memory warpMessage = _getPChainWarpMessage(messageIndex);
 
         (bytes32 validationID, bool validRegistration) =
             ValidatorMessages.unpackSubnetValidatorRegistrationMessage(warpMessage.payload);
@@ -206,7 +271,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         );
 
         emit CompleteValidatorRegistration(
-            validation.nodeID, validationID, validation.periods[0].weight, uint64(block.timestamp)
+            validation.nodeID, validationID, validation.periods[0].weight
         );
     }
 
@@ -278,20 +343,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
     /// @inheritdoc IACP99Manager
     function completeValidatorWeightUpdate(uint32 messageIndex) external {
-        // Get the Warp message.
-        (WarpMessage memory warpMessage, bool valid) =
-            warpMessenger.getVerifiedWarpMessage(messageIndex);
-        if (!valid) {
-            revert ACP99Manager__InvalidWarpMessage();
-        }
-
-        if (warpMessage.sourceChainID != P_CHAIN_ID_HEX) {
-            revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
-        }
-        if (warpMessage.originSenderAddress != address(0)) {
-            revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
-        }
-
+        WarpMessage memory warpMessage = _getPChainWarpMessage(messageIndex);
         (bytes32 validationID, uint64 nonce, uint64 weight) =
             ValidatorMessages.unpackSetSubnetValidatorWeightMessage(warpMessage.payload);
         Validation storage validation = subnetValidations[validationID];
@@ -325,6 +377,24 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         _notifySecurityModuleValidatorWeightUpdate(validationID, nonce, weight);
 
         emit CompleteValidatorWeightUpdate(validation.nodeID, validationID, nonce, weight);
+    }
+
+    /// @dev Get the Warp message from the P-Chain and verify that it is valid and from the P-Chain
+    function _getPChainWarpMessage(uint32 messageIndex) private view returns (WarpMessage memory) {
+        (WarpMessage memory warpMessage, bool valid) =
+            warpMessenger.getVerifiedWarpMessage(messageIndex);
+        if (!valid) {
+            revert ACP99Manager__InvalidWarpMessage();
+        }
+
+        if (warpMessage.sourceChainID != P_CHAIN_ID_HEX) {
+            revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
+        }
+        if (warpMessage.originSenderAddress != address(0)) {
+            revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
+        }
+
+        return warpMessage;
     }
 
     function _notifySecurityModuleValidatorWeightUpdate(
