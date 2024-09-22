@@ -23,8 +23,9 @@ contract WarpMessengerTestMock {
         0x1000000000000000000000000000000000000000000000000000000000000000;
     bytes32 private constant MESSAGE_ID =
         0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
+    address private constant VALIDATOR_MANAGER_ADDRESS = 0xf06FD5A15c8333CcC2b336D72ECE381c88cB657f;
     bytes32 private constant VALIDATION_ID =
-        0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2;
+        0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372;
     uint64 private constant VALIDATION_UPTIME_SECONDS = uint64(2_544_480);
 
     address private immutable tokenHomeAddress;
@@ -47,22 +48,25 @@ contract WarpMessengerTestMock {
 
     // Mocks valid warp messages for testing
     // messageIndex = 1: RegisterRemoteMessage used for AvalancheICTTRouter tests
-    // messageIndex = 2: SubnetValidatorRegistrationMessage used for ACP99Manager tests
-    // messageIndex = 3: ValidatorUptimeMessage used for ACP99Manager tests
-    // messageIndex = 4: ValidatorWeightUpdateMessage used for ACP99Manager tests (weight = 200)
-    // messageIndex = 5: ValidatorWeightUpdateMessage used for ACP99Manager tests (weight = 0)
+    // messageIndex = 2: InitializeValidatorSetMessage used for ACP99Manager tests
+    // messageIndex = 3: SubnetValidatorRegistrationMessage used for ACP99Manager tests
+    // messageIndex = 4: ValidatorUptimeMessage used for ACP99Manager tests
+    // messageIndex = 5: ValidatorWeightUpdateMessage used for ACP99Manager tests (weight = 200)
+    // messageIndex = 6: ValidatorWeightUpdateMessage used for ACP99Manager tests (weight = 0)
     function getVerifiedWarpMessage(
         uint32 messageIndex
     ) external view returns (WarpMessage memory message, bool valid) {
         if (messageIndex == 1) {
             return _registerRemoteWarpMessage();
         } else if (messageIndex == 2) {
-            return _subnetValidatorRegistrationWarpMessage();
+            return _initializeValidatorSetWarpMessage();
         } else if (messageIndex == 3) {
-            return _validatorUptimeWarpMessage();
+            return _validatorRegistrationWarpMessage();
         } else if (messageIndex == 4) {
-            return _validatorWeightUpdateWarpMessage();
+            return _validatorUptimeWarpMessage();
         } else if (messageIndex == 5) {
+            return _validatorWeightUpdateWarpMessage();
+        } else if (messageIndex == 6) {
             return _validatorWeightZeroWarpMessage();
         }
     }
@@ -98,11 +102,41 @@ contract WarpMessengerTestMock {
         return (warpMessage, true);
     }
 
-    function _subnetValidatorRegistrationWarpMessage()
-        private
-        pure
-        returns (WarpMessage memory, bool)
-    {
+    function _initializeValidatorSetWarpMessage() private pure returns (WarpMessage memory, bool) {
+        ValidatorMessages.InitialValidator[] memory initialValidators =
+            new ValidatorMessages.InitialValidator[](2);
+        initialValidators[0] = ValidatorMessages.InitialValidator({
+            nodeID: bytes32(uint256(2)),
+            weight: 100,
+            blsPublicKey: new bytes(48)
+        });
+        initialValidators[1] = ValidatorMessages.InitialValidator({
+            nodeID: bytes32(uint256(3)),
+            weight: 100,
+            blsPublicKey: new bytes(48)
+        });
+        ValidatorMessages.SubnetConversionData memory subnetConversionData = ValidatorMessages
+            .SubnetConversionData({
+            convertSubnetTxID: bytes32(uint256(1)),
+            validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
+            validatorManagerAddress: VALIDATOR_MANAGER_ADDRESS,
+            initialValidators: initialValidators
+        });
+
+        WarpMessage memory warpMessage = WarpMessage({
+            sourceChainID: P_CHAIN_ID_HEX,
+            originSenderAddress: address(0),
+            payload: abi.encodePacked(
+                ValidatorMessages.CODEC_ID,
+                ValidatorMessages.SUBNET_CONVERSION_MESSAGE_TYPE_ID,
+                sha256(ValidatorMessages.packSubnetConversionData(subnetConversionData))
+            )
+        });
+
+        return (warpMessage, true);
+    }
+
+    function _validatorRegistrationWarpMessage() private pure returns (WarpMessage memory, bool) {
         WarpMessage memory warpMessage = WarpMessage({
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),

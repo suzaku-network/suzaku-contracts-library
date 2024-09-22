@@ -19,15 +19,15 @@ contract ACP99PoAModuleTest is Test {
     event ValidatorRemoved(bytes32 indexed nodeID);
     event ValidatorWeightUpdated(bytes32 indexed nodeID, uint64 newWeight);
 
-    uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 2;
-    uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 3;
-    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 4;
+    uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 3;
+    uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
+    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
     address constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
     bytes32 constant VALIDATOR_NODE_ID = bytes32(uint256(1));
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 100;
     bytes32 constant VALIDATION_ID =
-        0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2;
+        0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372;
 
     ACP99PoAModule poaModule;
     uint256 deployerKey;
@@ -55,7 +55,7 @@ contract ACP99PoAModuleTest is Test {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.prank(deployerAddress);
-        // validationID = 0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2
+        // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         poaModule.addValidator(
             VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
         );
@@ -66,7 +66,7 @@ contract ACP99PoAModuleTest is Test {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.startPrank(deployerAddress);
-        // validationID = 0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2
+        // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         poaModule.addValidator(
             VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
         );
