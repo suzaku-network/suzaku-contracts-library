@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.18;
 
 import {ValidatorMessages} from "../../contracts/ACP99/ValidatorMessages.sol";
 
