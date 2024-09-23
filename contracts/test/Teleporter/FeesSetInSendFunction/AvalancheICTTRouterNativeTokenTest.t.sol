@@ -3,9 +3,10 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
-import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
+import {AvalancheICTTRouterFreeFees} from
+    "../../../src/contracts/Teleporter/AvalancheICTTRouterFreeFees.sol";
+import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -18,7 +19,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME);
+    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME, 0);
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
     uint256 secondaryRelayerFeeBips;
@@ -26,7 +27,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
     WrappedNativeToken wrappedToken;
     NativeTokenHome tokenHome;
     address tokenRemote;
-    AvalancheICTTRouter tokenBridgeRouter;
+    AvalancheICTTRouterFreeFees tokenBridgeRouter;
     bytes32 homeChainID;
     bytes32 remoteChainID;
     address owner;
@@ -48,6 +49,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
             tokenHome,
             tokenRemote,
             tokenBridgeRouter,
+            ,
             homeChainID,
             remoteChainID,
             owner,
@@ -77,7 +79,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
         uint256 amount = 1 ether;
         tokenBridgeRouter.bridgeNative{value: amount}(
-            remoteChainID, bridger, address(wrappedToken), address(0)
+            remoteChainID, bridger, address(wrappedToken), address(0), 20, 0
         );
 
         uint256 balanceEnd = bridger.balance;
@@ -92,7 +94,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
         uint256 amount = 1 ether;
         tokenBridgeRouter.bridgeNative{value: amount}(
-            remoteChainID, bridger, address(wrappedToken), address(0)
+            remoteChainID, bridger, address(wrappedToken), address(0), 20, 0
         );
 
         uint256 feeAmount = SafeMath.div(SafeMath.mul(amount, primaryRelayerFeeBips), 10_000);
@@ -108,7 +110,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         emit BridgeNative(remoteChainID, 1 ether, bridger);
 
         tokenBridgeRouter.bridgeNative{value: 1 ether}(
-            remoteChainID, bridger, address(wrappedToken), address(0)
+            remoteChainID, bridger, address(wrappedToken), address(0), 20, 0
         );
         vm.stopPrank();
     }

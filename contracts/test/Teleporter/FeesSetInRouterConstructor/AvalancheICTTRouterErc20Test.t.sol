@@ -3,9 +3,10 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
-import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
+import {AvalancheICTTRouterSetFees} from
+    "../../../src/contracts/Teleporter/AvalancheICTTRouterSetFees.sol";
+import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {TokenRemote} from "@avalabs/avalanche-ictt/TokenRemote/TokenRemote.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -23,8 +24,8 @@ contract AvalancheICTTRouterErc20Test is Test {
         address recipient
     );
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME);
-    AvalancheICTTRouter tokenBridgeRouter;
+    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME, 1);
+    AvalancheICTTRouterSetFees tokenBridgeRouter;
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
     uint256 secondaryRelayerFeeBips;
@@ -52,6 +53,7 @@ contract AvalancheICTTRouterErc20Test is Test {
             tokenHome,
             ,
             tokenRemote,
+            ,
             tokenBridgeRouter,
             homeChainID,
             remoteChainID,

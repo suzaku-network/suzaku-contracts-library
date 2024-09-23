@@ -3,8 +3,11 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
+import {AvalancheICTTRouterFreeFees} from
+    "../../src/contracts/Teleporter/AvalancheICTTRouterFreeFees.sol";
+import {AvalancheICTTRouterSetFees} from
+    "../../src/contracts/Teleporter/AvalancheICTTRouterSetFees.sol";
+import {WarpMessengerTestMock} from "../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -36,7 +39,8 @@ contract HelperConfig4Test is Script {
         ERC20TokenHome erc20TokenHome;
         NativeTokenHome nativeTokenHome;
         address tokenRemote;
-        AvalancheICTTRouter tokenBridgeRouter;
+        AvalancheICTTRouterFreeFees tokenBridgeRouterF;
+        AvalancheICTTRouterSetFees tokenBridgeRouterS;
         bytes32 homeChainID;
         bytes32 remoteChainID;
         address owner;
@@ -65,11 +69,15 @@ contract HelperConfig4Test is Script {
 
     ProtocolRegistryEntry[] protocolRegistryEntry;
 
-    constructor(address _tokenHome) {
-        activeNetworkConfigTest = getNetworkConfig(_tokenHome);
+    constructor(address _tokenHome, uint256 _routerType) {
+        if (_routerType == 0) {
+            activeNetworkConfigTest = getNetworkConfigWoFees(_tokenHome);
+        } else {
+            activeNetworkConfigTest = getNetworkConfigWFees(_tokenHome);
+        }
     }
 
-    function getNetworkConfig(address _tokenHome) public returns (NetworkConfigTest memory) {
+    function getNetworkConfigWoFees(address _tokenHome) public returns (NetworkConfigTest memory) {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _homeChainID,
             _remoteChainID,
@@ -92,8 +100,7 @@ contract HelperConfig4Test is Script {
         ERC20Mock _erc20Token = new ERC20Mock("ERC20Mock", "ERC20M", makeAddr("mockRecipient"), 0);
         WrappedNativeToken _wrappedToken = new WrappedNativeToken("WNTT"); // WNTT for Wrapped Native Token Test
 
-        AvalancheICTTRouter _tokenBridgeRouter =
-            new AvalancheICTTRouter(_primaryRelayerFeeBips, _secondaryRelayerFeeBips);
+        AvalancheICTTRouterFreeFees _tokenBridgeRouterF = new AvalancheICTTRouterFreeFees();
 
         ERC20TokenHome _erc20TokenHome =
             new ERC20TokenHome(address(teleporterRegistry), _owner, address(_erc20Token), 18);
@@ -111,7 +118,62 @@ contract HelperConfig4Test is Script {
             erc20TokenHome: _erc20TokenHome,
             nativeTokenHome: _nativeTokenHome,
             tokenRemote: _tokenRemote,
-            tokenBridgeRouter: _tokenBridgeRouter,
+            tokenBridgeRouterF: _tokenBridgeRouterF,
+            tokenBridgeRouterS: AvalancheICTTRouterSetFees(address(0)),
+            homeChainID: _homeChainID,
+            remoteChainID: _remoteChainID,
+            owner: _owner,
+            bridger: _bridger,
+            messageID: _messageID,
+            warpPrecompileAddress: _warpPrecompileAddress,
+            warpMessengerTestMock: warpMessengerTestMock
+        });
+    }
+
+    function getNetworkConfigWFees(address _tokenHome) public returns (NetworkConfigTest memory) {
+        WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
+            _homeChainID,
+            _remoteChainID,
+            _messageID,
+            _initialReserveImbalance,
+            _homeTokenDecimals,
+            _remoteTokenDecimals,
+            TELEPORTER_MESSENGER_ADDRESS,
+            _tokenHome,
+            _tokenRemote,
+            _requiredGasLimit
+        );
+        vm.etch(_warpPrecompileAddress, address(warpMessengerTestMock).code);
+
+        vm.startBroadcast(_deployerKey);
+        TeleporterMessenger teleporterMessenger = new TeleporterMessenger();
+        protocolRegistryEntry.push(ProtocolRegistryEntry(1, address(teleporterMessenger)));
+        TeleporterRegistry teleporterRegistry = new TeleporterRegistry(protocolRegistryEntry);
+
+        ERC20Mock _erc20Token = new ERC20Mock("ERC20Mock", "ERC20M", makeAddr("mockRecipient"), 0);
+        WrappedNativeToken _wrappedToken = new WrappedNativeToken("WNTT"); // WNTT for Wrapped Native Token Test
+
+        AvalancheICTTRouterSetFees _tokenBridgeRouterS =
+            new AvalancheICTTRouterSetFees(_primaryRelayerFeeBips, _secondaryRelayerFeeBips);
+
+        ERC20TokenHome _erc20TokenHome =
+            new ERC20TokenHome(address(teleporterRegistry), _owner, address(_erc20Token), 18);
+        NativeTokenHome _nativeTokenHome =
+            new NativeTokenHome(address(teleporterRegistry), _owner, address(_wrappedToken));
+        vm.stopBroadcast();
+        teleporterMessenger.receiveCrossChainMessage(1, address(0));
+
+        return NetworkConfigTest({
+            deployerKey: _deployerKey,
+            primaryRelayerFeeBips: _primaryRelayerFeeBips,
+            secondaryRelayerFeeBips: _secondaryRelayerFeeBips,
+            erc20Token: _erc20Token,
+            wrappedToken: _wrappedToken,
+            erc20TokenHome: _erc20TokenHome,
+            nativeTokenHome: _nativeTokenHome,
+            tokenRemote: _tokenRemote,
+            tokenBridgeRouterF: AvalancheICTTRouterFreeFees(address(0)),
+            tokenBridgeRouterS: _tokenBridgeRouterS,
             homeChainID: _homeChainID,
             remoteChainID: _remoteChainID,
             owner: _owner,

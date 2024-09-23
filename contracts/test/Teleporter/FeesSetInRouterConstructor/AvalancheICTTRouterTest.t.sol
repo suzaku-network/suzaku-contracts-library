@@ -3,9 +3,11 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {RemoteBridge} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
+import {
+    AvalancheICTTRouterSetFees,
+    RemoteBridge
+} from "../../../src/contracts/Teleporter/AvalancheICTTRouterSetFees.sol";
+import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -23,8 +25,8 @@ contract AvalancheICTTRouterTest is Test {
     event RemoveHomeTokenBridge(address indexed tokenAddress);
     event RemoveRemoteTokenBridge(address indexed tokenAddress, bytes32 indexed remoteChainID);
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(address(0));
-    AvalancheICTTRouter tokenBridgeRouter;
+    HelperConfig4Test helperConfig = new HelperConfig4Test(address(0), 1);
+    AvalancheICTTRouterSetFees tokenBridgeRouter;
     uint256 deployerKey;
     ERC20Mock erc20Token;
     ERC20TokenHome tokenHome;
@@ -48,6 +50,7 @@ contract AvalancheICTTRouterTest is Test {
             tokenHome,
             ,
             tokenRemote,
+            ,
             tokenBridgeRouter,
             homeChainID,
             remoteChainID,
@@ -72,12 +75,12 @@ contract AvalancheICTTRouterTest is Test {
     function testSetRelayerFee() public {
         vm.startPrank(owner);
         (uint256 primaryRelayerFeeStart, uint256 secondaryRelayerFeeStart) =
-            tokenBridgeRouter.getRelayerFeeBips();
+            tokenBridgeRouter.getRelayerFeesBips();
         uint256 primaryRelayerFeeValue = 50;
         uint256 secondaryRelayerFeeValue = 20;
         tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
         (uint256 primaryRelayerFeeEnd, uint256 secondaryRelayerFeeEnd) =
-            tokenBridgeRouter.getRelayerFeeBips();
+            tokenBridgeRouter.getRelayerFeesBips();
         assert(
             (primaryRelayerFeeStart != primaryRelayerFeeEnd)
                 && (secondaryRelayerFeeStart != secondaryRelayerFeeEnd)
