@@ -50,23 +50,14 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     /// @notice The total weight of the current Subnet validator set
     uint64 public subnetTotalWeight;
 
-    /**
-     * @notice The list of validationIDs associated with a validator of the Subnet
-     * @notice NodeID => validationID[]
-     */
-    mapping(bytes32 => bytes32[]) private subnetValidatorValidations;
+    /// @notice The list of validationIDs associated with a validator of the Subnet
+    mapping(bytes32 nodeID => bytes32[] validationIDs) private subnetValidatorValidations;
 
-    /**
-     * @notice The validation corresponding to each validationID
-     * @notice validationID => SubnetValidation
-     */
-    mapping(bytes32 => Validation) private subnetValidations;
+    /// @notice The validation corresponding to each validationID
+    mapping(bytes32 validationID => Validation validation) private subnetValidations;
 
-    /**
-     * @notice The registration message corresponding to a validationID such that it can be re-sent
-     * @notice validationID => messageBytes
-     */
-    mapping(bytes32 => bytes) public pendingRegisterValidationMessages;
+    /// @notice The registration message corresponding to a validationID such that it can be re-sent
+    mapping(bytes32 validationID => bytes messageBytes) public pendingRegisterValidationMessages;
 
     modifier onlySecurityModule() {
         if (msg.sender != address(securityModule)) {
@@ -410,7 +401,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         // Compute the average weight of the validator during all periods
         uint256 averageWeight;
-        for (uint256 i = 0; i < nonce; i++) {
+        for (uint256 i; i < nonce; ++i) {
             uint64 periodDuration = validation.periods[i].endTime - validation.periods[i].startTime;
             averageWeight += validation.periods[i].weight * periodDuration;
         }
