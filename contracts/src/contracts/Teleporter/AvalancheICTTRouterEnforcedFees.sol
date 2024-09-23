@@ -37,14 +37,15 @@ contract AvalancheICTTRouterEnforcedFees is
      * @notice Token address => source bridge address
      * @notice Address `0x0` is used for the native token
      */
-    mapping(address => address) public tokenToSourceBridge;
+    mapping(address token => address sourceBridge) public tokenToSourceBridge;
 
     /**
      * @notice Token address => destination chain ID => DestinationBridge
      * @notice Address `0x0` is used for the native token
      */
-    mapping(bytes32 => mapping(address => DestinationBridge)) public
-        tokenDestinationChainToDestinationBridge;
+    mapping(
+        bytes32 destinationChainID => mapping(address token => DestinationBridge destinationBridge)
+    ) public tokenDestinationChainToDestinationBridge;
 
     /// @notice Relayer fee enforced by the router (in basis points)
     uint256 public primaryRelayerFeeBips;
