@@ -76,7 +76,7 @@ contract ACP99PoAModule is Ownable2Step, IACP99SecurityModule {
     }
 
     /// @inheritdoc IACP99SecurityModule
-    function handleValidatorRegistration(ValidatiorRegistrationInfo memory validatorInfo)
+    function handleValidatorRegistration(ValidatiorRegistrationInfo memory /*validatorInfo*/ )
         external
         onlyManager
     {
@@ -84,7 +84,7 @@ contract ACP99PoAModule is Ownable2Step, IACP99SecurityModule {
     }
 
     /// @inheritdoc IACP99SecurityModule
-    function handleValidatorWeightChange(ValidatorWeightChangeInfo memory weightChangeInfo)
+    function handleValidatorWeightChange(ValidatorWeightChangeInfo memory /*weightChangeInfo*/ )
         external
         onlyManager
     {
