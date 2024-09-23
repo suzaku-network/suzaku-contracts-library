@@ -6,9 +6,9 @@
 pragma solidity 0.8.18;
 
 import {
-    IAvalancheICTTRouterFreeFees,
-    RemoteBridge
-} from "../../interfaces/IAvalancheICTTRouterFreeFees.sol";
+    DestinationBridge,
+    IAvalancheICTTRouterLooseFees
+} from "../../interfaces/IAvalancheICTTRouterLooseFees.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
 import {INativeTokenTransferrer} from
@@ -25,30 +25,31 @@ import {SafeMath} from "@openzeppelin/contracts@4.8.1/utils/math/SafeMath.sol";
 import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /// @custom:security-contact security@e36knots.com
-contract AvalancheICTTRouterFreeFees is Ownable, ReentrancyGuard, IAvalancheICTTRouterFreeFees {
+contract AvalancheICTTRouterLooseFees is Ownable, ReentrancyGuard, IAvalancheICTTRouterLooseFees {
     using Address for address;
 
     /**
-     * @notice Token address => home bridge address
+     * @notice Token address => source bridge address
      * @notice Address `0x0` is used for the native token
      */
-    mapping(address => address) public tokenToHomeBridge;
+    mapping(address => address) public tokenToSourceBridge;
 
     /**
-     * @notice Token address => remote chain ID => RemoteBridge
+     * @notice Token address => destination chain ID => DestinationBridge
      * @notice Address `0x0` is used for the native token
      */
-    mapping(bytes32 => mapping(address => RemoteBridge)) public tokenRemoteChainToRemoteBridge;
+    mapping(bytes32 => mapping(address => DestinationBridge)) public
+        tokenDestinationChainToDestinationBridge;
 
     /// @notice  Current chain ID
     bytes32 private immutable routerChainID;
 
-    /// @notice Set the relayer fee and the ID of the home chain
+    /// @notice Set the relayer fee and the ID of the source chain
     constructor() {
         routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
     }
 
-    function registerHomeTokenBridge(
+    function registerSourceTokenBridge(
         address tokenAddress,
         address bridgeAddress
     ) external onlyOwner {
@@ -59,14 +60,14 @@ contract AvalancheICTTRouterFreeFees is Ownable, ReentrancyGuard, IAvalancheICTT
         require(
             bridgeAddress.isContract(), "TeleporterBridgeRouter: bridgeAddress is not a contract"
         );
-        tokenToHomeBridge[tokenAddress] = bridgeAddress;
+        tokenToSourceBridge[tokenAddress] = bridgeAddress;
 
-        emit RegisterHomeTokenBridge(tokenAddress, bridgeAddress);
+        emit RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
     }
 
-    function registerRemoteTokenBridge(
+    function registerDestinationTokenBridge(
         address tokenAddress,
-        bytes32 remoteChainID,
+        bytes32 destinationChainID,
         address bridgeAddress,
         uint256 requiredGasLimit,
         bool isMultihop
@@ -76,46 +77,50 @@ contract AvalancheICTTRouterFreeFees is Ownable, ReentrancyGuard, IAvalancheICTT
             "TeleporterBridgeRouter: tokenAddress is not a contract"
         );
         require(
-            remoteChainID != routerChainID,
-            "TeleporterBridgeRouter: remote chain cannot be the same as home chain"
+            destinationChainID != routerChainID,
+            "TeleporterBridgeRouter: destination chain cannot be the same as source chain"
         );
-        RemoteBridge memory remoteBridge = RemoteBridge(bridgeAddress, requiredGasLimit, isMultihop);
-        tokenRemoteChainToRemoteBridge[remoteChainID][tokenAddress] = remoteBridge;
+        DestinationBridge memory destinationBridge =
+            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
+        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
+            destinationBridge;
 
-        emit RegisterRemoteTokenBridge(tokenAddress, remoteBridge, remoteChainID);
+        emit RegisterDestinationTokenBridge(tokenAddress, destinationBridge, destinationChainID);
     }
 
-    function removeHomeTokenBridge(address tokenAddress) external onlyOwner {
-        delete tokenToHomeBridge[tokenAddress];
+    function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
+        delete tokenToSourceBridge[tokenAddress];
 
-        emit RemoveHomeTokenBridge(tokenAddress);
+        emit RemoveSourceTokenBridge(tokenAddress);
     }
 
-    function removeRemoteTokenBridge(
+    function removeDestinationTokenBridge(
         address tokenAddress,
-        bytes32 remoteChainID
+        bytes32 destinationChainID
     ) external onlyOwner {
-        delete tokenRemoteChainToRemoteBridge[remoteChainID][tokenAddress];
+        delete tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
 
-        emit RemoveRemoteTokenBridge(tokenAddress, remoteChainID);
+        emit RemoveDestinationTokenBridge(tokenAddress, destinationChainID);
     }
 
     function bridgeERC20(
         address tokenAddress,
-        bytes32 remoteChainID,
+        bytes32 destinationChainID,
         uint256 amount,
         address recipient,
         address multiHopFallback,
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
     ) external nonReentrant {
-        address bridgeHome = tokenToHomeBridge[tokenAddress];
-        RemoteBridge memory remoteBridge =
-            tokenRemoteChainToRemoteBridge[remoteChainID][tokenAddress];
-        require(bridgeHome != address(0), "TeleporterBridgeRouter: bridge not set for home + token");
+        address bridgeSource = tokenToSourceBridge[tokenAddress];
+        DestinationBridge memory destinationBridge =
+            tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
         require(
-            remoteBridge.bridgeAddress != address(0),
-            "TeleporterBridgeRouter: bridge not set for remote + token"
+            bridgeSource != address(0), "TeleporterBridgeRouter: bridge not set for source + token"
+        );
+        require(
+            destinationBridge.bridgeAddress != address(0),
+            "TeleporterBridgeRouter: bridge not set for destination + token"
         );
 
         uint256 primaryFeeAmount = SafeMath.div(SafeMath.mul(amount, primaryRelayerFeeBips), 10_000);
@@ -126,43 +131,44 @@ contract AvalancheICTTRouterFreeFees is Ownable, ReentrancyGuard, IAvalancheICTT
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
 
-        if (!remoteBridge.isMultihop) {
+        if (!destinationBridge.isMultihop) {
             secondaryFeeAmount = 0;
         }
 
         uint256 bridgeAmount = adjustedAmount - (primaryFeeAmount + secondaryFeeAmount);
 
-        SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeHome, adjustedAmount);
+        SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeSource, adjustedAmount);
 
         SendTokensInput memory input = SendTokensInput(
-            remoteChainID,
-            remoteBridge.bridgeAddress,
+            destinationChainID,
+            destinationBridge.bridgeAddress,
             recipient,
             tokenAddress,
             primaryFeeAmount,
             secondaryFeeAmount,
-            remoteBridge.requiredGasLimit,
+            destinationBridge.requiredGasLimit,
             multiHopFallback
         );
-        IERC20TokenTransferrer(bridgeHome).send(input, bridgeAmount);
+        IERC20TokenTransferrer(bridgeSource).send(input, bridgeAmount);
 
-        emit BridgeERC20(tokenAddress, remoteChainID, bridgeAmount, recipient);
+        emit BridgeERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
     }
 
     function bridgeNative(
-        bytes32 remoteChainID,
+        bytes32 destinationChainID,
         address recipient,
         address feeToken,
         address multiHopFallback,
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
     ) external payable nonReentrant {
-        address bridgeHome = tokenToHomeBridge[address(0)];
-        RemoteBridge memory remoteBridge = tokenRemoteChainToRemoteBridge[remoteChainID][address(0)];
-        require(bridgeHome != address(0), "TeleporterBridgeRouter: bridge not set for home");
+        address bridgeSource = tokenToSourceBridge[address(0)];
+        DestinationBridge memory destinationBridge =
+            tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+        require(bridgeSource != address(0), "TeleporterBridgeRouter: bridge not set for source");
         require(
-            remoteBridge.bridgeAddress != address(0),
-            "TeleporterBridgeRouter: bridge not set for remote"
+            destinationBridge.bridgeAddress != address(0),
+            "TeleporterBridgeRouter: bridge not set for destination"
         );
 
         uint256 primaryFeeAmount =
@@ -171,38 +177,38 @@ contract AvalancheICTTRouterFreeFees is Ownable, ReentrancyGuard, IAvalancheICTT
         uint256 secondaryFeeAmount =
             SafeMath.div(SafeMath.mul(msg.value, secondaryRelayerFeeBips), 10_000);
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeHome, msg.value);
+        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
         WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
 
-        if (!remoteBridge.isMultihop) {
+        if (!destinationBridge.isMultihop) {
             secondaryFeeAmount = 0;
         }
 
         uint256 bridgeAmount = msg.value - (primaryFeeAmount + secondaryFeeAmount);
 
         SendTokensInput memory input = SendTokensInput(
-            remoteChainID,
-            remoteBridge.bridgeAddress,
+            destinationChainID,
+            destinationBridge.bridgeAddress,
             recipient,
             feeToken,
             primaryFeeAmount,
             secondaryFeeAmount,
-            remoteBridge.requiredGasLimit,
+            destinationBridge.requiredGasLimit,
             multiHopFallback
         );
 
-        INativeTokenTransferrer(bridgeHome).send{value: bridgeAmount}(input);
-        emit BridgeNative(remoteChainID, bridgeAmount, recipient);
+        INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
+        emit BridgeNative(destinationChainID, bridgeAmount, recipient);
     }
 
-    function getHomeBridge(address token) external view returns (address) {
-        return tokenToHomeBridge[token];
+    function getSourceBridge(address token) external view returns (address) {
+        return tokenToSourceBridge[token];
     }
 
-    function getRemoteBridge(
+    function getDestinationBridge(
         bytes32 chainID,
         address token
-    ) external view returns (RemoteBridge memory) {
-        return tokenRemoteChainToRemoteBridge[chainID][token];
+    ) external view returns (DestinationBridge memory) {
+        return tokenDestinationChainToDestinationBridge[chainID][token];
     }
 }

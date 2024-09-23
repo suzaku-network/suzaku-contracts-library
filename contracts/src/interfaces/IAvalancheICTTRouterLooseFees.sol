@@ -5,14 +5,14 @@
 
 pragma solidity 0.8.18;
 
-import {IAvalancheICTTRouter, RemoteBridge} from "./IAvalancheICTTRouter.sol";
+import {DestinationBridge, IAvalancheICTTRouter} from "./IAvalancheICTTRouter.sol";
 
 /// @custom:security-contact security@e36knots.com
-interface IAvalancheICTTRouterFreeFees is IAvalancheICTTRouter {
+interface IAvalancheICTTRouterLooseFees is IAvalancheICTTRouter {
     /**
-     * @notice Bridge ERC20 token to a remote chain
+     * @notice Bridge ERC20 token to a destination chain
      * @param tokenAddress Address of the ERC20 token contract
-     * @param remoteChainID ID of the remote chain
+     * @param destinationChainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
@@ -21,7 +21,7 @@ interface IAvalancheICTTRouterFreeFees is IAvalancheICTTRouter {
      */
     function bridgeERC20(
         address tokenAddress,
-        bytes32 remoteChainID,
+        bytes32 destinationChainID,
         uint256 amount,
         address recipient,
         address multiHopFallback,
@@ -30,8 +30,8 @@ interface IAvalancheICTTRouterFreeFees is IAvalancheICTTRouter {
     ) external;
 
     /**
-     * @notice Bridge native token to a remote chain
-     * @param remoteChainID ID of the remote chain
+     * @notice Bridge native token to a destination chain
+     * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param feeToken Address of the fee token
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
@@ -39,7 +39,7 @@ interface IAvalancheICTTRouterFreeFees is IAvalancheICTTRouter {
      * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
      */
     function bridgeNative(
-        bytes32 remoteChainID,
+        bytes32 destinationChainID,
         address recipient,
         address feeToken,
         address multiHopFallback,
