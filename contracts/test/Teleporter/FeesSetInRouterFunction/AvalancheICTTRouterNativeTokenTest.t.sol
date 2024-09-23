@@ -15,11 +15,11 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterNativeTokenTest is Test {
-    address private constant TOKEN_HOME = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
+    address private constant TOKEN_SOURCE = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
 
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME, 0);
+    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
     uint256 secondaryRelayerFeeBips;

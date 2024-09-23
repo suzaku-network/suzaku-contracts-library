@@ -14,6 +14,25 @@ struct DestinationBridge {
 /// @custom:security-contact security@e36knots.com
 interface IAvalancheICTTRouter {
     /**
+     * @notice Issued when an address is not that of a contract
+     * @param contractAddress Address of the supposedly contract
+     */
+    error NotAContract(address contractAddress);
+
+    /**
+     * @notice Issued when a bridge instance has not been registered correctly
+     * @param bridgeAddress Address of the bridge contract that was not registered
+     */
+    error BridgeNotSet(address bridgeAddress);
+
+    /**
+     * @notice Issued when the source chain and the destination chain are the same
+     * @param sourceChain ID of the source chain (chain on which the router is deployed)
+     * @param destinationChain ID of the destination chain
+     */
+    error SourceChainEqualToDestinationChain(bytes32 sourceChain, bytes32 destinationChain);
+
+    /**
      * @notice Issued when registering a new bridge source instance
      * @param tokenAddress Address of the ERC20 token contract
      * @param bridgeAddress Address of the bridge contract

@@ -79,13 +79,12 @@ contract AvalancheICTTRouterEnforcedFees is
         address tokenAddress,
         address bridgeAddress
     ) external onlyOwner {
-        require(
-            tokenAddress.isContract() || tokenAddress == address(0),
-            "TeleporterBridgeRouter: tokenAddress is not a contract"
-        );
-        require(
-            bridgeAddress.isContract(), "TeleporterBridgeRouter: bridgeAddress is not a contract"
-        );
+        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
+            revert NotAContract(tokenAddress);
+        }
+        if (!bridgeAddress.isContract()) {
+            revert NotAContract(tokenAddress);
+        }
         tokenToSourceBridge[tokenAddress] = bridgeAddress;
 
         emit RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
@@ -98,14 +97,12 @@ contract AvalancheICTTRouterEnforcedFees is
         uint256 requiredGasLimit,
         bool isMultihop
     ) external onlyOwner {
-        require(
-            tokenAddress.isContract() || tokenAddress == address(0),
-            "TeleporterBridgeRouter: tokenAddress is not a contract"
-        );
-        require(
-            destinationChainID != routerChainID,
-            "TeleporterBridgeRouter: destination chain cannot be the same as source chain"
-        );
+        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
+            revert NotAContract(tokenAddress);
+        }
+        if (destinationChainID == routerChainID) {
+            revert SourceChainEqualToDestinationChain(routerChainID, destinationChainID);
+        }
         DestinationBridge memory destinationBridge =
             DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
         tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
@@ -139,13 +136,12 @@ contract AvalancheICTTRouterEnforcedFees is
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
-        require(
-            bridgeSource != address(0), "TeleporterBridgeRouter: bridge not set for source + token"
-        );
-        require(
-            destinationBridge.bridgeAddress != address(0),
-            "TeleporterBridgeRouter: bridge not set for destination + token"
-        );
+        if (bridgeSource == address(0)) {
+            revert BridgeNotSet(bridgeSource);
+        }
+        if (destinationBridge.bridgeAddress == address(0)) {
+            revert BridgeNotSet(destinationBridge.bridgeAddress);
+        }
 
         uint256 primaryFeeAmount = (amount * primaryRelayerFeeBips) / 10_000;
 
@@ -186,11 +182,12 @@ contract AvalancheICTTRouterEnforcedFees is
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
-        require(bridgeSource != address(0), "TeleporterBridgeRouter: bridge not set for source");
-        require(
-            destinationBridge.bridgeAddress != address(0),
-            "TeleporterBridgeRouter: bridge not set for destination"
-        );
+        if (bridgeSource == address(0)) {
+            revert BridgeNotSet(bridgeSource);
+        }
+        if (destinationBridge.bridgeAddress == address(0)) {
+            revert BridgeNotSet(destinationBridge.bridgeAddress);
+        }
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
 

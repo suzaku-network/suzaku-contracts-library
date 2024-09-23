@@ -14,7 +14,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterErc20Test is Test {
-    address private constant TOKEN_HOME = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
+    address private constant TOKEN_SOURCE = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
 
     event BridgeERC20(
         address indexed tokenAddress,
@@ -23,7 +23,7 @@ contract AvalancheICTTRouterErc20Test is Test {
         address recipient
     );
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME, 1);
+    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 1);
     AvalancheICTTRouterEnforcedFees tokenBridgeRouter;
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
