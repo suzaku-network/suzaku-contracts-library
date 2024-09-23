@@ -13,11 +13,15 @@ import {
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Ownable2Step} from "@openzeppelin/contracts@4.9.6/access/Ownable2Step.sol";
-
-import {SafeMath} from "@openzeppelin/contracts@4.9.6/utils/math/SafeMath.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@4.9.6/utils/structs/EnumerableMap.sol";
 
-/// @custom:security-contact security@suzaku.network
+/**
+ * @title ACP99Manager
+ * @author ADDPHO
+ * @notice The ACP99Manager contract is responsible for managing the validator set of a Subnet.
+ * It is meant to be used as the Subnet manager address in the `ConvertSubnetTx`.
+ * @custom:security-contact security@suzaku.network
+ */
 contract ACP99Manager is Ownable2Step, IACP99Manager {
     using EnumerableMap for EnumerableMap.Bytes32ToBytes32Map;
 
@@ -410,7 +414,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             uint64 periodDuration = validation.periods[i].endTime - validation.periods[i].startTime;
             averageWeight += validation.periods[i].weight * periodDuration;
         }
-        averageWeight = SafeMath.div(averageWeight, validation.activeSeconds);
+        averageWeight = averageWeight / validation.activeSeconds;
 
         IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo = IACP99SecurityModule
             .ValidatorUptimeInfo({

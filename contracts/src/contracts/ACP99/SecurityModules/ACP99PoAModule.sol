@@ -7,8 +7,16 @@ import {IACP99Manager} from "../../../interfaces/ACP99/IACP99Manager.sol";
 import {IACP99SecurityModule} from "../../../interfaces/ACP99/IACP99SecurityModule.sol";
 import {Ownable2Step} from "@openzeppelin/contracts@4.9.6/access/Ownable2Step.sol";
 
+/**
+ * @title ACP99PoAModule
+ * @author ADDPHO
+ * @notice The ACP99PoAModule is a security module for the ACP99Manager contract.
+ * It implements the Proof of Authority (PoA) mechanism for managing the validator set of a Subnet.
+ * @custom:security-contact security@suzaku.network
+ */
 contract ACP99PoAModule is Ownable2Step, IACP99SecurityModule {
-    IACP99Manager public manager;
+    /// @notice The ACP99Manager contract that relies on this security module
+    IACP99Manager public immutable manager;
 
     constructor(address _manager) Ownable2Step() {
         if (_manager == address(0)) {

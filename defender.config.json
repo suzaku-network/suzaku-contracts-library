@@ -1,7 +1,7 @@
 {
   "contract_inspector": {
     "enabled": true,
-    "scan_directories": ["contracts/src/"]
+    "scan_directories": ["contracts/src/contracts", "contracts/src/interfaces"]
   },
   "dependency_checker": {
     "enabled": true
