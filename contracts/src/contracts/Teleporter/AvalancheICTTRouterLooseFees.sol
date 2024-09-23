@@ -21,7 +21,6 @@ import {ReentrancyGuard} from "@openzeppelin/contracts@4.8.1/security/Reentrancy
 import {IERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
-import {SafeMath} from "@openzeppelin/contracts@4.8.1/utils/math/SafeMath.sol";
 import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /// @custom:security-contact security@e36knots.com
@@ -124,10 +123,9 @@ contract AvalancheICTTRouterLooseFees is Ownable, ReentrancyGuard, IAvalancheICT
             "TeleporterBridgeRouter: bridge not set for destination + token"
         );
 
-        uint256 primaryFeeAmount = SafeMath.div(SafeMath.mul(amount, primaryRelayerFeeBips), 10_000);
+        uint256 primaryFeeAmount = (amount * primaryRelayerFeeBips) / 10_000;
 
-        uint256 secondaryFeeAmount =
-            SafeMath.div(SafeMath.mul(amount, secondaryRelayerFeeBips), 10_000);
+        uint256 secondaryFeeAmount = (amount * secondaryRelayerFeeBips) / 10_000;
 
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
@@ -172,11 +170,9 @@ contract AvalancheICTTRouterLooseFees is Ownable, ReentrancyGuard, IAvalancheICT
             "TeleporterBridgeRouter: bridge not set for destination"
         );
 
-        uint256 primaryFeeAmount =
-            SafeMath.div(SafeMath.mul(msg.value, primaryRelayerFeeBips), 10_000);
+        uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
 
-        uint256 secondaryFeeAmount =
-            SafeMath.div(SafeMath.mul(msg.value, secondaryRelayerFeeBips), 10_000);
+        uint256 secondaryFeeAmount = (msg.value * secondaryRelayerFeeBips) / 10_000;
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
         WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
