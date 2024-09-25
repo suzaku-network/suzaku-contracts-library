@@ -44,7 +44,7 @@ contract ACP99ManagerTest is Test {
     uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
     uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
     uint32 constant COMPLETE_VALIDATION_MESSAGE_INDEX = 6;
-    address constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
+    address constant WARP_MESSENGER_ADDR = 0x0200000000000000000000000000000000000005;
     bytes32 constant VALIDATOR_NODE_ID = bytes32(uint256(1));
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 100;
@@ -64,7 +64,7 @@ contract ACP99ManagerTest is Test {
 
         WarpMessengerTestMock warpMessengerTestMock =
             new WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
-        vm.etch(WARP_MESSENGER_ADDRESS, address(warpMessengerTestMock).code);
+        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
 
         DeployACP99PoAModule validatorSetManagerDeployer = new DeployACP99PoAModule();
         (manager, poaModule) = validatorSetManagerDeployer.run();
