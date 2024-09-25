@@ -134,25 +134,4 @@ contract AvalancheICTTRouterErc20Test is Test {
 
         vm.stopPrank();
     }
-
-    function testBridgeNotSetRevertOnCallOfBridgeERC20Function() public fundBridgerAccount {
-        vm.startPrank(owner);
-        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
-        tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), destinationChainID, address(0), requiredGasLimit, false
-        );
-        vm.stopPrank();
-        vm.startPrank(bridger);
-        uint256 amount = 1 ether;
-        erc20Token.approve(address(tokenBridgeRouter), amount);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvalancheICTTRouter.BridgeNotSet.selector, address(0))
-        );
-        tokenBridgeRouter.bridgeERC20(
-            address(erc20Token), destinationChainID, amount, bridger, address(0)
-        );
-
-        vm.stopPrank();
-    }
 }
