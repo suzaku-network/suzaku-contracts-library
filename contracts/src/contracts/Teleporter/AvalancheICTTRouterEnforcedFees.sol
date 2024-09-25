@@ -83,7 +83,7 @@ contract AvalancheICTTRouterEnforcedFees is
             revert NotAContract(tokenAddress);
         }
         if (!bridgeAddress.isContract()) {
-            revert NotAContract(tokenAddress);
+            revert NotAContract(bridgeAddress);
         }
         tokenToSourceBridge[tokenAddress] = bridgeAddress;
 
@@ -99,6 +99,9 @@ contract AvalancheICTTRouterEnforcedFees is
     ) external onlyOwner {
         if (tokenAddress != address(0) && !tokenAddress.isContract()) {
             revert NotAContract(tokenAddress);
+        }
+        if (bridgeAddress == address(0)) {
+            revert NotAContract(bridgeAddress);
         }
         if (destinationChainID == routerChainID) {
             revert SourceChainEqualToDestinationChain(routerChainID, destinationChainID);
@@ -136,12 +139,6 @@ contract AvalancheICTTRouterEnforcedFees is
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
-        if (bridgeSource == address(0)) {
-            revert BridgeNotSet(bridgeSource);
-        }
-        if (destinationBridge.bridgeAddress == address(0)) {
-            revert BridgeNotSet(destinationBridge.bridgeAddress);
-        }
 
         uint256 primaryFeeAmount = (amount * primaryRelayerFeeBips) / 10_000;
 
@@ -182,12 +179,6 @@ contract AvalancheICTTRouterEnforcedFees is
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
-        if (bridgeSource == address(0)) {
-            revert BridgeNotSet(bridgeSource);
-        }
-        if (destinationBridge.bridgeAddress == address(0)) {
-            revert BridgeNotSet(destinationBridge.bridgeAddress);
-        }
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
 

@@ -20,12 +20,6 @@ interface IAvalancheICTTRouter {
     error NotAContract(address contractAddress);
 
     /**
-     * @notice Issued when a bridge instance has not been registered correctly
-     * @param bridgeAddress Address of the bridge contract that was not registered
-     */
-    error BridgeNotSet(address bridgeAddress);
-
-    /**
      * @notice Issued when the source chain and the destination chain are the same
      * @param sourceChain ID of the source chain (chain on which the router is deployed)
      * @param destinationChain ID of the destination chain

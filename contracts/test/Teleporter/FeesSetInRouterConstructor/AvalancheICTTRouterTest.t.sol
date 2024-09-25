@@ -7,6 +7,7 @@ import {
     AvalancheICTTRouterEnforcedFees,
     DestinationBridge
 } from "../../../src/contracts/Teleporter/AvalancheICTTRouterEnforcedFees.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -62,6 +63,32 @@ contract AvalancheICTTRouterTest is Test {
             ,
         ) = helperConfig.activeNetworkConfigTest();
         vm.deal(bridger, STARTING_GAS_BALANCE);
+    }
+
+    function testNotAContractRevertOnRegisterSourceTokenBridge() public {
+        vm.startPrank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAvalancheICTTRouter.NotAContract.selector, address(0))
+        );
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(0));
+        vm.stopPrank();
+    }
+
+    function testSourceChainEqualToDestinationChainRevertOnRegisterDestinationTokenBridge()
+        public
+    {
+        vm.startPrank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter.SourceChainEqualToDestinationChain.selector,
+                sourceChainID,
+                sourceChainID
+            )
+        );
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), sourceChainID, tokenDestination, requiredGasLimit, false
+        );
+        vm.stopPrank();
     }
 
     modifier registerTokenBridge() {

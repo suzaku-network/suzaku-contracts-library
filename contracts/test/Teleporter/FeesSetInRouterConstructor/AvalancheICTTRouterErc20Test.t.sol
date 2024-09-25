@@ -6,6 +6,7 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouterEnforcedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterEnforcedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -127,6 +128,27 @@ contract AvalancheICTTRouterErc20Test is Test {
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
         emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
+        tokenBridgeRouter.bridgeERC20(
+            address(erc20Token), destinationChainID, amount, bridger, address(0)
+        );
+
+        vm.stopPrank();
+    }
+
+    function testBridgeNotSetRevertOnCallOfBridgeERC20Function() public fundBridgerAccount {
+        vm.startPrank(owner);
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), destinationChainID, address(0), requiredGasLimit, false
+        );
+        vm.stopPrank();
+        vm.startPrank(bridger);
+        uint256 amount = 1 ether;
+        erc20Token.approve(address(tokenBridgeRouter), amount);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAvalancheICTTRouter.BridgeNotSet.selector, address(0))
+        );
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token), destinationChainID, amount, bridger, address(0)
         );
