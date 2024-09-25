@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity ^0.8.0;
 
 import {HelperConfig} from "../../script/ACP99/HelperConfig.s.sol";
 import {DeployACP99PoAModule} from "../../script/ACP99/SecurityModules/DeployACP99PoAModule.s.sol";
@@ -19,15 +19,15 @@ contract ACP99PoAModuleTest is Test {
     event ValidatorRemoved(bytes32 indexed nodeID);
     event ValidatorWeightUpdated(bytes32 indexed nodeID, uint64 newWeight);
 
-    uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 2;
-    uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 3;
-    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 4;
-    address constant WARP_MESSENGER_ADDRESS = 0x0200000000000000000000000000000000000005;
+    uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 3;
+    uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
+    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
+    address constant WARP_MESSENGER_ADDR = 0x0200000000000000000000000000000000000005;
     bytes32 constant VALIDATOR_NODE_ID = bytes32(uint256(1));
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 100;
     bytes32 constant VALIDATION_ID =
-        0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2;
+        0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372;
 
     ACP99PoAModule poaModule;
     uint256 deployerKey;
@@ -42,7 +42,7 @@ contract ACP99PoAModuleTest is Test {
 
         WarpMessengerTestMock warpMessengerTestMock =
             new WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
-        vm.etch(WARP_MESSENGER_ADDRESS, address(warpMessengerTestMock).code);
+        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
 
         DeployACP99PoAModule poaModuleDeployer = new DeployACP99PoAModule();
         (manager, poaModule) = poaModuleDeployer.run();
@@ -55,7 +55,7 @@ contract ACP99PoAModuleTest is Test {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.prank(deployerAddress);
-        // validationID = 0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2
+        // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         poaModule.addValidator(
             VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
         );
@@ -66,7 +66,7 @@ contract ACP99PoAModuleTest is Test {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.startPrank(deployerAddress);
-        // validationID = 0x5b95b95601dce19048a51e797c1910a7da3514f77ed33a75ef69bd8aaf29a3d2
+        // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         poaModule.addValidator(
             VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
         );
