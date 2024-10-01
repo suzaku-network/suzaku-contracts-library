@@ -3,14 +3,14 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouterEnforcedFees} from
-    "../../../src/contracts/Teleporter/AvalancheICTTRouterEnforcedFees.sol";
+import {AvalancheICTTRouterFixedFees} from
+    "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 import {Script, console} from "forge-std/Script.sol";
 
-contract DeployAvalancheICTTRouterSetFees is Script {
-    function run() external returns (AvalancheICTTRouterEnforcedFees) {
+contract DeployAvalancheICTTRouterFixedFees is Script {
+    function run() external returns (AvalancheICTTRouterFixedFees) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
@@ -35,8 +35,8 @@ contract DeployAvalancheICTTRouterSetFees is Script {
         ) = helperConfig.activeNetworkConfig();
         vm.etch(warpPrecompileAddress, address(mock).code);
         vm.startBroadcast(deployerKey);
-        AvalancheICTTRouterEnforcedFees tokenBridgeRouter =
-            new AvalancheICTTRouterEnforcedFees(primaryRelayerFeeBips, secondaryRelayerFeeBips);
+        AvalancheICTTRouterFixedFees tokenBridgeRouter =
+            new AvalancheICTTRouterFixedFees(primaryRelayerFeeBips, secondaryRelayerFeeBips);
         vm.stopBroadcast();
 
         return (tokenBridgeRouter);
