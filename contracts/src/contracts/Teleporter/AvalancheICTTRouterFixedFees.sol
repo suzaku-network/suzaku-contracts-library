@@ -8,8 +8,9 @@ pragma solidity 0.8.18;
 import {IAvalancheICTTRouter} from "../../interfaces/IAvalancheICTTRouter.sol";
 import {
     DestinationBridge,
-    IAvalancheICTTRouterEnforcedFees
-} from "../../interfaces/IAvalancheICTTRouterEnforcedFees.sol";
+    IAvalancheICTTRouterFixedFees
+} from "../../interfaces/IAvalancheICTTRouterFixedFees.sol";
+import {AvalancheICTTRouter} from "./AvalancheICTTRouter.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
 import {INativeTokenTransferrer} from
@@ -24,27 +25,19 @@ import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC
 import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
 import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
-/// @custom:security-contact security@e36knots.com
-contract AvalancheICTTRouterEnforcedFees is
+/**
+ * @title AvalancheICTTRouterFixedFees
+ * @author Suzaku
+ * @notice The AvalancheICTTRouterFixedFees serves the purpose of a router for all transfers initiated from an Avalanche EVM chain through Avalanche ICTT contracts.
+ * The difference with the AvalancheICTTRouter contract is that it gives the owner of the contract the possibility to enfore the relayer fees and manage them.
+ */
+contract AvalancheICTTRouterFixedFees is
     Ownable,
     ReentrancyGuard,
-    IAvalancheICTTRouterEnforcedFees
+    IAvalancheICTTRouterFixedFees,
+    AvalancheICTTRouter
 {
     using Address for address;
-
-    /**
-     * @notice Token address => source bridge address
-     * @notice Address `0x0` is used for the native token
-     */
-    mapping(address token => address sourceBridge) public tokenToSourceBridge;
-
-    /**
-     * @notice Token address => destination chain ID => DestinationBridge
-     * @notice Address `0x0` is used for the native token
-     */
-    mapping(
-        bytes32 destinationChainID => mapping(address token => DestinationBridge destinationBridge)
-    ) public tokenDestinationChainToDestinationBridge;
 
     /// @notice Relayer fee enforced by the router (in basis points)
     uint256 public primaryRelayerFeeBips;
@@ -52,7 +45,7 @@ contract AvalancheICTTRouterEnforcedFees is
     /// @notice Relayer fee enforced by the router (in basis points) in case of multihop bridging during the second bridge
     uint256 public secondaryRelayerFeeBips;
 
-    /// @notice  Current chain ID
+    /// @notice Router chain ID
     bytes32 private immutable routerChainID;
 
     /**
@@ -72,61 +65,9 @@ contract AvalancheICTTRouterEnforcedFees is
     ) external onlyOwner {
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
         secondaryRelayerFeeBips = secondaryRelayerFeeBips_;
-        emit ChangeRelayerFees(primaryRelayerFeeBips_, secondaryRelayerFeeBips_);
-    }
-
-    function registerSourceTokenBridge(
-        address tokenAddress,
-        address bridgeAddress
-    ) external onlyOwner {
-        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
-            revert NotAContract(tokenAddress);
-        }
-        if (!bridgeAddress.isContract()) {
-            revert NotAContract(bridgeAddress);
-        }
-        tokenToSourceBridge[tokenAddress] = bridgeAddress;
-
-        emit RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
-    }
-
-    function registerDestinationTokenBridge(
-        address tokenAddress,
-        bytes32 destinationChainID,
-        address bridgeAddress,
-        uint256 requiredGasLimit,
-        bool isMultihop
-    ) external onlyOwner {
-        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
-            revert NotAContract(tokenAddress);
-        }
-        if (bridgeAddress == address(0)) {
-            revert NotAContract(bridgeAddress);
-        }
-        if (destinationChainID == routerChainID) {
-            revert SourceChainEqualToDestinationChain(routerChainID, destinationChainID);
-        }
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
-        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
-            destinationBridge;
-
-        emit RegisterDestinationTokenBridge(tokenAddress, destinationBridge, destinationChainID);
-    }
-
-    function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
-        delete tokenToSourceBridge[tokenAddress];
-
-        emit RemoveSourceTokenBridge(tokenAddress);
-    }
-
-    function removeDestinationTokenBridge(
-        address tokenAddress,
-        bytes32 destinationChainID
-    ) external onlyOwner {
-        delete tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
-
-        emit RemoveDestinationTokenBridge(tokenAddress, destinationChainID);
+        emit AvalancheICTTRouterFixedFees__ChangeRelayerFees(
+            primaryRelayerFeeBips_, secondaryRelayerFeeBips_
+        );
     }
 
     function bridgeERC20(
@@ -167,7 +108,9 @@ contract AvalancheICTTRouterEnforcedFees is
         );
         IERC20TokenTransferrer(bridgeSource).send(input, bridgeAmount);
 
-        emit BridgeERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
+        emit AvalancheICTTRouter__BridgeERC20(
+            tokenAddress, destinationChainID, bridgeAmount, recipient
+        );
     }
 
     function bridgeNative(
@@ -205,21 +148,34 @@ contract AvalancheICTTRouterEnforcedFees is
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
-        emit BridgeNative(destinationChainID, bridgeAmount, recipient);
+        emit AvalancheICTTRouter__BridgeNative(destinationChainID, bridgeAmount, recipient);
     }
 
     function getRelayerFeesBips() external view returns (uint256, uint256) {
         return (primaryRelayerFeeBips, secondaryRelayerFeeBips);
     }
 
-    function getSourceBridge(address token) external view returns (address) {
-        return tokenToSourceBridge[token];
+    // REVERT FUNCTIONS
+    function bridgeERC20(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        uint256 amount,
+        address recipient,
+        address multiHopFallback,
+        uint256 primaryRelayerFeeBips,
+        uint256 secondaryRelayerFeeBips
+    ) external override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
+        revert("Cannot call this function in this contract");
     }
 
-    function getDestinationBridge(
-        bytes32 chainID,
-        address token
-    ) external view returns (DestinationBridge memory) {
-        return tokenDestinationChainToDestinationBridge[chainID][token];
+    function bridgeNative(
+        bytes32 destinationChainID,
+        address recipient,
+        address feeToken,
+        address multiHopFallback,
+        uint256 primaryRelayerFeeBips,
+        uint256 secondaryRelayerFeeBips
+    ) external payable override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
+        revert("Cannot call this function in this contract");
     }
 }

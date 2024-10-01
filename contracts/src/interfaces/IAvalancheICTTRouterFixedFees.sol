@@ -8,13 +8,15 @@ import {DestinationBridge, IAvalancheICTTRouter} from "./IAvalancheICTTRouter.so
 pragma solidity 0.8.18;
 
 /// @custom:security-contact security@e36knots.com
-interface IAvalancheICTTRouterEnforcedFees is IAvalancheICTTRouter {
+interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     /**
      * @notice Issued when changing the value of the relayer fee
      * @param primaryRelayerFee New value of the primary relayer fee
      * @param secondaryRelayerFee New value of the secondary relayer fee
      */
-    event ChangeRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
+    event AvalancheICTTRouterFixedFees__ChangeRelayerFees(
+        uint256 primaryRelayerFee, uint256 secondaryRelayerFee
+    );
 
     /**
      * @notice Change the relayer fee
