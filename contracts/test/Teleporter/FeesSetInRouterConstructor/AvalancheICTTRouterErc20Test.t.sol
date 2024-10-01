@@ -3,8 +3,8 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouterEnforcedFees} from
-    "../../../src/contracts/Teleporter/AvalancheICTTRouterEnforcedFees.sol";
+import {AvalancheICTTRouterFixedFees} from
+    "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
@@ -17,7 +17,11 @@ import {Vm} from "forge-std/Vm.sol";
 contract AvalancheICTTRouterErc20Test is Test {
     address private constant TOKEN_SOURCE = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
 
-    event BridgeERC20(
+    event AvalancheICTTRouterFixedFees__ChangeRelayerFees(
+        uint256 primaryRelayerFee, uint256 secondaryRelayerFee
+    );
+
+    event AvalancheICTTRouter__BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
@@ -25,7 +29,7 @@ contract AvalancheICTTRouterErc20Test is Test {
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 1);
-    AvalancheICTTRouterEnforcedFees tokenBridgeRouter;
+    AvalancheICTTRouterFixedFees tokenBridgeRouter;
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
     uint256 secondaryRelayerFeeBips;
@@ -85,6 +89,38 @@ contract AvalancheICTTRouterErc20Test is Test {
         _;
     }
 
+    function testSetRelayerFee() public {
+        vm.startPrank(owner);
+        (uint256 primaryRelayerFeeStart, uint256 secondaryRelayerFeeStart) =
+            tokenBridgeRouter.getRelayerFeesBips();
+        uint256 primaryRelayerFeeValue = 50;
+        uint256 secondaryRelayerFeeValue = 20;
+        tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
+        (uint256 primaryRelayerFeeEnd, uint256 secondaryRelayerFeeEnd) =
+            tokenBridgeRouter.getRelayerFeesBips();
+        assert(
+            (primaryRelayerFeeStart != primaryRelayerFeeEnd)
+                && (secondaryRelayerFeeStart != secondaryRelayerFeeEnd)
+        );
+        assert(
+            (primaryRelayerFeeEnd == primaryRelayerFeeValue)
+                && (secondaryRelayerFeeEnd == secondaryRelayerFeeValue)
+        );
+        vm.stopPrank();
+    }
+
+    function testEmitsOnSetRelayerFee() public {
+        vm.startPrank(owner);
+        uint256 primaryRelayerFeeValue = 50;
+        uint256 secondaryRelayerFeeValue = 20;
+        vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
+        emit AvalancheICTTRouterFixedFees__ChangeRelayerFees(
+            primaryRelayerFeeValue, secondaryRelayerFeeValue
+        );
+        tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
+        vm.stopPrank();
+    }
+
     function testBalanceBridgerWhenSendERC20Tokens()
         public
         registerTokenBridge
@@ -127,7 +163,9 @@ contract AvalancheICTTRouterErc20Test is Test {
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
+        emit AvalancheICTTRouter__BridgeERC20(
+            address(erc20Token), destinationChainID, amount, bridger
+        );
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token), destinationChainID, amount, bridger, address(0)
         );

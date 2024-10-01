@@ -3,8 +3,7 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouterLooseFees} from
-    "../../../src/contracts/Teleporter/AvalancheICTTRouterLooseFees.sol";
+import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
@@ -17,7 +16,9 @@ import {Vm} from "forge-std/Vm.sol";
 contract AvalancheICTTRouterNativeTokenTest is Test {
     address private constant TOKEN_SOURCE = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
 
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event AvalancheICTTRouter__BridgeNative(
+        bytes32 indexed destinationChainID, uint256 amount, address recipient
+    );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
     uint256 deployerKey;
@@ -27,7 +28,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
     WrappedNativeToken wrappedToken;
     NativeTokenHome tokenSource;
     address tokenDestination;
-    AvalancheICTTRouterLooseFees tokenBridgeRouter;
+    AvalancheICTTRouter tokenBridgeRouter;
     bytes32 sourceChainID;
     bytes32 destinationChainID;
     address owner;
@@ -107,7 +108,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
     function testEmitsOnSendNativeTokens() public registerTokenBridge {
         vm.startPrank(bridger);
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeNative(destinationChainID, 1 ether, bridger);
+        emit AvalancheICTTRouter__BridgeNative(destinationChainID, 1 ether, bridger);
 
         tokenBridgeRouter.bridgeNative{value: 1 ether}(
             destinationChainID, bridger, address(wrappedToken), address(0), 20, 0

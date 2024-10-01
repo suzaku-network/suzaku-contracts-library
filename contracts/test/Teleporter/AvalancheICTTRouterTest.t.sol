@@ -4,11 +4,11 @@
 pragma solidity 0.8.18;
 
 import {
-    AvalancheICTTRouterEnforcedFees,
+    AvalancheICTTRouter,
     DestinationBridge
-} from "../../../src/contracts/Teleporter/AvalancheICTTRouterEnforcedFees.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
-import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
+} from "../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../src/interfaces/IAvalancheICTTRouter.sol";
+import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -16,20 +16,22 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterTest is Test {
-    event ChangeRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
-    event RegisterSourceTokenBridge(address indexed tokenAddress, address indexed bridgeAddress);
-    event RegisterDestinationTokenBridge(
+    // event ChangeRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
+    event AvalancheICTTRouter__RegisterSourceTokenBridge(
+        address indexed tokenAddress, address indexed bridgeAddress
+    );
+    event AvalancheICTTRouter__RegisterDestinationTokenBridge(
         address indexed tokenAddress,
         DestinationBridge indexed destinationBridge,
         bytes32 indexed destinationChainID
     );
-    event RemoveSourceTokenBridge(address indexed tokenAddress);
-    event RemoveDestinationTokenBridge(
+    event AvalancheICTTRouter__RemoveSourceTokenBridge(address indexed tokenAddress);
+    event AvalancheICTTRouter__RemoveDestinationTokenBridge(
         address indexed tokenAddress, bytes32 indexed destinationChainID
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(address(0), 1);
-    AvalancheICTTRouterEnforcedFees tokenBridgeRouter;
+    AvalancheICTTRouter tokenBridgeRouter;
     uint256 deployerKey;
     ERC20Mock erc20Token;
     ERC20TokenHome tokenSource;
@@ -65,12 +67,29 @@ contract AvalancheICTTRouterTest is Test {
         vm.deal(bridger, STARTING_GAS_BALANCE);
     }
 
-    function testNotAContractRevertOnRegisterSourceTokenBridge() public {
+    function testBridgeAddrNotAContractRevertOnRegisterSourceTokenBridge() public {
         vm.startPrank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(IAvalancheICTTRouter.NotAContract.selector, address(0))
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter.AvalancheICTTRouter__BridgeAddrNotAContract.selector,
+                address(0)
+            )
         );
         tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(0));
+        vm.stopPrank();
+    }
+
+    function testTokenAddrNotAContractRevertOnRegisterSourceTokenBridge() public {
+        vm.startPrank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter.AvalancheICTTRouter__TokenAddrNotAContract.selector,
+                address(0x1111111111111111111111111111111111111111)
+            )
+        );
+        tokenBridgeRouter.registerSourceTokenBridge(
+            address(0x1111111111111111111111111111111111111111), address(tokenSource)
+        );
         vm.stopPrank();
     }
 
@@ -80,7 +99,9 @@ contract AvalancheICTTRouterTest is Test {
         vm.startPrank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAvalancheICTTRouter.SourceChainEqualToDestinationChain.selector,
+                IAvalancheICTTRouter
+                    .AvalancheICTTRouter__SourceChainEqualToDestinationChain
+                    .selector,
                 sourceChainID,
                 sourceChainID
             )
@@ -101,40 +122,42 @@ contract AvalancheICTTRouterTest is Test {
         _;
     }
 
-    function testSetRelayerFee() public {
-        vm.startPrank(owner);
-        (uint256 primaryRelayerFeeStart, uint256 secondaryRelayerFeeStart) =
-            tokenBridgeRouter.getRelayerFeesBips();
-        uint256 primaryRelayerFeeValue = 50;
-        uint256 secondaryRelayerFeeValue = 20;
-        tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
-        (uint256 primaryRelayerFeeEnd, uint256 secondaryRelayerFeeEnd) =
-            tokenBridgeRouter.getRelayerFeesBips();
-        assert(
-            (primaryRelayerFeeStart != primaryRelayerFeeEnd)
-                && (secondaryRelayerFeeStart != secondaryRelayerFeeEnd)
-        );
-        assert(
-            (primaryRelayerFeeEnd == primaryRelayerFeeValue)
-                && (secondaryRelayerFeeEnd == secondaryRelayerFeeValue)
-        );
-        vm.stopPrank();
-    }
+    // function testSetRelayerFee() public {
+    //     vm.startPrank(owner);
+    //     (uint256 primaryRelayerFeeStart, uint256 secondaryRelayerFeeStart) =
+    //         tokenBridgeRouter.getRelayerFeesBips();
+    //     uint256 primaryRelayerFeeValue = 50;
+    //     uint256 secondaryRelayerFeeValue = 20;
+    //     tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
+    //     (uint256 primaryRelayerFeeEnd, uint256 secondaryRelayerFeeEnd) =
+    //         tokenBridgeRouter.getRelayerFeesBips();
+    //     assert(
+    //         (primaryRelayerFeeStart != primaryRelayerFeeEnd)
+    //             && (secondaryRelayerFeeStart != secondaryRelayerFeeEnd)
+    //     );
+    //     assert(
+    //         (primaryRelayerFeeEnd == primaryRelayerFeeValue)
+    //             && (secondaryRelayerFeeEnd == secondaryRelayerFeeValue)
+    //     );
+    //     vm.stopPrank();
+    // }
 
-    function testEmitsOnSetRelayerFee() public {
-        vm.startPrank(owner);
-        uint256 primaryRelayerFeeValue = 50;
-        uint256 secondaryRelayerFeeValue = 20;
-        vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit ChangeRelayerFees(primaryRelayerFeeValue, secondaryRelayerFeeValue);
-        tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
-        vm.stopPrank();
-    }
+    // function testEmitsOnSetRelayerFee() public {
+    //     vm.startPrank(owner);
+    //     uint256 primaryRelayerFeeValue = 50;
+    //     uint256 secondaryRelayerFeeValue = 20;
+    //     vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
+    //     emit ChangeRelayerFees(primaryRelayerFeeValue, secondaryRelayerFeeValue);
+    //     tokenBridgeRouter.setRelayerFeesBips(primaryRelayerFeeValue, secondaryRelayerFeeValue);
+    //     vm.stopPrank();
+    // }
 
     function testEmitsOnRegisterSourceTokenBridge() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit RegisterSourceTokenBridge(address(erc20Token), address(tokenSource));
+        emit AvalancheICTTRouter__RegisterSourceTokenBridge(
+            address(erc20Token), address(tokenSource)
+        );
         tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
         vm.stopPrank();
     }
@@ -144,7 +167,7 @@ contract AvalancheICTTRouterTest is Test {
         DestinationBridge memory destinationBridge =
             DestinationBridge(tokenDestination, requiredGasLimit, false);
         vm.expectEmit(true, true, true, false, address(tokenBridgeRouter));
-        emit RegisterDestinationTokenBridge(
+        emit AvalancheICTTRouter__RegisterDestinationTokenBridge(
             address(erc20Token), destinationBridge, destinationChainID
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
@@ -169,7 +192,7 @@ contract AvalancheICTTRouterTest is Test {
     function testEmitsOnRemoveSourceTokenBridge() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit RemoveSourceTokenBridge(address(erc20Token));
+        emit AvalancheICTTRouter__RemoveSourceTokenBridge(address(erc20Token));
         tokenBridgeRouter.removeSourceTokenBridge(address(erc20Token));
         vm.stopPrank();
     }
@@ -177,7 +200,9 @@ contract AvalancheICTTRouterTest is Test {
     function testEmitsOnRemoveDestinationTokenBridge() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, false, address(tokenBridgeRouter));
-        emit RemoveDestinationTokenBridge(address(erc20Token), destinationChainID);
+        emit AvalancheICTTRouter__RemoveDestinationTokenBridge(
+            address(erc20Token), destinationChainID
+        );
         tokenBridgeRouter.removeDestinationTokenBridge(address(erc20Token), destinationChainID);
         vm.stopPrank();
     }

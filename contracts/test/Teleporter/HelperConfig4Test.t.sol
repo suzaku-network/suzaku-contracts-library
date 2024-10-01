@@ -3,10 +3,9 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouterEnforcedFees} from
-    "../../src/contracts/Teleporter/AvalancheICTTRouterEnforcedFees.sol";
-import {AvalancheICTTRouterLooseFees} from
-    "../../src/contracts/Teleporter/AvalancheICTTRouterLooseFees.sol";
+import {AvalancheICTTRouter} from "../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {AvalancheICTTRouterFixedFees} from
+    "../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
@@ -39,8 +38,8 @@ contract HelperConfig4Test is Script {
         ERC20TokenHome erc20TokenSource;
         NativeTokenHome nativeTokenSource;
         address tokenRemote;
-        AvalancheICTTRouterLooseFees tokenBridgeRouterF;
-        AvalancheICTTRouterEnforcedFees tokenBridgeRouterS;
+        AvalancheICTTRouter tokenBridgeRouterF;
+        AvalancheICTTRouterFixedFees tokenBridgeRouterS;
         bytes32 sourceChainID;
         bytes32 remoteChainID;
         address owner;
@@ -101,9 +100,9 @@ contract HelperConfig4Test is Script {
         TeleporterRegistry teleporterRegistry = new TeleporterRegistry(protocolRegistryEntry);
 
         ERC20Mock _erc20Token = new ERC20Mock("ERC20Mock", "ERC20M", makeAddr("mockRecipient"), 0);
-        WrappedNativeToken _wrappedToken = new WrappedNativeToken("WNTT"); // WNTT for Wrapped Native Token Test
+        WrappedNativeToken _wrappedToken = new WrappedNativeToken("WNTT");
 
-        AvalancheICTTRouterLooseFees _tokenBridgeRouterF = new AvalancheICTTRouterLooseFees();
+        AvalancheICTTRouter _tokenBridgeRouterF = new AvalancheICTTRouter();
 
         ERC20TokenHome _erc20TokenSource =
             new ERC20TokenHome(address(teleporterRegistry), _owner, address(_erc20Token), 18);
@@ -122,7 +121,7 @@ contract HelperConfig4Test is Script {
             nativeTokenSource: _nativeTokenSource,
             tokenRemote: _tokenRemote,
             tokenBridgeRouterF: _tokenBridgeRouterF,
-            tokenBridgeRouterS: AvalancheICTTRouterEnforcedFees(address(0)),
+            tokenBridgeRouterS: AvalancheICTTRouterFixedFees(address(0)),
             sourceChainID: _sourceChainID,
             remoteChainID: _remoteChainID,
             owner: _owner,
@@ -159,8 +158,8 @@ contract HelperConfig4Test is Script {
         ERC20Mock _erc20Token = new ERC20Mock("ERC20Mock", "ERC20M", makeAddr("mockRecipient"), 0);
         WrappedNativeToken _wrappedToken = new WrappedNativeToken("WNTT"); // WNTT for Wrapped Native Token Test
 
-        AvalancheICTTRouterEnforcedFees _tokenBridgeRouterS =
-            new AvalancheICTTRouterEnforcedFees(_primaryRelayerFeeBips, _secondaryRelayerFeeBips);
+        AvalancheICTTRouterFixedFees _tokenBridgeRouterS =
+            new AvalancheICTTRouterFixedFees(_primaryRelayerFeeBips, _secondaryRelayerFeeBips);
 
         ERC20TokenHome _erc20TokenSource =
             new ERC20TokenHome(address(teleporterRegistry), _owner, address(_erc20Token), 18);
@@ -178,7 +177,7 @@ contract HelperConfig4Test is Script {
             erc20TokenSource: _erc20TokenSource,
             nativeTokenSource: _nativeTokenSource,
             tokenRemote: _tokenRemote,
-            tokenBridgeRouterF: AvalancheICTTRouterLooseFees(address(0)),
+            tokenBridgeRouterF: AvalancheICTTRouter(address(0)),
             tokenBridgeRouterS: _tokenBridgeRouterS,
             sourceChainID: _sourceChainID,
             remoteChainID: _remoteChainID,
