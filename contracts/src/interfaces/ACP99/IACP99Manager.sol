@@ -5,7 +5,12 @@ pragma solidity 0.8.18;
 
 import {ValidatorMessages} from "../../contracts/ACP99/ValidatorMessages.sol";
 
-/// @custom:security-contact security@suzaku.network
+/*
+ * @title IACP99Manager
+ * @author ADDPHO
+ * @notice The IACP99Manager interface is the interface for the ACP99Manager contract.
+ * @custom:security-contact security@suzaku.network
+ */
 interface IACP99Manager {
     /// @notice Subnet validation status
     enum ValidationStatus {
@@ -110,10 +115,14 @@ interface IACP99Manager {
     function getSecurityModule() external view returns (address);
 
     /// @notice Get the validation details for a given validation ID
-    function getValidation(bytes32 validationID) external view returns (Validation memory);
+    function getValidation(
+        bytes32 validationID
+    ) external view returns (Validation memory);
 
     /// @notice Get a Subnet validator's active validation ID
-    function getValidatorActiveValidation(bytes32 nodeID) external view returns (bytes32);
+    function getValidatorActiveValidation(
+        bytes32 nodeID
+    ) external view returns (bytes32);
 
     /// @notice Get the current Subnet validator set (list of NodeIDs)
     function getActiveValidatorSet() external view returns (bytes32[] memory);
@@ -122,13 +131,17 @@ interface IACP99Manager {
     function subnetTotalWeight() external view returns (uint64);
 
     /// @notice Get the list of message IDs associated with a validator of the Subnet
-    function getValidatorValidations(bytes32 nodeID) external view returns (bytes32[] memory);
+    function getValidatorValidations(
+        bytes32 nodeID
+    ) external view returns (bytes32[] memory);
 
     /**
      * @notice Set the address of the security module attached to this manager
      * @param securityModule_ The address of the security module
      */
-    function setSecurityModule(address securityModule_) external;
+    function setSecurityModule(
+        address securityModule_
+    ) external;
 
     /**
      * @notice Verifies and sets the initial validator set for the chain through a P-Chain
@@ -160,14 +173,18 @@ interface IACP99Manager {
      * Only necessary if the original message can't be delivered due to validator churn.
      * @param validationID The validationID attached to the registration message
      */
-    function resendValidatorRegistrationMessage(bytes32 validationID) external returns (bytes32);
+    function resendValidatorRegistrationMessage(
+        bytes32 validationID
+    ) external returns (bytes32);
 
     /**
      * @notice Completes the validator registration process by returning an acknowledgement of the registration of a
      * validationID from the P-Chain.
      * @param messageIndex The index of the Warp message to be received providing the acknowledgement.
      */
-    function completeValidatorRegistration(uint32 messageIndex) external;
+    function completeValidatorRegistration(
+        uint32 messageIndex
+    ) external;
 
     /**
      * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message.
@@ -190,5 +207,7 @@ interface IACP99Manager {
      * validationID from the P-Chain.
      * @param messageIndex The index of the Warp message to be received providing the acknowledgement.
      */
-    function completeValidatorWeightUpdate(uint32 messageIndex) external;
+    function completeValidatorWeightUpdate(
+        uint32 messageIndex
+    ) external;
 }

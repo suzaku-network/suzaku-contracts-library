@@ -3,7 +3,12 @@
 
 pragma solidity 0.8.18;
 
-/// @custom:security-contact security@suzaku.network
+/*
+ * @title IACP99SecurityModule
+ * @author ADDPHO
+ * @notice The IACP99SecurityModule interface is the interface for the ACP99 security modules.
+ * @custom:security-contact security@suzaku.network
+ */
 interface IACP99SecurityModule {
     /**
      * @notice Information about a validator registration
@@ -57,13 +62,15 @@ interface IACP99SecurityModule {
      * @notice Handle a validator registration
      * @param validatorInfo The information about the validator
      */
-    function handleValidatorRegistration(ValidatiorRegistrationInfo memory validatorInfo)
-        external;
+    function handleValidatorRegistration(
+        ValidatiorRegistrationInfo memory validatorInfo
+    ) external;
 
     /**
      * @notice Handle a validator weight change
      * @param weightChangeInfo The information about the validator weight change
      */
-    function handleValidatorWeightChange(ValidatorWeightChangeInfo memory weightChangeInfo)
-        external;
+    function handleValidatorWeightChange(
+        ValidatorWeightChangeInfo memory weightChangeInfo
+    ) external;
 }
