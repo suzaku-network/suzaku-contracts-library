@@ -14,24 +14,34 @@ struct DestinationBridge {
 /// @custom:security-contact security@e36knots.com
 interface IAvalancheICTTRouter {
     /**
-     * @notice Issued when an address is not that of a contract
-     * @param contractAddress Address of the supposedly contract
+     * @notice Issued when the address of the token is not that of a contract
+     * @param contractAddress Address of the supposedly token contract
      */
-    error NotAContract(address contractAddress);
+    error AvalancheICTTRouter__TokenAddrNotAContract(address contractAddress);
+
+    /**
+     * @notice Issued when the address of the bridge is not that of a contract
+     * @param contractAddress Address of the supposedly bridge contract
+     */
+    error AvalancheICTTRouter__BridgeAddrNotAContract(address contractAddress);
 
     /**
      * @notice Issued when the source chain and the destination chain are the same
      * @param sourceChain ID of the source chain (chain on which the router is deployed)
      * @param destinationChain ID of the destination chain
      */
-    error SourceChainEqualToDestinationChain(bytes32 sourceChain, bytes32 destinationChain);
+    error AvalancheICTTRouter__SourceChainEqualToDestinationChain(
+        bytes32 sourceChain, bytes32 destinationChain
+    );
 
     /**
      * @notice Issued when registering a new bridge source instance
      * @param tokenAddress Address of the ERC20 token contract
      * @param bridgeAddress Address of the bridge contract
      */
-    event RegisterSourceTokenBridge(address indexed tokenAddress, address indexed bridgeAddress);
+    event AvalancheICTTRouter__RegisterSourceTokenBridge(
+        address indexed tokenAddress, address indexed bridgeAddress
+    );
 
     /**
      * @notice Issued when registering a new bridge destination
@@ -39,7 +49,7 @@ interface IAvalancheICTTRouter {
      * @param destinationBridge Bridge destination instance and required gas limit
      * @param destinationChainID ID of the destination chain
      */
-    event RegisterDestinationTokenBridge(
+    event AvalancheICTTRouter__RegisterDestinationTokenBridge(
         address indexed tokenAddress,
         DestinationBridge indexed destinationBridge,
         bytes32 indexed destinationChainID
@@ -49,14 +59,14 @@ interface IAvalancheICTTRouter {
      * @notice Issued when deleting a bridge source instance
      * @param tokenAddress Address of the ERC20 token contract
      */
-    event RemoveSourceTokenBridge(address indexed tokenAddress);
+    event AvalancheICTTRouter__RemoveSourceTokenBridge(address indexed tokenAddress);
 
     /**
      * @notice Issued when deleting a bridge destination
      * @param tokenAddress Address of the ERC20 token contract
      * @param destinationChainID ID of the destination chain
      */
-    event RemoveDestinationTokenBridge(
+    event AvalancheICTTRouter__RemoveDestinationTokenBridge(
         address indexed tokenAddress, bytes32 indexed destinationChainID
     );
 
@@ -67,7 +77,7 @@ interface IAvalancheICTTRouter {
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
      */
-    event BridgeERC20(
+    event AvalancheICTTRouter__BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
@@ -80,7 +90,9 @@ interface IAvalancheICTTRouter {
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
      */
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event AvalancheICTTRouter__BridgeNative(
+        bytes32 indexed destinationChainID, uint256 amount, address recipient
+    );
 
     /**
      * @notice Register a new source bridge instance
@@ -120,6 +132,44 @@ interface IAvalancheICTTRouter {
         address tokenAddress,
         bytes32 destinationChainID
     ) external;
+
+    /**
+     * @notice Bridge ERC20 token to a destination chain
+     * @param tokenAddress Address of the ERC20 token contract
+     * @param destinationChainID ID of the destination chain
+     * @param amount Amount of token bridged
+     * @param recipient Address of the receiver of the tokens
+     * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
+     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
+     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     */
+    function bridgeERC20(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        uint256 amount,
+        address recipient,
+        address multiHopFallback,
+        uint256 primaryRelayerFeeBips,
+        uint256 secondaryRelayerFeeBips
+    ) external;
+
+    /**
+     * @notice Bridge native token to a destination chain
+     * @param destinationChainID ID of the destination chain
+     * @param recipient Address of the receiver of the tokens
+     * @param feeToken Address of the fee token
+     * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
+     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
+     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     */
+    function bridgeNative(
+        bytes32 destinationChainID,
+        address recipient,
+        address feeToken,
+        address multiHopFallback,
+        uint256 primaryRelayerFeeBips,
+        uint256 secondaryRelayerFeeBips
+    ) external payable;
 
     /**
      * @notice Get the source bridge contract via the ERC20 token
