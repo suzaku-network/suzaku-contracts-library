@@ -5,11 +5,8 @@
 
 pragma solidity 0.8.18;
 
-import {IAvalancheICTTRouter} from "../../interfaces/IAvalancheICTTRouter.sol";
-import {
-    DestinationBridge,
-    IAvalancheICTTRouterFixedFees
-} from "../../interfaces/IAvalancheICTTRouterFixedFees.sol";
+import {DestinationBridge, IAvalancheICTTRouter} from "../../interfaces/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouterFixedFees} from "../../interfaces/IAvalancheICTTRouterFixedFees.sol";
 import {AvalancheICTTRouter} from "./AvalancheICTTRouter.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
@@ -27,8 +24,9 @@ import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /**
  * @title AvalancheICTTRouterFixedFees
- * @author Suzaku
+ * @author ADDPHO
  * @notice Equivalent of AvalancheICTTRouter that gives the owner of the contract the possibility to enforce the relayer fees.
+ * @custom:security-contact security@suzaku.network
  */
 contract AvalancheICTTRouterFixedFees is
     Ownable,
@@ -44,13 +42,9 @@ contract AvalancheICTTRouterFixedFees is
     /// @notice Relayer fee enforced by the router (in basis points) in case of multihop bridging during the second bridge
     uint256 public secondaryRelayerFeeBips;
 
-    /// @notice Router chain ID
-    bytes32 private immutable routerChainID;
-
     constructor(uint256 primaryRelayerFeeBips_, uint256 secondaryRelayerFeeBips_) {
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
         secondaryRelayerFeeBips = secondaryRelayerFeeBips_;
-        routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees

@@ -9,18 +9,19 @@ pragma solidity 0.8.18;
 
 /**
  * @title IAvalancheICTTRouterFixedFees
- * @author Suzaku
+ * @author ADDPHO
  * @notice The complementary interface of the AvalancheICTTRouterFixedFees contract.
- * This interface introduce a new signature for the bridge functions and some relayer fees relating functions (getter, setter, event, error).
+ * This interface introduces a new signature for the bridge functions and some relayer fees relating functions (getter, setter, event, error).
+ * @custom:security-contact security@suzaku.network
  */
 interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     error AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
+
     /**
      * @notice Emitted when the value of the fixes relayer fees are updated
      * @param primaryRelayerFee New value of the primary relayer fee
      * @param secondaryRelayerFee New value of the secondary relayer fee
      */
-
     event UpdateRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
 
     /**

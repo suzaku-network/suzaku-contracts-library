@@ -13,8 +13,9 @@ struct DestinationBridge {
 
 /**
  * @title IAvalancheICTTRouter
- * @author Suzaku
+ * @author ADDPHO
  * @notice The interface of the AvalancheICTTRouter contract
+ * @custom:security-contact security@suzaku.network
  */
 interface IAvalancheICTTRouter {
     error AvalancheICTTRouter__TokenAddrNotAContract(address contractAddress);

@@ -22,8 +22,9 @@ import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /**
  * @title AvalancheICTTRouter
- * @author Suzaku
+ * @author ADDPHO
  * @notice The AvalancheICTTRouter allows users to bridge assets between Avalanche EVM L1s through canonical ICTT contracts.
+ * @custom:security-contact security@suzaku.network
  */
 contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     using Address for address;
