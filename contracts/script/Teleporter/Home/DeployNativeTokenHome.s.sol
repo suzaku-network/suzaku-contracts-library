@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.18;
 
-import {WarpMessengerMock} from "../../../src/mocks/WarpMessengerMock.sol";
+import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {Script, console} from "forge-std/Script.sol";

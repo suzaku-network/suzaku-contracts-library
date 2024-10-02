@@ -3,36 +3,35 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
-import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
+import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
-import {TokenRemote} from "@avalabs/avalanche-ictt/TokenRemote/TokenRemote.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
 import {SafeMath} from "@openzeppelin/contracts@4.8.1/utils/math/SafeMath.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterErc20Test is Test {
-    address private constant TOKEN_HOME = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
+    address private constant TOKEN_SOURCE = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
 
     event BridgeERC20(
         address indexed tokenAddress,
-        bytes32 indexed remoteBlockchainID,
+        bytes32 indexed destinationBlockchainID,
         uint256 amount,
         address recipient
     );
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_HOME);
+    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
     AvalancheICTTRouter tokenBridgeRouter;
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
     uint256 secondaryRelayerFeeBips;
     ERC20Mock erc20Token;
-    ERC20TokenHome tokenHome;
-    address tokenRemote;
-    bytes32 homeChainID;
-    bytes32 remoteChainID;
+    ERC20TokenHome tokenSource;
+    address tokenDestination;
+    bytes32 sourceChainID;
+    bytes32 destinationChainID;
     address owner;
     address bridger;
     bytes32 messageId;
@@ -49,12 +48,13 @@ contract AvalancheICTTRouterErc20Test is Test {
             secondaryRelayerFeeBips,
             erc20Token,
             ,
-            tokenHome,
+            tokenSource,
             ,
-            tokenRemote,
+            tokenDestination,
             tokenBridgeRouter,
-            homeChainID,
-            remoteChainID,
+            ,
+            sourceChainID,
+            destinationChainID,
             owner,
             bridger,
             messageId,
@@ -68,9 +68,9 @@ contract AvalancheICTTRouterErc20Test is Test {
 
     modifier registerTokenBridge() {
         vm.startPrank(owner);
-        tokenBridgeRouter.registerHomeTokenBridge(address(erc20Token), address(tokenHome));
-        tokenBridgeRouter.registerRemoteTokenBridge(
-            address(erc20Token), remoteChainID, tokenRemote, requiredGasLimit, false
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
         );
         vm.stopPrank();
         _;
@@ -94,7 +94,7 @@ contract AvalancheICTTRouterErc20Test is Test {
         uint256 amount = 1 ether;
         erc20Token.approve(address(tokenBridgeRouter), amount);
         tokenBridgeRouter.bridgeERC20(
-            address(erc20Token), remoteChainID, amount, bridger, address(0)
+            address(erc20Token), destinationChainID, amount, bridger, address(0), 20, 0
         );
 
         uint256 balanceEnd = erc20Token.balanceOf(bridger);
@@ -104,17 +104,17 @@ contract AvalancheICTTRouterErc20Test is Test {
 
     function testBalanceBridgeWhenSendERC20Tokens() public registerTokenBridge fundBridgerAccount {
         vm.startPrank(bridger);
-        uint256 balanceStart = erc20Token.balanceOf(address(tokenHome));
+        uint256 balanceStart = erc20Token.balanceOf(address(tokenSource));
         assert(balanceStart == 0);
 
         uint256 amount = 1 ether;
         erc20Token.approve(address(tokenBridgeRouter), amount);
         tokenBridgeRouter.bridgeERC20(
-            address(erc20Token), remoteChainID, amount, bridger, address(0)
+            address(erc20Token), destinationChainID, amount, bridger, address(0), 20, 0
         );
 
         uint256 feeAmount = SafeMath.div(SafeMath.mul(amount, primaryRelayerFeeBips), 10_000);
-        uint256 balanceEnd = erc20Token.balanceOf(address(tokenHome));
+        uint256 balanceEnd = erc20Token.balanceOf(address(tokenSource));
         assert(balanceEnd == amount - feeAmount);
         vm.stopPrank();
     }
@@ -125,9 +125,9 @@ contract AvalancheICTTRouterErc20Test is Test {
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeERC20(address(erc20Token), remoteChainID, amount, bridger);
+        emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
         tokenBridgeRouter.bridgeERC20(
-            address(erc20Token), remoteChainID, amount, bridger, address(0)
+            address(erc20Token), destinationChainID, amount, bridger, address(0), 20, 0
         );
 
         vm.stopPrank();

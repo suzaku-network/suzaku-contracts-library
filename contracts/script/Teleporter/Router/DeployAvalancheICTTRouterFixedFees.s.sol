@@ -3,13 +3,14 @@
 
 pragma solidity 0.8.18;
 
-import {AvalancheICTTRouter} from "../../src/Teleporter/AvalancheICTTRouter.sol";
-import {WarpMessengerMock} from "../../src/mocks/WarpMessengerMock.sol";
-import {HelperConfig} from "./HelperConfig.s.sol";
+import {AvalancheICTTRouterFixedFees} from
+    "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
+import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
+import {HelperConfig} from "../HelperConfig.s.sol";
 import {Script, console} from "forge-std/Script.sol";
 
-contract DeployAvalancheICTTRouter is Script {
-    function run() external returns (AvalancheICTTRouter) {
+contract DeployAvalancheICTTRouterFixedFees is Script {
+    function run() external returns (AvalancheICTTRouterFixedFees) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
@@ -34,8 +35,8 @@ contract DeployAvalancheICTTRouter is Script {
         ) = helperConfig.activeNetworkConfig();
         vm.etch(warpPrecompileAddress, address(mock).code);
         vm.startBroadcast(deployerKey);
-        AvalancheICTTRouter tokenBridgeRouter =
-            new AvalancheICTTRouter(primaryRelayerFeeBips, secondaryRelayerFeeBips);
+        AvalancheICTTRouterFixedFees tokenBridgeRouter =
+            new AvalancheICTTRouterFixedFees(primaryRelayerFeeBips, secondaryRelayerFeeBips);
         vm.stopBroadcast();
 
         return (tokenBridgeRouter);
