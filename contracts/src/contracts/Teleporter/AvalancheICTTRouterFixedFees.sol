@@ -145,25 +145,25 @@ contract AvalancheICTTRouterFixedFees is
 
     /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
     function bridgeERC20(
-        address tokenAddress,
-        bytes32 destinationChainID,
-        uint256 amount,
-        address recipient,
-        address multiHopFallback,
-        uint256 primaryRelayerFeeBips,
-        uint256 secondaryRelayerFeeBips
+        address, /*tokenAddress*/
+        bytes32, /*destinationChainID*/
+        uint256, /*amount*/
+        address, /*recipient*/
+        address, /*multiHopFallback*/
+        uint256, /*primaryRelayerFeeBips*/
+        uint256 /*secondaryRelayerFeeBips*/
     ) external override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
         revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
     }
 
     /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
     function bridgeNative(
-        bytes32 destinationChainID,
-        address recipient,
-        address feeToken,
-        address multiHopFallback,
-        uint256 primaryRelayerFeeBips,
-        uint256 secondaryRelayerFeeBips
+        bytes32, /*destinationChainID*/
+        address, /*recipient*/
+        address, /*feeToken*/
+        address, /*multiHopFallback*/
+        uint256, /*primaryRelayerFeeBips*/
+        uint256 /*secondaryRelayerFeeBips*/
     ) external payable override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
         revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
     }
