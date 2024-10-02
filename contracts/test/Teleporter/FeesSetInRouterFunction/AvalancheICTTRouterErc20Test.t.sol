@@ -15,7 +15,7 @@ import {Vm} from "forge-std/Vm.sol";
 contract AvalancheICTTRouterErc20Test is Test {
     address private constant TOKEN_SOURCE = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
 
-    event AvalancheICTTRouter__BridgeERC20(
+    event BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
@@ -125,9 +125,7 @@ contract AvalancheICTTRouterErc20Test is Test {
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit AvalancheICTTRouter__BridgeERC20(
-            address(erc20Token), destinationChainID, amount, bridger
-        );
+        emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token), destinationChainID, amount, bridger, address(0), 20, 0
         );
