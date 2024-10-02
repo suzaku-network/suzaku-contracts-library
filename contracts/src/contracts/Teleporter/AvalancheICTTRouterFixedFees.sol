@@ -28,14 +28,13 @@ import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 /**
  * @title AvalancheICTTRouterFixedFees
  * @author Suzaku
- * @notice The AvalancheICTTRouterFixedFees serves the purpose of a router for all transfers initiated from an Avalanche EVM chain through Avalanche ICTT contracts.
- * The difference with the AvalancheICTTRouter contract is that it gives the owner of the contract the possibility to enfore the relayer fees and manage them.
+ * @notice Equivalent of AvalancheICTTRouter that gives the owner of the contract the possibility to enforce the relayer fees.
  */
 contract AvalancheICTTRouterFixedFees is
     Ownable,
     ReentrancyGuard,
-    IAvalancheICTTRouterFixedFees,
-    AvalancheICTTRouter
+    AvalancheICTTRouter,
+    IAvalancheICTTRouterFixedFees
 {
     using Address for address;
 
@@ -48,28 +47,23 @@ contract AvalancheICTTRouterFixedFees is
     /// @notice Router chain ID
     bytes32 private immutable routerChainID;
 
-    /**
-     * @notice Set the relayer fee and the ID of the source chain
-     * @param primaryRelayerFeeBips_ Relayer fee in basic points
-     * @param secondaryRelayerFeeBips_ In case of multihop bridge, relayer fee for the second bridge
-     */
     constructor(uint256 primaryRelayerFeeBips_, uint256 secondaryRelayerFeeBips_) {
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
         secondaryRelayerFeeBips = secondaryRelayerFeeBips_;
         routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
     }
 
-    function setRelayerFeesBips(
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
+    function updateRelayerFeesBips(
         uint256 primaryRelayerFeeBips_,
         uint256 secondaryRelayerFeeBips_
     ) external onlyOwner {
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
         secondaryRelayerFeeBips = secondaryRelayerFeeBips_;
-        emit AvalancheICTTRouterFixedFees__ChangeRelayerFees(
-            primaryRelayerFeeBips_, secondaryRelayerFeeBips_
-        );
+        emit UpdateRelayerFees(primaryRelayerFeeBips_, secondaryRelayerFeeBips_);
     }
 
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
     function bridgeERC20(
         address tokenAddress,
         bytes32 destinationChainID,
@@ -108,11 +102,10 @@ contract AvalancheICTTRouterFixedFees is
         );
         IERC20TokenTransferrer(bridgeSource).send(input, bridgeAmount);
 
-        emit AvalancheICTTRouter__BridgeERC20(
-            tokenAddress, destinationChainID, bridgeAmount, recipient
-        );
+        emit BridgeERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
     }
 
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
@@ -148,14 +141,15 @@ contract AvalancheICTTRouterFixedFees is
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
-        emit AvalancheICTTRouter__BridgeNative(destinationChainID, bridgeAmount, recipient);
+        emit BridgeNative(destinationChainID, bridgeAmount, recipient);
     }
 
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
     function getRelayerFeesBips() external view returns (uint256, uint256) {
         return (primaryRelayerFeeBips, secondaryRelayerFeeBips);
     }
 
-    // REVERT FUNCTIONS
+    /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
     function bridgeERC20(
         address tokenAddress,
         bytes32 destinationChainID,
@@ -165,9 +159,10 @@ contract AvalancheICTTRouterFixedFees is
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
     ) external override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
-        revert("Cannot call this function in this contract");
+        revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
     }
 
+    /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
@@ -176,6 +171,6 @@ contract AvalancheICTTRouterFixedFees is
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
     ) external payable override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
-        revert("Cannot call this function in this contract");
+        revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
     }
 }

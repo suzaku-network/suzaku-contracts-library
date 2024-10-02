@@ -7,36 +7,41 @@ import {DestinationBridge, IAvalancheICTTRouter} from "./IAvalancheICTTRouter.so
 
 pragma solidity 0.8.18;
 
-/// @custom:security-contact security@e36knots.com
+/**
+ * @title IAvalancheICTTRouterFixedFees
+ * @author Suzaku
+ * @notice The complementary interface of the AvalancheICTTRouterFixedFees contract.
+ * This interface introduce a new signature for the bridge functions and some relayer fees relating functions (getter, setter, event, error).
+ */
 interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
+    error AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
     /**
-     * @notice Issued when changing the value of the relayer fee
+     * @notice Emitted when the value of the fixes relayer fees are updated
      * @param primaryRelayerFee New value of the primary relayer fee
      * @param secondaryRelayerFee New value of the secondary relayer fee
      */
-    event AvalancheICTTRouterFixedFees__ChangeRelayerFees(
-        uint256 primaryRelayerFee, uint256 secondaryRelayerFee
-    );
+
+    event UpdateRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
 
     /**
-     * @notice Change the relayer fee
+     * @notice Update the fixed relayer fees
      * @param primaryRelayerFeeBips_ The relayer fee in basic points
      * @param secondaryRelayerFeeBips_ The relayer fee in basic points (multihop second bridge)
      */
-    function setRelayerFeesBips(
+    function updateRelayerFeesBips(
         uint256 primaryRelayerFeeBips_,
         uint256 secondaryRelayerFeeBips_
     ) external;
 
     /**
-     * @notice Get the relayer fee in basic points
+     * @notice Get the fixed relayer fees in basic points
      * @return primaryRelayerFeeBips The current primary relayer fee in basic points
      * @return secondaryRelayerFeeBips The current secondary relayer fee in basic points
      */
     function getRelayerFeesBips() external view returns (uint256, uint256);
 
     /**
-     * @notice Bridge ERC20 token to a destination chain
+     * @notice Bridge ERC20 token to a destination chain. The relayer fees are set by the contract.
      * @param tokenAddress Address of the ERC20 token contract
      * @param destinationChainID ID of the destination chain
      * @param amount Amount of token bridged
@@ -52,7 +57,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     ) external;
 
     /**
-     * @notice Bridge native token to a destination chain
+     * @notice Bridge native token to a destination chain. The relayer fees are set by the contract.
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param feeToken Address of the fee token

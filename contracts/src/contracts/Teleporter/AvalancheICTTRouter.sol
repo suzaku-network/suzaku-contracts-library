@@ -20,9 +20,11 @@ import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC
 import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
 import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
-/// @title AvalancheICTTRouter
-/// @author Suzaku
-/// @notice The AvalancheICTTRouter serves the purpose of a router for all transfers initiated from an Avalanche EVM chain through Avalanche ICTT contracts.
+/**
+ * @title AvalancheICTTRouter
+ * @author Suzaku
+ * @notice The AvalancheICTTRouter allows users to bridge assets between Avalanche EVM L1s through canonical ICTT contracts.
+ */
 contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     using Address for address;
 
@@ -33,7 +35,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     mapping(address token => address sourceBridge) public tokenToSourceBridge;
 
     /**
-     * @notice Token address => destination chain ID => DestinationBridge
+     * @notice Destination chain ID => token address => DestinationBridge
      * @notice Address `0x0` is used for the native token
      */
     mapping(
@@ -43,11 +45,11 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     /// @notice Router chain ID
     bytes32 private immutable routerChainID;
 
-    /// @notice Set the relayer fee and the ID of the source chain
     constructor() {
         routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function registerSourceTokenBridge(
         address tokenAddress,
         address bridgeAddress
@@ -60,9 +62,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         }
         tokenToSourceBridge[tokenAddress] = bridgeAddress;
 
-        emit AvalancheICTTRouter__RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
+        emit RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function registerDestinationTokenBridge(
         address tokenAddress,
         bytes32 destinationChainID,
@@ -77,7 +80,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
         }
         if (destinationChainID == routerChainID) {
-            revert AvalancheICTTRouter__SourceChainEqualToDestinationChain(
+            revert AvalancheICTTRouter__SourceChainEqualsDestinationChain(
                 routerChainID, destinationChainID
             );
         }
@@ -86,26 +89,27 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
             destinationBridge;
 
-        emit AvalancheICTTRouter__RegisterDestinationTokenBridge(
-            tokenAddress, destinationBridge, destinationChainID
-        );
+        emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
         delete tokenToSourceBridge[tokenAddress];
 
-        emit AvalancheICTTRouter__RemoveSourceTokenBridge(tokenAddress);
+        emit RemoveSourceTokenBridge(tokenAddress);
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function removeDestinationTokenBridge(
         address tokenAddress,
         bytes32 destinationChainID
     ) external onlyOwner {
         delete tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
 
-        emit AvalancheICTTRouter__RemoveDestinationTokenBridge(tokenAddress, destinationChainID);
+        emit RemoveDestinationTokenBridge(tokenAddress, destinationChainID);
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function bridgeERC20(
         address tokenAddress,
         bytes32 destinationChainID,
@@ -146,11 +150,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
         IERC20TokenTransferrer(bridgeSource).send(input, bridgeAmount);
 
-        emit AvalancheICTTRouter__BridgeERC20(
-            tokenAddress, destinationChainID, bridgeAmount, recipient
-        );
+        emit BridgeERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
@@ -188,13 +191,15 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
-        emit AvalancheICTTRouter__BridgeNative(destinationChainID, bridgeAmount, recipient);
+        emit BridgeNative(destinationChainID, bridgeAmount, recipient);
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function getSourceBridge(address token) external view returns (address) {
         return tokenToSourceBridge[token];
     }
 
+    /// @inheritdoc IAvalancheICTTRouter
     function getDestinationBridge(
         bytes32 chainID,
         address token
