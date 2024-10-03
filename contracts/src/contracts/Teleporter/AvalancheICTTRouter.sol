@@ -13,12 +13,13 @@ import {INativeTokenTransferrer} from
 import {SendTokensInput} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
+
 import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts@4.8.1/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
-import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /**
  * @title AvalancheICTTRouter
@@ -28,6 +29,9 @@ import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
  */
 contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     using Address for address;
+
+    /// @notice List of tokens deployed on the source chain
+    address[] public tokensList;
 
     /**
      * @notice Token address => source bridge address
@@ -42,6 +46,13 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     mapping(
         bytes32 destinationChainID => mapping(address token => DestinationBridge destinationBridge)
     ) public tokenDestinationChainToDestinationBridge;
+
+    /**
+     * @notice Token Address => list of destination chains
+     * @notice Address `0x0` is used for the native token
+     */
+    mapping(address token => bytes32[] destinationChainsIDList) public
+        tokenToDestinationChainsIDList;
 
     /// @notice Router chain ID
     bytes32 private immutable routerChainID;
@@ -62,6 +73,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
         }
         tokenToSourceBridge[tokenAddress] = bridgeAddress;
+        tokensList.push(tokenAddress);
 
         emit RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
     }
@@ -89,6 +101,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
         tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
             destinationBridge;
+        tokenToDestinationChainsIDList[tokenAddress].push(destinationChainID);
 
         emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
     }
@@ -96,6 +109,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     /// @inheritdoc IAvalancheICTTRouter
     function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
         delete tokenToSourceBridge[tokenAddress];
+        _burnToken(tokenAddress);
 
         emit RemoveSourceTokenBridge(tokenAddress);
     }
@@ -106,6 +120,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         bytes32 destinationChainID
     ) external onlyOwner {
         delete tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+        _burnDestinationChainID(tokenAddress, destinationChainID);
 
         emit RemoveDestinationTokenBridge(tokenAddress, destinationChainID);
     }
@@ -206,5 +221,45 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address token
     ) external view returns (DestinationBridge memory) {
         return tokenDestinationChainToDestinationBridge[chainID][token];
+    }
+
+    /// @inheritdoc IAvalancheICTTRouter
+    function getTokensList() external view returns (address[] memory) {
+        return (tokensList);
+    }
+
+    /// @inheritdoc IAvalancheICTTRouter
+    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory) {
+        return (tokenToDestinationChainsIDList[token]);
+    }
+
+    /**
+     * @notice Remove a token from the tokensList array (internal function)
+     * @param _token The address of the token
+     */
+    function _burnToken(address _token) internal {
+        for (uint256 i; i < tokensList.length; i++) {
+            if (tokensList[i] == _token) {
+                tokensList[i] = tokensList[tokensList.length - 1];
+                tokensList.pop();
+                break;
+            }
+        }
+    }
+
+    /**
+     * @notice Remove a destination chain from the list of destination chain associated with a token (internal function)
+     * @param _token The address of the token
+     * @param _chainID The ID of the destination chain
+     */
+    function _burnDestinationChainID(address _token, bytes32 _chainID) internal {
+        for (uint256 i; i < tokenToDestinationChainsIDList[_token].length; i++) {
+            if (tokenToDestinationChainsIDList[_token][i] == _chainID) {
+                tokenToDestinationChainsIDList[_token][i] =
+                    tokenToDestinationChainsIDList[_token][tokensList.length - 1];
+                tokenToDestinationChainsIDList[_token].pop();
+                break;
+            }
+        }
     }
 }

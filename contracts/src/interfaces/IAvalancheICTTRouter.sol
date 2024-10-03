@@ -174,4 +174,15 @@ interface IAvalancheICTTRouter {
         bytes32 chainID,
         address token
     ) external view returns (DestinationBridge memory);
+
+    /**
+     * @notice Get the list of tokens deployed on the source chain
+     */
+    function getTokensList() external view returns (address[] memory);
+
+    /**
+     * @notice Get the list of the destination chains for a token
+     * @param token The address of the token
+     */
+    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory);
 }
