@@ -167,4 +167,55 @@ contract AvalancheICTTRouterTest is Test {
         tokenBridgeRouter.removeDestinationTokenBridge(address(erc20Token), destinationChainID);
         vm.stopPrank();
     }
+
+    function testTokenAddedToTokensListWhenRegisterTokenSource() public {
+        vm.startPrank(owner);
+        address[] memory startList = tokenBridgeRouter.getTokensList();
+        assert(startList.length == 0);
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
+        address[] memory endList = tokenBridgeRouter.getTokensList();
+        assert(endList.length == 1 && endList[0] == address(erc20Token));
+        vm.stopPrank();
+    }
+
+    function testTokenRemovedFromTokensListWhenRemovingTokenSource() public registerTokenBridge {
+        vm.startPrank(owner);
+        address[] memory startList = tokenBridgeRouter.getTokensList();
+        assert(startList.length == 1 && startList[0] == address(erc20Token));
+        tokenBridgeRouter.removeSourceTokenBridge(address(erc20Token));
+        address[] memory endList = tokenBridgeRouter.getTokensList();
+        assert(endList.length == 0);
+        vm.stopPrank();
+    }
+
+    function testDestinationChainAddedToTokenToDestinationChainsListWhenRegisterTokenDestination()
+        public
+    {
+        vm.startPrank(owner);
+        bytes32[] memory startList =
+            tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
+        assert(startList.length == 0);
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
+        );
+        bytes32[] memory endList =
+            tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
+        assert(endList.length == 1 && endList[0] == destinationChainID);
+        vm.stopPrank();
+    }
+
+    function testDestinationChainRemovedFromDestinationChainsListWhenRemovingTokenDestination()
+        public
+        registerTokenBridge
+    {
+        vm.startPrank(owner);
+        bytes32[] memory startList =
+            tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
+        assert(startList.length == 1 && startList[0] == destinationChainID);
+        tokenBridgeRouter.removeDestinationTokenBridge(address(erc20Token), destinationChainID);
+        bytes32[] memory endList =
+            tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
+        assert(endList.length == 0);
+        vm.stopPrank();
+    }
 }
