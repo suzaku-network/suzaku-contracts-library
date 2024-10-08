@@ -26,6 +26,13 @@ contract AvalancheICTTRouterErc20Test is Test {
         address recipient
     );
 
+    event BridgeContractERC20(
+        address indexed tokenAddress,
+        bytes32 indexed destinationBlockchainID,
+        uint256 amount,
+        address recipient
+    );
+
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 1);
     AvalancheICTTRouterFixedFees tokenBridgeRouter;
     uint256 deployerKey;
@@ -162,6 +169,95 @@ contract AvalancheICTTRouterErc20Test is Test {
         emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token), destinationChainID, amount, bridger, address(0)
+        );
+
+        vm.stopPrank();
+    }
+
+    function testBalanceBridgerWhenSendAndCallERC20Tokens()
+        public
+        registerTokenBridge
+        fundBridgerAccount
+    {
+        vm.startPrank(bridger);
+        uint256 balanceStart = erc20Token.balanceOf(bridger);
+        uint256 amount = 1 ether;
+        erc20Token.approve(address(tokenBridgeRouter), amount);
+
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+
+        tokenBridgeRouter.bridgeContractERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            tokenDestination,
+            payload,
+            bridger,
+            100_000,
+            requiredGasLimit,
+            address(0)
+        );
+
+        uint256 balanceEnd = erc20Token.balanceOf(bridger);
+        assert(balanceStart == balanceEnd + amount);
+
+        vm.stopPrank();
+    }
+
+    function testBalanceBridgeWhenSendAndCallERC20Tokens()
+        public
+        registerTokenBridge
+        fundBridgerAccount
+    {
+        vm.startPrank(bridger);
+        uint256 balanceStart = erc20Token.balanceOf(address(tokenSource));
+        assert(balanceStart == 0);
+        uint256 amount = 1 ether;
+        erc20Token.approve(address(tokenBridgeRouter), amount);
+
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+
+        tokenBridgeRouter.bridgeContractERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            tokenDestination,
+            payload,
+            bridger,
+            100_000,
+            requiredGasLimit,
+            address(0)
+        );
+
+        uint256 feeAmount = SafeMath.div(SafeMath.mul(amount, primaryRelayerFeeBips), 10_000);
+        uint256 balanceEnd = erc20Token.balanceOf(address(tokenSource));
+        assert(balanceEnd == amount - feeAmount);
+
+        vm.stopPrank();
+    }
+
+    function testEmitsOnCallOfBridgeContractERC20Function()
+        public
+        registerTokenBridge
+        fundBridgerAccount
+    {
+        vm.startPrank(bridger);
+        uint256 amount = 1 ether;
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+        erc20Token.approve(address(tokenBridgeRouter), amount);
+
+        vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
+        emit BridgeContractERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
+        tokenBridgeRouter.bridgeContractERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            tokenDestination,
+            payload,
+            bridger,
+            100_000,
+            requiredGasLimit,
+            address(0)
         );
 
         vm.stopPrank();

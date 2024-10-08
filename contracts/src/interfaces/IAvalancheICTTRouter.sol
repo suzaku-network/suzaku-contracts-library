@@ -73,12 +73,36 @@ interface IAvalancheICTTRouter {
     );
 
     /**
+     * @notice Emitted when ERC20 tokens are bridged to call a contract
+     * @param tokenAddress Address of the ERC20 token contract
+     * @param destinationBlockchainID ID of the destination chain
+     * @param amount Amount of token bridged
+     * @param recipient Address of the contract receiving the tokens
+     */
+    event BridgeContractERC20(
+        address indexed tokenAddress,
+        bytes32 indexed destinationBlockchainID,
+        uint256 amount,
+        address recipient
+    );
+
+    /**
      * @notice Emitted when native tokens are bridged
      * @param destinationChainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
      */
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+
+    /**
+     * @notice Emitted when native tokens are bridged to call a contract
+     * @param destinationChainID ID of the destination chain
+     * @param amount Amount of token bridged
+     * @param recipient Address of the receiver of the tokens
+     */
+    event BridgeContractNative(
+        bytes32 indexed destinationChainID, uint256 amount, address recipient
+    );
 
     /**
      * @notice Register the source bridge for a token
@@ -140,6 +164,32 @@ interface IAvalancheICTTRouter {
     ) external;
 
     /**
+     * @notice Bridge ERC20 token and call a contract function on the destination chain
+     * @param tokenAddress Address of the ERC20 token contract
+     * @param destinationChainID ID of the destination chain
+     * @param amount Amount of token bridged
+     * @param recipient Contract on the destination chain
+     * @param recipientPayload Function signature with parameters hashed of the contract
+     * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
+     * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
+     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
+     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     */
+    function bridgeContractERC20(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        uint256 amount,
+        address recipient,
+        bytes memory recipientPayload,
+        address recipientFallback,
+        uint256 recipientGasLimit,
+        uint256 requiredGasLimit,
+        address multiHopFallback,
+        uint256 primaryRelayerFeeBips,
+        uint256 secondaryRelayerFeeBips
+    ) external;
+
+    /**
      * @notice Bridge native token to a destination chain
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
@@ -152,6 +202,30 @@ interface IAvalancheICTTRouter {
         bytes32 destinationChainID,
         address recipient,
         address feeToken,
+        address multiHopFallback,
+        uint256 primaryRelayerFeeBips,
+        uint256 secondaryRelayerFeeBips
+    ) external payable;
+
+    /**
+     * @notice Bridge native token and call a contract function on the destination chain
+     * @param destinationChainID ID of the destination chain
+     * @param recipient Contract on the destination chain
+     * @param feeToken Address of the fee token
+     * @param recipientPayload Function signature with parameters hashed of the contract
+     * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
+     * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
+     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
+     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     */
+    function bridgeContractNative(
+        bytes32 destinationChainID,
+        address recipient,
+        address feeToken,
+        bytes memory recipientPayload,
+        address recipientFallback,
+        uint256 recipientGasLimit,
+        uint256 requiredGasLimit,
         address multiHopFallback,
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
