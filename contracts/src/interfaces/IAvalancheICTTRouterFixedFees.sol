@@ -67,7 +67,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      */
-    function bridgeContractERC20(
+    function bridgeAndCallERC20(
         address tokenAddress,
         bytes32 destinationChainID,
         uint256 amount,
@@ -102,7 +102,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      */
-    function bridgeContractNative(
+    function bridgeAndCallNative(
         bytes32 destinationChainID,
         address recipient,
         address feeToken,

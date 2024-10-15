@@ -28,7 +28,7 @@ import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
 contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     using Address for address;
 
-    /// @notice List of tokens deployed on the source chain
+    /// @notice List of tokens supported by this router on the source chain
     address[] public tokensList;
 
     /**
@@ -45,10 +45,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         public tokenDestinationChainToDestinationBridge;
 
     /**
-     * @notice Token Address => list of destination chains
+     * @notice Token Address => list of supported destination chains
      * @notice Address `0x0` is used for the native token
      */
-    mapping(address token => bytes32[] destinationChainsIDList)
+    mapping(address token => bytes32[] destinationChainIDsList)
         public tokenToDestinationChainsIDList;
 
     /// @notice Router chain ID
@@ -399,8 +399,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      * @notice Remove a token from the tokensList array (internal function)
      * @param _token The address of the token
      */
-    function _burnToken(address _token) internal {
-        for (uint256 i; i < tokensList.length; i++) {
+    function _removeToken(address token) internal {
+        uint256 tokensNumber = tokensList.length;
+        for (uint256 i; i < tokensNumber; i++) {
             if (tokensList[i] == _token) {
                 tokensList[i] = tokensList[tokensList.length - 1];
                 tokensList.pop();
@@ -414,14 +415,15 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      * @param _token The address of the token
      * @param _chainID The ID of the destination chain
      */
-    function _burnDestinationChainID(
-        address _token,
-        bytes32 _chainID
+    function _removeDestinationChainID(
+        address token,
+        bytes32 chainID
     ) internal {
+        uint256 chainsNumber = tokenToDestinationChainsIDList[_token].length;
         for (
             uint256 i;
-            i < tokenToDestinationChainsIDList[_token].length;
-            i++
+            i < chainsNumber;
+            ++i
         ) {
             if (tokenToDestinationChainsIDList[_token][i] == _chainID) {
                 tokenToDestinationChainsIDList[_token][

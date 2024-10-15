@@ -73,13 +73,13 @@ interface IAvalancheICTTRouter {
     );
 
     /**
-     * @notice Emitted when ERC20 tokens are bridged to call a contract
+     * @notice Emitted when ERC20 tokens are bridged with calldata for a contract recipient
      * @param tokenAddress Address of the ERC20 token contract
      * @param destinationBlockchainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the contract receiving the tokens
      */
-    event BridgeContractERC20(
+    event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
@@ -95,12 +95,12 @@ interface IAvalancheICTTRouter {
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
 
     /**
-     * @notice Emitted when native tokens are bridged to call a contract
+     * @notice Emitted when native tokens are bridged with calldata for a contract recipient
      * @param destinationChainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
      */
-    event BridgeContractNative(
+    event BridgeAndCallNative(
         bytes32 indexed destinationChainID, uint256 amount, address recipient
     );
 
@@ -175,7 +175,7 @@ interface IAvalancheICTTRouter {
      * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
      * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
      */
-    function bridgeContractERC20(
+    function bridgeAndCallERC20(
         address tokenAddress,
         bytes32 destinationChainID,
         uint256 amount,
@@ -218,7 +218,7 @@ interface IAvalancheICTTRouter {
      * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
      * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
      */
-    function bridgeContractNative(
+    function bridgeAndCallNative(
         bytes32 destinationChainID,
         address recipient,
         address feeToken,
@@ -250,12 +250,12 @@ interface IAvalancheICTTRouter {
     ) external view returns (DestinationBridge memory);
 
     /**
-     * @notice Get the list of tokens deployed on the source chain
+     * @notice Get the list of tokens supported by this router on the source chain
      */
     function getTokensList() external view returns (address[] memory);
 
     /**
-     * @notice Get the list of the destination chains for a token
+     * @notice Get the list of the destination chains for a supported token
      * @param token The address of the token
      */
     function getDestinationChainsForToken(address token) external view returns (bytes32[] memory);
