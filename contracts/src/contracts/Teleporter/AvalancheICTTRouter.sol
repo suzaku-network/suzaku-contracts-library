@@ -16,13 +16,12 @@ import {
 } from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
-
 import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts@4.8.1/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
+import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /**
  * @title AvalancheICTTRouter
@@ -110,7 +109,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
+    function removeSourceTokenBridge(
+        address tokenAddress
+    ) external onlyOwner {
         delete tokenToSourceBridge[tokenAddress];
         _removeToken(tokenAddress);
 
@@ -314,7 +315,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function getSourceBridge(address token) external view returns (address) {
+    function getSourceBridge(
+        address token
+    ) external view returns (address) {
         return tokenToSourceBridge[token];
     }
 
@@ -332,7 +335,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory) {
+    function getDestinationChainsForToken(
+        address token
+    ) external view returns (bytes32[] memory) {
         return (tokenToDestinationChainsIDList[token]);
     }
 
@@ -340,7 +345,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      * @notice Remove a token from the tokensList array (internal function)
      * @param token The address of the token
      */
-    function _removeToken(address token) internal {
+    function _removeToken(
+        address token
+    ) internal {
         uint256 tokensNumber = tokensList.length;
         for (uint256 i; i < tokensNumber; ++i) {
             if (tokensList[i] == token) {
