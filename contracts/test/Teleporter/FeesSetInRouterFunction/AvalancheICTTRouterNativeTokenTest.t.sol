@@ -18,6 +18,10 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
 
+    event BridgeAndCallNative(
+        bytes32 indexed destinationChainID, uint256 amount, address recipient
+    );
+
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
     uint256 deployerKey;
     uint256 primaryRelayerFeeBips;
@@ -110,6 +114,78 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
         tokenBridgeRouter.bridgeNative{value: 1 ether}(
             destinationChainID, bridger, address(wrappedToken), address(0), 20, 0
+        );
+        vm.stopPrank();
+    }
+
+    function testBalanceBridgerWhenSendAndCallNativeTokens() public registerTokenBridge {
+        vm.startPrank(bridger);
+        uint256 balanceStart = bridger.balance;
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+
+        uint256 amount = 1 ether;
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
+            destinationChainID,
+            tokenDestination,
+            address(wrappedToken),
+            payload,
+            bridger,
+            100_000,
+            requiredGasLimit,
+            address(0),
+            20,
+            0
+        );
+
+        uint256 balanceEnd = bridger.balance;
+        assert(balanceStart == balanceEnd + amount);
+        vm.stopPrank();
+    }
+
+    function testBalanceBridgeWhenSendAndCallNativeTokens() public registerTokenBridge {
+        vm.startPrank(bridger);
+        uint256 balanceStart = wrappedToken.balanceOf(address(tokenSource));
+        assert(balanceStart == 0);
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+
+        uint256 amount = 1 ether;
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
+            destinationChainID,
+            tokenDestination,
+            address(wrappedToken),
+            payload,
+            bridger,
+            100_000,
+            requiredGasLimit,
+            address(0),
+            20,
+            0
+        );
+
+        uint256 balanceEnd = wrappedToken.balanceOf(address(tokenSource));
+        uint256 feeAmount = SafeMath.div(SafeMath.mul(amount, primaryRelayerFeeBips), 10_000);
+
+        assert(balanceEnd == amount - feeAmount);
+        vm.stopPrank();
+    }
+
+    function testEmitsOnSendAndCallNativeTokens() public registerTokenBridge {
+        vm.startPrank(bridger);
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+        vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
+        emit BridgeAndCallNative(destinationChainID, 1 ether, bridger);
+
+        tokenBridgeRouter.bridgeAndCallNative{value: 1 ether}(
+            destinationChainID,
+            tokenDestination,
+            address(wrappedToken),
+            payload,
+            bridger,
+            100_000,
+            requiredGasLimit,
+            address(0),
+            20,
+            0
         );
         vm.stopPrank();
     }

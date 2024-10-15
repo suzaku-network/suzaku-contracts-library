@@ -12,7 +12,10 @@ import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
 import {INativeTokenTransferrer} from
     "@avalabs/avalanche-ictt/interfaces/INativeTokenTransferrer.sol";
-import {SendTokensInput} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
+import {
+    SendAndCallInput,
+    SendTokensInput
+} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
@@ -100,6 +103,54 @@ contract AvalancheICTTRouterFixedFees is
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
+    function bridgeAndCallERC20(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        uint256 amount,
+        address recipient,
+        bytes memory recipientPayload,
+        address recipientFallback,
+        uint256 recipientGasLimit,
+        uint256 requiredGasLimit,
+        address multiHopFallback
+    ) external nonReentrant {
+        address bridgeSource = tokenToSourceBridge[tokenAddress];
+        DestinationBridge memory destinationBridge =
+            tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+
+        uint256 primaryFeeAmount = (amount * primaryRelayerFeeBips) / 10_000;
+
+        uint256 secondaryFeeAmount = (amount * secondaryRelayerFeeBips) / 10_000;
+
+        uint256 adjustedAmount =
+            SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
+
+        if (!destinationBridge.isMultihop) {
+            secondaryFeeAmount = 0;
+        }
+
+        uint256 bridgeAmount = adjustedAmount - (primaryFeeAmount + secondaryFeeAmount);
+
+        SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeSource, adjustedAmount);
+
+        SendAndCallInput memory input = SendAndCallInput(
+            destinationChainID,
+            destinationBridge.bridgeAddress,
+            recipient,
+            recipientPayload,
+            requiredGasLimit,
+            recipientGasLimit,
+            multiHopFallback,
+            recipientFallback,
+            tokenAddress,
+            primaryFeeAmount,
+            secondaryFeeAmount
+        );
+        IERC20TokenTransferrer(bridgeSource).sendAndCall(input, bridgeAmount);
+        emit BridgeAndCallERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
+    }
+
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
@@ -139,6 +190,52 @@ contract AvalancheICTTRouterFixedFees is
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
+    function bridgeAndCallNative(
+        bytes32 destinationChainID,
+        address recipient,
+        address feeToken,
+        bytes memory recipientPayload,
+        address recipientFallback,
+        uint256 recipientGasLimit,
+        uint256 requiredGasLimit,
+        address multiHopFallback
+    ) external payable nonReentrant {
+        address bridgeSource = tokenToSourceBridge[address(0)];
+        DestinationBridge memory destinationBridge =
+            tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+
+        uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
+
+        uint256 secondaryFeeAmount = (msg.value * secondaryRelayerFeeBips) / 10_000;
+
+        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
+        WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
+
+        if (!destinationBridge.isMultihop) {
+            secondaryFeeAmount = 0;
+        }
+
+        uint256 bridgeAmount = msg.value - (primaryFeeAmount + secondaryFeeAmount);
+
+        SendAndCallInput memory input = SendAndCallInput(
+            destinationChainID,
+            destinationBridge.bridgeAddress,
+            recipient,
+            recipientPayload,
+            requiredGasLimit,
+            recipientGasLimit,
+            multiHopFallback,
+            recipientFallback,
+            feeToken,
+            primaryFeeAmount,
+            secondaryFeeAmount
+        );
+
+        INativeTokenTransferrer(bridgeSource).sendAndCall{value: bridgeAmount}(input);
+        emit BridgeAndCallNative(destinationChainID, bridgeAmount, recipient);
+    }
+
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
     function getRelayerFeesBips() external view returns (uint256, uint256) {
         return (primaryRelayerFeeBips, secondaryRelayerFeeBips);
     }
@@ -157,6 +254,23 @@ contract AvalancheICTTRouterFixedFees is
     }
 
     /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
+    function bridgeAndCallERC20(
+        address, /* tokenAddress */
+        bytes32, /* destinationChainID */
+        uint256, /* amount */
+        address, /* recipient */
+        bytes memory, /* recipientPayload */
+        address, /* recipientFallback */
+        uint256, /* recipientGasLimit */
+        uint256, /* requiredGasLimit */
+        address, /* multiHopFallback */
+        uint256, /* primaryRelayerFeeBips */
+        uint256 /* secondaryRelayerFeeBips */
+    ) external override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
+        revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
+    }
+
+    /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
     function bridgeNative(
         bytes32, /*destinationChainID*/
         address, /*recipient*/
@@ -164,6 +278,22 @@ contract AvalancheICTTRouterFixedFees is
         address, /*multiHopFallback*/
         uint256, /*primaryRelayerFeeBips*/
         uint256 /*secondaryRelayerFeeBips*/
+    ) external payable override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
+        revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
+    }
+
+    /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
+    function bridgeAndCallNative(
+        bytes32, /* destinationChainID */
+        address, /* recipient */
+        address, /* feeToken */
+        bytes memory, /* recipientPayload */
+        address, /* recipientFallback */
+        uint256, /* recipientGasLimit */
+        uint256, /* requiredGasLimit */
+        address, /* multiHopFallback */
+        uint256, /* primaryRelayerFeeBips */
+        uint256 /* secondaryRelayerFeeBips */
     ) external payable override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
         revert AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
     }
