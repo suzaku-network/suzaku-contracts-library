@@ -76,10 +76,9 @@ contract HelperConfig4Test is Script {
         }
     }
 
-    function getNetworkConfigWoFees(address _tokenSource)
-        public
-        returns (NetworkConfigTest memory)
-    {
+    function getNetworkConfigWoFees(
+        address _tokenSource
+    ) public returns (NetworkConfigTest memory) {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
             _remoteChainID,
@@ -132,10 +131,9 @@ contract HelperConfig4Test is Script {
         });
     }
 
-    function getNetworkConfigWFees(address _tokenSource)
-        public
-        returns (NetworkConfigTest memory)
-    {
+    function getNetworkConfigWFees(
+        address _tokenSource
+    ) public returns (NetworkConfigTest memory) {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
             _remoteChainID,

@@ -7,7 +7,7 @@ import {
     AvalancheICTTRouter,
     DestinationBridge
 } from "../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
-import {IAvalancheICTTRouter} from "../../src/interfaces/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";

@@ -53,15 +53,15 @@ contract WarpMessengerTestMock {
         return homeChainID;
     }
 
-    function sendWarpMessage(bytes calldata) external view returns (bytes32) {
+    function sendWarpMessage(
+        bytes calldata
+    ) external view returns (bytes32) {
         return messageID;
     }
 
-    function getVerifiedWarpMessage(uint32)
-        external
-        view
-        returns (WarpMessage memory message, bool valid)
-    {
+    function getVerifiedWarpMessage(
+        uint32
+    ) external view returns (WarpMessage memory message, bool valid) {
         RegisterRemoteMessage memory registerMessage = RegisterRemoteMessage({
             initialReserveImbalance: initialReserveImbalance,
             homeTokenDecimals: homeTokenDecimals,

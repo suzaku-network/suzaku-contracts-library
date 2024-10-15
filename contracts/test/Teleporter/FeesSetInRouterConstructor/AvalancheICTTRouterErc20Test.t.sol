@@ -6,7 +6,7 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";

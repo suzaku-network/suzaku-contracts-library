@@ -6,14 +6,16 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 
 import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 
 import {IERC20} from "@openzeppelin/contracts@4.8.1/interfaces/IERC20.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 contract TestSendAndCallFunctionICTTRouter is Script {
-    function run(bool erc20) external {
+    function run(
+        bool erc20
+    ) external {
         HelperConfig helperConfig = new HelperConfig();
         (
             ,

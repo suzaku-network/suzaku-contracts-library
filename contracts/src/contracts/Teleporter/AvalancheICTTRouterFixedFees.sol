@@ -5,8 +5,12 @@
 
 pragma solidity 0.8.18;
 
-import {DestinationBridge, IAvalancheICTTRouter} from "../../interfaces/IAvalancheICTTRouter.sol";
-import {IAvalancheICTTRouterFixedFees} from "../../interfaces/IAvalancheICTTRouterFixedFees.sol";
+import {
+    DestinationBridge,
+    IAvalancheICTTRouter
+} from "../../interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouterFixedFees} from
+    "../../interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
 import {AvalancheICTTRouter} from "./AvalancheICTTRouter.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";

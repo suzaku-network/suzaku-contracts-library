@@ -75,7 +75,9 @@ contract DeployNativeTokenRemote is Script {
         return nativeTokenRemote;
     }
 
-    function registerRemoteInstance(NativeTokenRemote tokenRemoteBridge) public {
+    function registerRemoteInstance(
+        NativeTokenRemote tokenRemoteBridge
+    ) public {
         TeleporterFeeInfo memory feeInfo =
             TeleporterFeeInfo({feeTokenAddress: address(tokenRemoteBridge), amount: 0});
         tokenRemoteBridge.approve(address(tokenRemoteBridge), 10 ether);
