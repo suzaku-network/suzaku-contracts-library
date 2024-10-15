@@ -251,12 +251,14 @@ interface IAvalancheICTTRouter {
 
     /**
      * @notice Get the list of tokens supported by this router on the source chain
+     * @return tokensList The list of tokens
      */
     function getTokensList() external view returns (address[] memory);
 
     /**
      * @notice Get the list of the destination chains for a supported token
      * @param token The address of the token
+     * @return destinationChainIDsList The list of destination chain IDs
      */
     function getDestinationChainsForToken(address token) external view returns (bytes32[] memory);
 }

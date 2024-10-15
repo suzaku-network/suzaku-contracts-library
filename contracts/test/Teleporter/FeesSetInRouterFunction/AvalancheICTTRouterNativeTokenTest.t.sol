@@ -124,7 +124,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         uint256 amount = 1 ether;
-        tokenBridgeRouter.bridgeContractNative{value: amount}(
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
             destinationChainID,
             tokenDestination,
             address(wrappedToken),
@@ -149,7 +149,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         uint256 amount = 1 ether;
-        tokenBridgeRouter.bridgeContractNative{value: amount}(
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
             destinationChainID,
             tokenDestination,
             address(wrappedToken),
@@ -175,7 +175,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
         emit BridgeContractNative(destinationChainID, 1 ether, bridger);
 
-        tokenBridgeRouter.bridgeContractNative{value: 1 ether}(
+        tokenBridgeRouter.bridgeAndCallNative{value: 1 ether}(
             destinationChainID,
             tokenDestination,
             address(wrappedToken),

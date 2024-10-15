@@ -153,7 +153,7 @@ contract AvalancheICTTRouterErc20Test is Test {
 
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
-        tokenBridgeRouter.bridgeContractERC20(
+        tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
             amount,
@@ -186,7 +186,7 @@ contract AvalancheICTTRouterErc20Test is Test {
 
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
-        tokenBridgeRouter.bridgeContractERC20(
+        tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
             amount,
@@ -207,7 +207,7 @@ contract AvalancheICTTRouterErc20Test is Test {
         vm.stopPrank();
     }
 
-    function testEmitsOnCallOfBridgeContractERC20Function()
+    function testEmitsOnCallOfBridgeAndCallERC20Function()
         public
         registerTokenBridge
         fundBridgerAccount
@@ -219,7 +219,7 @@ contract AvalancheICTTRouterErc20Test is Test {
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
         emit BridgeContractERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
-        tokenBridgeRouter.bridgeContractERC20(
+        tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
             amount,
