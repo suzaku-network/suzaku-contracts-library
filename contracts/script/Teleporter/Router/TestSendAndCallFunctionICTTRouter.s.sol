@@ -4,11 +4,13 @@
 pragma solidity 0.8.18;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
+
 import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/IAvalancheICTTRouter.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
-import {Script, console} from "forge-std/Script.sol";
+
 import {IERC20} from "@openzeppelin/contracts@4.8.1/interfaces/IERC20.sol";
+import {Script, console} from "forge-std/Script.sol";
 
 contract TestSendAndCallFunctionICTTRouter is Script {
     function run(bool erc20) external {
@@ -35,9 +37,7 @@ contract TestSendAndCallFunctionICTTRouter is Script {
             WarpMessengerMock mock
         ) = helperConfig.activeNetworkConfig();
 
-        address tokenBridgeRouterAddr = vm.envAddress(
-            "TOKEN_BRIDGE_ROUTER_HOME"
-        );
+        address tokenBridgeRouterAddr = vm.envAddress("TOKEN_BRIDGE_ROUTER_HOME");
         address bridgerAddr = vm.envAddress("BRIDGER_ADDR");
         bytes32 destinationChainID = vm.envBytes32("REMOTE_CHAIN_HEX");
         uint256 amount = 1 ether;
@@ -98,7 +98,7 @@ contract TestSendAndCallFunctionICTTRouter is Script {
         uint256 secondaryRelayerFeeBips
     ) public {
         IERC20(tokenAddress).approve(tokenBridgeRouterAddr, amount);
-        IAvalancheICTTRouter(tokenBridgeRouterAddr).bridgeContractERC20(
+        IAvalancheICTTRouter(tokenBridgeRouterAddr).bridgeAndCallERC20(
             tokenAddress,
             destinationChainID,
             amount,
@@ -127,9 +127,7 @@ contract TestSendAndCallFunctionICTTRouter is Script {
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
     ) public {
-        IAvalancheICTTRouter(tokenBridgeRouterAddr).bridgeContractNative{
-            value: amount
-        }(
+        IAvalancheICTTRouter(tokenBridgeRouterAddr).bridgeAndCallNative{value: amount}(
             destinationChainID,
             recipient,
             tokenAddress,

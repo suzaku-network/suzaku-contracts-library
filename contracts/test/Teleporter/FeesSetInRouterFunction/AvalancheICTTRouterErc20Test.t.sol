@@ -22,7 +22,7 @@ contract AvalancheICTTRouterErc20Test is Test {
         address recipient
     );
 
-    event BridgeContractERC20(
+    event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
@@ -218,7 +218,7 @@ contract AvalancheICTTRouterErc20Test is Test {
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeContractERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
+        emit BridgeAndCallERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
         tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,

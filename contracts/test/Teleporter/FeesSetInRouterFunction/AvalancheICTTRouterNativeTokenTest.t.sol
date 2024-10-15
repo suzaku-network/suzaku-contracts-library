@@ -18,7 +18,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
 
-    event BridgeContractNative(
+    event BridgeAndCallNative(
         bytes32 indexed destinationChainID, uint256 amount, address recipient
     );
 
@@ -173,7 +173,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         vm.startPrank(bridger);
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeContractNative(destinationChainID, 1 ether, bridger);
+        emit BridgeAndCallNative(destinationChainID, 1 ether, bridger);
 
         tokenBridgeRouter.bridgeAndCallNative{value: 1 ether}(
             destinationChainID,
