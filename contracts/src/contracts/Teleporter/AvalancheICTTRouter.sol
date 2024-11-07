@@ -193,7 +193,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard {
      * @notice Delete a bridge home instance
      * @param tokenAddress Address of the ERC20 token contract
      */
-    function removeHomeTokenBridge(address tokenAddress) external onlyOwner {
+    function removeHomeTokenBridge(
+        address tokenAddress
+    ) external onlyOwner {
         delete tokenToHomeBridge[tokenAddress];
 
         emit RemoveHomeTokenBridge(tokenAddress);
@@ -337,7 +339,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard {
      * @param token The address of the ERC20 token
      * @return homeBridge Address of the bridge home instance
      */
-    function getHomeBridge(address token) external view returns (address) {
+    function getHomeBridge(
+        address token
+    ) external view returns (address) {
         return tokenToHomeBridge[token];
     }
 

@@ -16,7 +16,9 @@ contract WarpMessengerMock {
         return blockchainId;
     }
 
-    function sendWarpMessage(bytes calldata) external view returns (bytes32) {
+    function sendWarpMessage(
+        bytes calldata
+    ) external view returns (bytes32) {
         return messageID;
     }
 }

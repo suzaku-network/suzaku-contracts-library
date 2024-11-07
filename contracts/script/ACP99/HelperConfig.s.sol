@@ -23,10 +23,9 @@ contract HelperConfig is Script {
 
     function getOrCreateAnvilConfig() public returns (NetworkConfig memory) {
         (, uint256 deployerKey) = makeAddrAndKey("subnetOwner");
-        return
-            NetworkConfig({
-                deployerKey: deployerKey,
-                subnetID: 0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9
-            });
+        return NetworkConfig({
+            deployerKey: deployerKey,
+            subnetID: 0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9
+        });
     }
 }

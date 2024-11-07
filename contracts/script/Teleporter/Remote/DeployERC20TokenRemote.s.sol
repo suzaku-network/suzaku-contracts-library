@@ -67,7 +67,9 @@ contract DeployERC20TokenRemote is Script {
         return erc20TokenRemote;
     }
 
-    function registerRemoteInstance(ERC20TokenRemote tokenRemoteBridge) public {
+    function registerRemoteInstance(
+        ERC20TokenRemote tokenRemoteBridge
+    ) public {
         TeleporterFeeInfo memory feeInfo =
             TeleporterFeeInfo({feeTokenAddress: address(tokenRemoteBridge), amount: 0});
         tokenRemoteBridge.approve(address(tokenRemoteBridge), 10 ether);
