@@ -58,11 +58,15 @@ contract HelperConfig4Test is Script {
 
     ProtocolRegistryEntry[] protocolRegistryEntry;
 
-    constructor(address _tokenHome) {
+    constructor(
+        address _tokenHome
+    ) {
         activeNetworkConfigTest = getNetworkConfig(_tokenHome);
     }
 
-    function getNetworkConfig(address _tokenHome) public returns (NetworkConfigTest memory) {
+    function getNetworkConfig(
+        address _tokenHome
+    ) public returns (NetworkConfigTest memory) {
         WarpMessengerTestMock warpMessengerTestMock =
             new WarpMessengerTestMock(_tokenHome, _tokenRemote);
         vm.etch(_warpPrecompileAddress, address(warpMessengerTestMock).code);

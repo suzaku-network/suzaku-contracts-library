@@ -10,7 +10,8 @@ import {
     ACP99PoAModule,
     IACP99SecurityModule
 } from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
-import {WarpMessengerTestMock} from "../../src/mocks/WarpMessengerTestMock.sol";
+import {ACP77WarpMessengerTestMock} from "../../src/mocks/ACP77WarpMessengerTestMock.sol";
+import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract ACP99PoAModuleTest is Test {
@@ -23,11 +24,15 @@ contract ACP99PoAModuleTest is Test {
     uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
     uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
     address constant WARP_MESSENGER_ADDR = 0x0200000000000000000000000000000000000005;
-    bytes32 constant VALIDATOR_NODE_ID = bytes32(uint256(1));
+    bytes public constant VALIDATOR_NODE_ID_01 =
+        bytes(hex"1234567812345678123456781234567812345678123456781234567812345678");
+    bytes public constant VALIDATOR_NODE_ID_02 =
+        bytes(hex"2345678123456781234567812345678123456781234567812345678123456781");
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 100;
     bytes32 constant VALIDATION_ID =
-        0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372;
+        0x6bc851f1cf9fe68ddb8c6fe4b72f467aeeff662677d4d65e1a387085bfdda283;
+    PChainOwner public P_CHAIN_OWNER;
 
     ACP99PoAModule poaModule;
     uint256 deployerKey;
@@ -40,35 +45,49 @@ contract ACP99PoAModuleTest is Test {
         (deployerKey, subnetID) = helperConfig.activeNetworkConfig();
         deployerAddress = vm.addr(deployerKey);
 
-        WarpMessengerTestMock warpMessengerTestMock =
-            new WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
+        ACP77WarpMessengerTestMock warpMessengerTestMock =
+            new ACP77WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
         vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
 
         DeployACP99PoAModule poaModuleDeployer = new DeployACP99PoAModule();
         (manager, poaModule) = poaModuleDeployer.run();
 
+        address[] memory addresses = new address[](1);
+        addresses[0] = 0x1234567812345678123456781234567812345678;
+        P_CHAIN_OWNER = PChainOwner({threshold: 1, addresses: addresses});
+
         // Warp to 2024-01-01 00:00:00
         vm.warp(1_704_067_200);
     }
 
-    modifier validatorRegistrationInitiated(bytes32 nodeID, uint64 weight) {
+    modifier validatorRegistrationInitiated(bytes memory nodeID, uint64 weight) {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.prank(deployerAddress);
         // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         poaModule.addValidator(
-            VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
+            nodeID,
+            VALIDATOR_BLS_PUBLIC_KEY,
+            registrationExpiry,
+            P_CHAIN_OWNER,
+            P_CHAIN_OWNER,
+            weight
         );
         _;
     }
 
-    modifier validatorRegistrationCompleted(bytes32 nodeID, uint64 weight) {
+    modifier validatorRegistrationCompleted(bytes memory nodeID, uint64 weight) {
         uint64 registrationExpiry = uint64(block.timestamp + 1 days);
 
         vm.startPrank(deployerAddress);
         // validationID = 0xe2d4e0a460dd3674dbc90edafc676f80d5a6b402a5c028cdf6c0796c60b2b372
         poaModule.addValidator(
-            VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
+            nodeID,
+            VALIDATOR_BLS_PUBLIC_KEY,
+            registrationExpiry,
+            P_CHAIN_OWNER,
+            P_CHAIN_OWNER,
+            weight
         );
         manager.completeValidatorRegistration(COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX);
         vm.stopPrank();
@@ -93,19 +112,24 @@ contract ACP99PoAModuleTest is Test {
         // Act
         vm.prank(deployerAddress);
         poaModule.addValidator(
-            VALIDATOR_NODE_ID, VALIDATOR_WEIGHT, registrationExpiry, VALIDATOR_BLS_PUBLIC_KEY
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_BLS_PUBLIC_KEY,
+            registrationExpiry,
+            P_CHAIN_OWNER,
+            P_CHAIN_OWNER,
+            VALIDATOR_WEIGHT
         );
 
         // Assert
         ACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
         assert(validation.status == IACP99Manager.ValidationStatus.Registering);
-        assert(validation.nodeID == VALIDATOR_NODE_ID);
+        assert(validation.nodeID == bytes32(VALIDATOR_NODE_ID_01));
         assert(validation.periods[0].weight == VALIDATOR_WEIGHT);
     }
 
     function testUpdateValidatorWeight()
         external
-        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
         uint64 newWeight = 200;
@@ -113,7 +137,7 @@ contract ACP99PoAModuleTest is Test {
 
         // Act
         vm.prank(deployerAddress);
-        poaModule.updateValidatorWeight(VALIDATOR_NODE_ID, newWeight);
+        poaModule.updateValidatorWeight(VALIDATOR_NODE_ID_01, newWeight);
 
         // Assert: Check the validation status after initiating the update
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
@@ -131,20 +155,20 @@ contract ACP99PoAModuleTest is Test {
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, block.timestamp);
-        assertEq(manager.getValidatorActiveValidation(VALIDATOR_NODE_ID), VALIDATION_ID);
-        assertEq(manager.subnetTotalWeight(), newWeight);
+        assertEq(manager.getValidatorActiveValidation(VALIDATOR_NODE_ID_01), VALIDATION_ID);
+        assertEq(manager.l1TotalWeight(), newWeight);
     }
 
     function testRemoveValidatorUpdatesState()
         external
-        validatorRegistrationCompleted(VALIDATOR_NODE_ID, VALIDATOR_WEIGHT)
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
         vm.warp(1_706_745_600); // Warp to 2024-02-01 00:00:00
 
         // Act
         vm.prank(deployerAddress);
-        poaModule.removeValidator(VALIDATOR_NODE_ID, true, VALIDATOR_UPTIME_MESSAGE_INDEX);
+        poaModule.removeValidator(VALIDATOR_NODE_ID_01, true, VALIDATOR_UPTIME_MESSAGE_INDEX);
 
         // Assert
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
@@ -157,10 +181,10 @@ contract ACP99PoAModuleTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IACP99Manager.ACP99Manager__NodeIDNotActiveValidator.selector, VALIDATOR_NODE_ID
+                IACP99Manager.ACP99Manager__NodeIDNotActiveValidator.selector, VALIDATOR_NODE_ID_01
             )
         );
-        manager.getValidatorActiveValidation(VALIDATOR_NODE_ID);
+        manager.getValidatorActiveValidation(VALIDATOR_NODE_ID_01);
     }
 
     function testOnlyManagerFunctionsRevertProperly() external {
@@ -178,7 +202,7 @@ contract ACP99PoAModuleTest is Test {
         );
         poaModule.handleValidatorRegistration(
             IACP99SecurityModule.ValidatiorRegistrationInfo({
-                nodeID: VALIDATOR_NODE_ID,
+                nodeID: bytes32(VALIDATOR_NODE_ID_01),
                 validationID: VALIDATION_ID,
                 weight: VALIDATOR_WEIGHT,
                 startTime: uint64(block.timestamp)
@@ -195,7 +219,7 @@ contract ACP99PoAModuleTest is Test {
         );
         poaModule.handleValidatorWeightChange(
             IACP99SecurityModule.ValidatorWeightChangeInfo({
-                nodeID: VALIDATOR_NODE_ID,
+                nodeID: bytes32(VALIDATOR_NODE_ID_01),
                 validationID: VALIDATION_ID,
                 nonce: 0,
                 newWeight: VALIDATOR_WEIGHT,

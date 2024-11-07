@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
-import {ValidatorMessages} from "../../contracts/ACP99/ValidatorMessages.sol";
+import {
+    ConversionData,
+    ValidatorMessages
+} from "@avalabs/teleporter/validator-manager/ValidatorMessages.sol";
+import {
+    InitialValidator,
+    PChainOwner
+} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 
 /*
  * @title IACP99Manager
@@ -66,8 +73,8 @@ interface IACP99Manager {
         bytes32 indexed nodeID,
         bytes32 indexed validationID,
         bytes32 registrationMessageID,
-        uint64 weight,
-        uint64 registrationExpiry
+        uint64 registrationExpiry,
+        uint64 weight
     );
     /// @notice Emitted when a validator registration to the Subnet is completed
     event CompleteValidatorRegistration(
@@ -86,9 +93,7 @@ interface IACP99Manager {
     );
 
     error ACP99Manager__ValidatorSetAlreadyInitialized();
-    error ACP99Manager__InvalidSubnetConversionID(
-        bytes32 subnetConversionID, bytes32 messageSubnetConversionID
-    );
+    error ACP99Manager__InvalidSubnetConversionID(bytes32 conversionID, bytes32 messageConversionID);
     error ACP99Manager__InvalidManagerBlockchainID(
         bytes32 managerBlockchainID, bytes32 conversionBlockchainID
     );
@@ -97,14 +102,16 @@ interface IACP99Manager {
     error ACP99Manager__OnlySecurityModule(address sender, address securityModule);
     error ACP99Manager__InvalidExpiry(uint64 expiry, uint256 timestamp);
     error ACP99Manager__ZeroNodeID();
-    error ACP99Manager__NodeAlreadyValidator(bytes32 nodeID);
+    error ACP99Manager__NodeAlreadyValidator(bytes nodeID);
+    error ACP99Manager__InvalidPChainOwnerThreshold(uint256 threshold, uint256 addressesLength);
+    error ACP99Manager__PChainOwnerAddressesNotSorted();
     error ACP99Manager__InvalidSignatureLength(uint256 length);
     error ACP99Manager__InvalidValidationID(bytes32 validationID);
     error ACP99Manager__InvalidWarpMessage();
     error ACP99Manager__InvalidSourceChainID(bytes32 sourceChainID);
     error ACP99Manager__InvalidOriginSenderAddress(address originSenderAddress);
     error ACP99Manager__InvalidRegistration();
-    error ACP99Manager__NodeIDNotActiveValidator(bytes32 nodeID);
+    error ACP99Manager__NodeIDNotActiveValidator(bytes nodeID);
     error ACP99Manager__InvalidUptimeValidationID(bytes32 validationID);
     error ACP99Manager__InvalidSetSubnetValidatorWeightNonce(uint64 nonce, uint64 currentNonce);
 
@@ -121,18 +128,18 @@ interface IACP99Manager {
 
     /// @notice Get a Subnet validator's active validation ID
     function getValidatorActiveValidation(
-        bytes32 nodeID
+        bytes memory nodeID
     ) external view returns (bytes32);
 
     /// @notice Get the current Subnet validator set (list of NodeIDs)
     function getActiveValidatorSet() external view returns (bytes32[] memory);
 
-    /// @notice Get the total weight of the current Subnet validator set
-    function subnetTotalWeight() external view returns (uint64);
+    /// @notice Get the total weight of the current L1 validator set
+    function l1TotalWeight() external view returns (uint64);
 
     /// @notice Get the list of message IDs associated with a validator of the Subnet
     function getValidatorValidations(
-        bytes32 nodeID
+        bytes memory nodeID
     ) external view returns (bytes32[] memory);
 
     /**
@@ -146,26 +153,30 @@ interface IACP99Manager {
     /**
      * @notice Verifies and sets the initial validator set for the chain through a P-Chain
      * SubnetConversionMessage.
-     * @param subnetConversionData The subnet conversion message data used to recompute and verify against the subnetConversionID.
+     * @param conversionData The Subnet conversion message data used to recompute and verify against the subnetConversionID.
      * @param messsageIndex The index that contains the SubnetConversionMessage Warp message containing the subnetConversionID to be verified against the provided {subnetConversionData}
      */
     function initializeValidatorSet(
-        ValidatorMessages.SubnetConversionData calldata subnetConversionData,
+        ConversionData calldata conversionData,
         uint32 messsageIndex
     ) external;
 
     /**
      * @notice Initiate a validator registration by issuing a RegisterSubnetValidatorTx Warp message
      * @param nodeID The ID of the node to add to the Subnet
+     * @param blsPublicKey The BLS public key of the validator
+     * @param registrationExpiry The time after which this message is invalid
+     * @param remainingBalanceOwner The remaining balance owner of the validator
+     * @param disableOwner The disable owner of the validator
      * @param weight The weight of the node on the Subnet
-     * @param expiry The time after which this message is invalid
-     * @param signature The Ed25519 signature of [subnetID]+[nodeID]+[blsPublicKey]+[weight]+[timestamp]
      */
     function initiateValidatorRegistration(
-        bytes32 nodeID,
-        uint64 weight,
-        uint64 expiry,
-        bytes memory signature
+        bytes memory nodeID,
+        bytes memory blsPublicKey,
+        uint64 registrationExpiry,
+        PChainOwner memory remainingBalanceOwner,
+        PChainOwner memory disableOwner,
+        uint64 weight
     ) external returns (bytes32);
 
     /**
@@ -196,7 +207,7 @@ interface IACP99Manager {
      * @param messageIndex The index of the Warp message containing the uptime proof
      */
     function initiateValidatorWeightUpdate(
-        bytes32 nodeID,
+        bytes memory nodeID,
         uint64 weight,
         bool includesUptimeProof,
         uint32 messageIndex
