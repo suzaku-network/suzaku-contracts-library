@@ -3,7 +3,6 @@
 
 pragma solidity 0.8.18;
 
-import {ValidatorMessages} from "../contracts/ACP99/ValidatorMessages.sol";
 import {
     RegisterRemoteMessage,
     TransferrerMessage,
@@ -42,8 +41,8 @@ contract WarpMessengerTestMock {
 
     function sendWarpMessage(
         bytes calldata
-    ) external view returns (bytes32) {
-        return messageID;
+    ) external pure returns (bytes32) {
+        return MESSAGE_ID;
     }
 
     // Mocks valid warp messages for testing
@@ -58,16 +57,6 @@ contract WarpMessengerTestMock {
     ) external view returns (WarpMessage memory message, bool valid) {
         if (messageIndex == 1) {
             return _registerRemoteWarpMessage();
-        } else if (messageIndex == 2) {
-            return _initializeValidatorSetWarpMessage();
-        } else if (messageIndex == 3) {
-            return _validatorRegistrationWarpMessage();
-        } else if (messageIndex == 4) {
-            return _validatorUptimeWarpMessage();
-        } else if (messageIndex == 5) {
-            return _validatorWeightUpdateWarpMessage();
-        } else if (messageIndex == 6) {
-            return _validatorWeightZeroWarpMessage();
         }
     }
 
@@ -97,102 +86,6 @@ contract WarpMessengerTestMock {
             sourceChainID: DEST_CHAIN_ID_HEX,
             originSenderAddress: TELEPORTER_MESSENGER_ADDRESS,
             payload: abi.encode(teleporterMessage)
-        });
-
-        return (warpMessage, true);
-    }
-
-    function _initializeValidatorSetWarpMessage() private pure returns (WarpMessage memory, bool) {
-        ValidatorMessages.InitialValidator[] memory initialValidators =
-            new ValidatorMessages.InitialValidator[](2);
-        initialValidators[0] = ValidatorMessages.InitialValidator({
-            nodeID: bytes32(uint256(2)),
-            weight: 100,
-            blsPublicKey: new bytes(48)
-        });
-        initialValidators[1] = ValidatorMessages.InitialValidator({
-            nodeID: bytes32(uint256(3)),
-            weight: 100,
-            blsPublicKey: new bytes(48)
-        });
-        ValidatorMessages.SubnetConversionData memory subnetConversionData = ValidatorMessages
-            .SubnetConversionData({
-            convertSubnetTxID: bytes32(uint256(1)),
-            validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
-            validatorManagerAddress: VALIDATOR_MANAGER_ADDRESS,
-            initialValidators: initialValidators
-        });
-
-        WarpMessage memory warpMessage = WarpMessage({
-            sourceChainID: P_CHAIN_ID_HEX,
-            originSenderAddress: address(0),
-            payload: abi.encodePacked(
-                ValidatorMessages.CODEC_ID,
-                ValidatorMessages.SUBNET_CONVERSION_MESSAGE_TYPE_ID,
-                sha256(ValidatorMessages.packSubnetConversionData(subnetConversionData))
-            )
-        });
-
-        return (warpMessage, true);
-    }
-
-    function _validatorRegistrationWarpMessage() private pure returns (WarpMessage memory, bool) {
-        WarpMessage memory warpMessage = WarpMessage({
-            sourceChainID: P_CHAIN_ID_HEX,
-            originSenderAddress: address(0),
-            payload: abi.encodePacked(
-                ValidatorMessages.CODEC_ID,
-                ValidatorMessages.SUBNET_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID,
-                VALIDATION_ID,
-                true
-            )
-        });
-
-        return (warpMessage, true);
-    }
-
-    function _validatorUptimeWarpMessage() private pure returns (WarpMessage memory, bool) {
-        WarpMessage memory warpMessage = WarpMessage({
-            sourceChainID: ANVIL_CHAIN_ID_HEX,
-            originSenderAddress: address(0),
-            payload: abi.encodePacked(
-                ValidatorMessages.CODEC_ID,
-                ValidatorMessages.VALIDATION_UPTIME_MESSAGE_TYPE_ID,
-                VALIDATION_ID,
-                VALIDATION_UPTIME_SECONDS
-            )
-        });
-
-        return (warpMessage, true);
-    }
-
-    function _validatorWeightUpdateWarpMessage() private pure returns (WarpMessage memory, bool) {
-        WarpMessage memory warpMessage = WarpMessage({
-            sourceChainID: P_CHAIN_ID_HEX,
-            originSenderAddress: address(0),
-            payload: abi.encodePacked(
-                ValidatorMessages.CODEC_ID,
-                ValidatorMessages.SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID,
-                VALIDATION_ID,
-                uint64(1),
-                uint64(200)
-            )
-        });
-
-        return (warpMessage, true);
-    }
-
-    function _validatorWeightZeroWarpMessage() private pure returns (WarpMessage memory, bool) {
-        WarpMessage memory warpMessage = WarpMessage({
-            sourceChainID: P_CHAIN_ID_HEX,
-            originSenderAddress: address(0),
-            payload: abi.encodePacked(
-                ValidatorMessages.CODEC_ID,
-                ValidatorMessages.SET_SUBNET_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID,
-                VALIDATION_ID,
-                uint64(1),
-                uint64(0)
-            )
         });
 
         return (warpMessage, true);
