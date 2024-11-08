@@ -13,9 +13,7 @@ import {IERC20} from "@openzeppelin/contracts@4.8.1/interfaces/IERC20.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 contract TestSendAndCallFunctionICTTRouter is Script {
-    function run(
-        bool erc20
-    ) external {
+    function run(bool erc20) external {
         HelperConfig helperConfig = new HelperConfig();
         (
             ,
@@ -110,6 +108,7 @@ contract TestSendAndCallFunctionICTTRouter is Script {
             recipientGasLimit,
             requiredGasLimit,
             multiHopFallback,
+            tokenAddress,
             primaryRelayerFeeBips,
             secondaryRelayerFeeBips
         );

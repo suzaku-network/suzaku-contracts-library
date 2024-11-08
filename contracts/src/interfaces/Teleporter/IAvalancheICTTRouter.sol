@@ -131,9 +131,7 @@ interface IAvalancheICTTRouter {
      * @notice Remove the source bridge for a token
      * @param tokenAddress Address of the ERC20 token contract
      */
-    function removeSourceTokenBridge(
-        address tokenAddress
-    ) external;
+    function removeSourceTokenBridge(address tokenAddress) external;
 
     /**
      * @notice Remove a destination bridge for a token
@@ -152,8 +150,9 @@ interface IAvalancheICTTRouter {
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
-     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
+     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
+     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
      */
     function bridgeERC20(
         address tokenAddress,
@@ -161,8 +160,9 @@ interface IAvalancheICTTRouter {
         uint256 amount,
         address recipient,
         address multiHopFallback,
-        uint256 primaryRelayerFeeBips,
-        uint256 secondaryRelayerFeeBips
+        address primaryFeeTokenAddress,
+        uint256 primaryRelayerFee,
+        uint256 secondaryRelayerFee
     ) external;
 
     /**
@@ -174,8 +174,9 @@ interface IAvalancheICTTRouter {
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
-     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
+     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
+     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
      */
     function bridgeAndCallERC20(
         address tokenAddress,
@@ -187,8 +188,9 @@ interface IAvalancheICTTRouter {
         uint256 recipientGasLimit,
         uint256 requiredGasLimit,
         address multiHopFallback,
-        uint256 primaryRelayerFeeBips,
-        uint256 secondaryRelayerFeeBips
+        address primaryFeeTokenAddress,
+        uint256 primaryRelayerFee,
+        uint256 secondaryRelayerFee
     ) external;
 
     /**
@@ -197,16 +199,16 @@ interface IAvalancheICTTRouter {
      * @param recipient Address of the receiver of the tokens
      * @param feeToken Address of the fee token
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
-     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
+     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
      */
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
         address feeToken,
         address multiHopFallback,
-        uint256 primaryRelayerFeeBips,
-        uint256 secondaryRelayerFeeBips
+        uint256 primaryRelayerFee,
+        uint256 secondaryRelayerFee
     ) external payable;
 
     /**
@@ -217,8 +219,8 @@ interface IAvalancheICTTRouter {
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFeeBips Fee for the relayer transmitting the message to the destination chain (in bips)
-     * @param secondaryRelayerFeeBips Fee for the second relayer in the case of a multihop bridge (in bips)
+     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
+     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
      */
     function bridgeAndCallNative(
         bytes32 destinationChainID,
@@ -229,8 +231,8 @@ interface IAvalancheICTTRouter {
         uint256 recipientGasLimit,
         uint256 requiredGasLimit,
         address multiHopFallback,
-        uint256 primaryRelayerFeeBips,
-        uint256 secondaryRelayerFeeBips
+        uint256 primaryRelayerFee,
+        uint256 secondaryRelayerFee
     ) external payable;
 
     /**
@@ -238,9 +240,7 @@ interface IAvalancheICTTRouter {
      * @param token The address of the ERC20 token
      * @return sourceBridge Address of the bridge source instance
      */
-    function getSourceBridge(
-        address token
-    ) external view returns (address);
+    function getSourceBridge(address token) external view returns (address);
 
     /**
      * @notice Get the destinationBridge for a token and a destination chain
@@ -264,7 +264,5 @@ interface IAvalancheICTTRouter {
      * @param token The address of the token
      * @return destinationChainIDsList The list of destination chain IDs
      */
-    function getDestinationChainsForToken(
-        address token
-    ) external view returns (bytes32[] memory);
+    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory);
 }
