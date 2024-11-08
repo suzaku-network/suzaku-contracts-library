@@ -19,7 +19,7 @@ import {
  * @custom:security-contact security@suzaku.network
  */
 interface IACP99Manager {
-    /// @notice Subnet validation status
+    /// @notice L1 validation status
     enum ValidationStatus {
         Registering,
         Active,
@@ -30,7 +30,7 @@ interface IACP99Manager {
     }
 
     /**
-     * @notice Subnet validation
+     * @notice L1 validation
      * @param status The validation status
      * @param nodeID The NodeID of the validator
      * @param startTime The start time of the validation
@@ -49,7 +49,7 @@ interface IACP99Manager {
     }
 
     /**
-     * @notice Subnet validation period
+     * @notice L1 validation period
      * @param weight The weight of the validator during the period
      * @param startTime The start time of the validation period
      * @param endTime The end time of the validation period (only ≠ 0 when the period is over)
@@ -66,7 +66,7 @@ interface IACP99Manager {
     event RegisterInitialValidator(
         bytes32 indexed nodeID, bytes32 indexed validationID, uint64 weight
     );
-    /// @notice Emitted when a validator registration to the Subnet is initiated
+    /// @notice Emitted when a validator registration to the L1 is initiated
     event InitiateValidatorRegistration(
         bytes32 indexed nodeID,
         bytes32 indexed validationID,
@@ -74,7 +74,7 @@ interface IACP99Manager {
         uint64 registrationExpiry,
         uint64 weight
     );
-    /// @notice Emitted when a validator registration to the Subnet is completed
+    /// @notice Emitted when a validator registration to the L1 is completed
     event CompleteValidatorRegistration(
         bytes32 indexed nodeID, bytes32 indexed validationID, uint64 weight
     );
@@ -111,7 +111,7 @@ interface IACP99Manager {
     error ACP99Manager__InvalidRegistration();
     error ACP99Manager__NodeIDNotActiveValidator(bytes nodeID);
     error ACP99Manager__InvalidUptimeValidationID(bytes32 validationID);
-    error ACP99Manager__InvalidSetSubnetValidatorWeightNonce(uint64 nonce, uint64 currentNonce);
+    error ACP99Manager__InvalidSetL1ValidatorWeightNonce(uint64 nonce, uint64 currentNonce);
 
     /// @notice Get the ID of the Subnet tied to this manager
     function subnetID() external view returns (bytes32);
@@ -124,18 +124,18 @@ interface IACP99Manager {
         bytes32 validationID
     ) external view returns (Validation memory);
 
-    /// @notice Get a Subnet validator's active validation ID
+    /// @notice Get an L1 validator's active validation ID
     function getValidatorActiveValidation(
         bytes memory nodeID
     ) external view returns (bytes32);
 
-    /// @notice Get the current Subnet validator set (list of NodeIDs)
+    /// @notice Get the current L1 validator set (list of NodeIDs)
     function getActiveValidatorSet() external view returns (bytes32[] memory);
 
     /// @notice Get the total weight of the current L1 validator set
     function l1TotalWeight() external view returns (uint64);
 
-    /// @notice Get the list of message IDs associated with a validator of the Subnet
+    /// @notice Get the list of message IDs associated with an L1 validator
     function getValidatorValidations(
         bytes memory nodeID
     ) external view returns (bytes32[] memory);
@@ -150,9 +150,9 @@ interface IACP99Manager {
 
     /**
      * @notice Verifies and sets the initial validator set for the chain through a P-Chain
-     * SubnetConversionMessage.
-     * @param conversionData The Subnet conversion message data used to recompute and verify against the subnetConversionID.
-     * @param messsageIndex The index that contains the SubnetConversionMessage Warp message containing the subnetConversionID to be verified against the provided {subnetConversionData}
+     * SubnetToL1ConversionMessage.
+     * @param conversionData The Subnet conversion message data used to recompute and verify against the ConversionID.
+     * @param messsageIndex The index that contains the SubnetToL1ConversionMessage Warp message containing the ConversionID to be verified against the provided {conversionData}
      */
     function initializeValidatorSet(
         ConversionData calldata conversionData,
@@ -160,13 +160,13 @@ interface IACP99Manager {
     ) external;
 
     /**
-     * @notice Initiate a validator registration by issuing a RegisterSubnetValidatorTx Warp message
-     * @param nodeID The ID of the node to add to the Subnet
+     * @notice Initiate a validator registration by issuing a RegisterL1ValidatorTx Warp message
+     * @param nodeID The ID of the node to add to the L1
      * @param blsPublicKey The BLS public key of the validator
      * @param registrationExpiry The time after which this message is invalid
      * @param remainingBalanceOwner The remaining balance owner of the validator
      * @param disableOwner The disable owner of the validator
-     * @param weight The weight of the node on the Subnet
+     * @param weight The weight of the node on the L1
      */
     function initiateValidatorRegistration(
         bytes memory nodeID,
@@ -196,11 +196,11 @@ interface IACP99Manager {
     ) external;
 
     /**
-     * @notice Initiate a validator weight update by issuing a SetSubnetValidatorWeightTx Warp message.
-     * If the weight is 0, this initiates the removal of the validator from the Subnet. An uptime proof can be
+     * @notice Initiate a validator weight update by issuing a SetL1ValidatorWeightTx Warp message.
+     * If the weight is 0, this initiates the removal of the validator from the L1. An uptime proof can be
      * included. This proof might be required to claim validator rewards (handled by the security module).
      * @param nodeID The ID of the node to modify
-     * @param weight The new weight of the node on the Subnet
+     * @param weight The new weight of the node on the L1
      * @param includesUptimeProof Whether the uptime proof is included in the message
      * @param messageIndex The index of the Warp message containing the uptime proof
      */

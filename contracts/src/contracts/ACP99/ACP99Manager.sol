@@ -151,7 +151,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         // Verify that the sha256 hash of the Subnet conversion data matches with the Warp message's subnetConversionID.
         WarpMessage memory warpMessage = _getPChainWarpMessage(messageIndex);
-        // Parse the Warp message into SubnetConversionMessage
+        // Parse the Warp message into SubnetToL1ConversionMessage
         bytes32 messageConversionID =
             ValidatorMessages.unpackSubnetToL1ConversionMessage(warpMessage.payload);
         bytes memory encodedConversion = ValidatorMessages.packConversionData(conversionData);
@@ -360,7 +360,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         if (weight == 0) {
             if (nonce != (validation.periods.length)) {
-                revert ACP99Manager__InvalidSetSubnetValidatorWeightNonce(
+                revert ACP99Manager__InvalidSetL1ValidatorWeightNonce(
                     nonce, uint64(validation.periods.length)
                 );
             }
@@ -368,7 +368,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             l1TotalWeight -= validation.periods[nonce - 1].weight;
         } else {
             if (nonce != (validation.periods.length - 1)) {
-                revert ACP99Manager__InvalidSetSubnetValidatorWeightNonce(
+                revert ACP99Manager__InvalidSetL1ValidatorWeightNonce(
                     nonce, uint64(validation.periods.length - 1)
                 );
             }
