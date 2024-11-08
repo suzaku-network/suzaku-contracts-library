@@ -43,8 +43,6 @@ interface IACP99Manager {
     struct Validation {
         ValidationStatus status;
         bytes32 nodeID;
-        uint64 startTime;
-        uint64 endTime;
         ValidationPeriod[] periods;
         uint64 activeSeconds;
         uint64 uptimeSeconds;

@@ -136,7 +136,6 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             Validation storage validation = l1Validations[validationID];
             validation.status = ValidationStatus.Active;
             validation.nodeID = bytes32(nodeID);
-            validation.startTime = uint64(block.timestamp);
             validation.periods.push(
                 IACP99Manager.ValidationPeriod({
                     weight: initialValidator.weight,
@@ -260,8 +259,8 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         delete pendingRegisterValidationMessages[validationID];
 
         validation.status = ValidationStatus.Active;
-        validation.startTime = uint64(block.timestamp);
-        validation.periods[0].startTime = uint64(block.timestamp);
+        uint64 startTime = uint64(block.timestamp);
+        validation.periods[0].startTime = startTime;
         activeValidators.set(validation.nodeID, validationID);
         l1TotalWeight += validation.periods[0].weight;
 
@@ -271,7 +270,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
                 nodeID: validation.nodeID,
                 validationID: validationID,
                 weight: validation.periods[0].weight,
-                startTime: validation.startTime
+                startTime: startTime
             })
         );
 
@@ -330,7 +329,6 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         } else {
             // If the weight is 0, the validator is being removed
             validation.status = ValidationStatus.Removing;
-            validation.endTime = uint64(block.timestamp);
             activeValidators.remove(validation.nodeID);
         }
 
