@@ -381,7 +381,7 @@ contract ACP99ManagerTest is Test {
         // Assert
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
         assert(validation.status == IACP99Manager.ValidationStatus.Updating);
-        assertEq(validation.activeSeconds, block.timestamp - validation.startTime);
+        assertEq(validation.activeSeconds, block.timestamp - validation.periods[0].startTime);
         assert(validation.uptimeSeconds > 0);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[0].endTime, block.timestamp);
@@ -429,8 +429,7 @@ contract ACP99ManagerTest is Test {
         // Assert
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
         assert(validation.status == IACP99Manager.ValidationStatus.Removing);
-        assertEq(validation.endTime, block.timestamp);
-        assertEq(validation.activeSeconds, block.timestamp - validation.startTime);
+        assertEq(validation.activeSeconds, block.timestamp - validation.periods[0].startTime);
         assert(validation.uptimeSeconds > 0);
         assertEq(validation.periods.length, 1);
         assertEq(validation.periods[0].endTime, block.timestamp);
