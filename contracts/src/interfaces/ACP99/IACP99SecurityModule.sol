@@ -28,7 +28,7 @@ interface IACP99SecurityModule {
      * @notice Information about a validator's uptime
      * @param activeSeconds The total number of seconds the validator was active
      * @param uptimeSeconds The total number of seconds the validator was online
-     * @param averageWeight The average weight of the validator during the period
+     * @param averageWeight The average weight of the validator during the validation
      */
     struct ValidatorUptimeInfo {
         uint64 activeSeconds;
