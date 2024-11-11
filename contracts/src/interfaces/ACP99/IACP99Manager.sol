@@ -3,6 +3,7 @@
 
 pragma solidity 0.8.25;
 
+import {IACP99SecurityModule} from "./IACP99SecurityModule.sol";
 import {
     ConversionData,
     ValidatorMessages
@@ -44,8 +45,6 @@ interface IACP99Manager {
         ValidationStatus status;
         bytes32 nodeID;
         ValidationPeriod[] periods;
-        uint64 activeSeconds;
-        uint64 uptimeSeconds;
     }
 
     /**
@@ -58,6 +57,7 @@ interface IACP99Manager {
         uint64 weight;
         uint64 startTime;
         uint64 endTime;
+        uint64 uptimeSeconds;
     }
 
     /// @notice Emitted when the security module address is set
@@ -123,6 +123,11 @@ interface IACP99Manager {
     function getValidation(
         bytes32 validationID
     ) external view returns (Validation memory);
+
+    /// @notice Get the uptime information for a given validation ID
+    function getValidationUptimeInfo(
+        bytes32 validationID
+    ) external view returns (IACP99SecurityModule.ValidatorUptimeInfo memory);
 
     /// @notice Get an L1 validator's active validation ID
     function getValidatorActiveValidation(

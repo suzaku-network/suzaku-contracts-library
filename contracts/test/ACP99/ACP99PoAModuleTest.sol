@@ -173,8 +173,7 @@ contract ACP99PoAModuleTest is Test {
         // Assert
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
         assert(validation.status == IACP99Manager.ValidationStatus.Removing);
-        assertEq(validation.activeSeconds, block.timestamp - validation.periods[0].startTime);
-        assert(validation.uptimeSeconds > 0);
+        assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 1);
         assertEq(validation.periods[0].endTime, block.timestamp);
 
@@ -200,7 +199,7 @@ contract ACP99PoAModuleTest is Test {
             )
         );
         poaModule.handleValidatorRegistration(
-            IACP99SecurityModule.ValidatiorRegistrationInfo({
+            IACP99SecurityModule.ValidatorRegistrationInfo({
                 nodeID: bytes32(VALIDATOR_NODE_ID_01),
                 validationID: VALIDATION_ID,
                 weight: VALIDATOR_WEIGHT,
@@ -225,7 +224,8 @@ contract ACP99PoAModuleTest is Test {
                 uptimeInfo: IACP99SecurityModule.ValidatorUptimeInfo({
                     activeSeconds: 1000,
                     uptimeSeconds: 900,
-                    averageWeight: VALIDATOR_WEIGHT
+                    activeWeightSeconds: 1000,
+                    uptimeWeightSeconds: 900
                 })
             })
         );
