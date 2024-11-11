@@ -83,7 +83,7 @@ contract ACP99PoAModule is Ownable2Step, IACP99SecurityModule {
 
     /// @inheritdoc IACP99SecurityModule
     function handleValidatorRegistration(
-        ValidatiorRegistrationInfo memory /*validatorInfo*/
+        ValidatorRegistrationInfo memory /*validatorInfo*/
     ) external onlyManager {
         // This function doesn't perform any special actions for PoA
     }

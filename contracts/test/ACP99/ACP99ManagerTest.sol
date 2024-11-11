@@ -245,7 +245,7 @@ contract ACP99ManagerTest is Test {
         assertEq(validation.periods[0].weight, VALIDATOR_WEIGHT);
         assertEq(validation.periods[0].startTime, 0);
         assertEq(validation.periods[0].endTime, 0);
-        assertEq(validation.uptimeSeconds, 0);
+        assertEq(validation.periods[0].uptimeSeconds, 0);
     }
 
     function testInitiateValidatorRegistrationEmitsEvent() external {
@@ -381,8 +381,7 @@ contract ACP99ManagerTest is Test {
         // Assert
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
         assert(validation.status == IACP99Manager.ValidationStatus.Updating);
-        assertEq(validation.activeSeconds, block.timestamp - validation.periods[0].startTime);
-        assert(validation.uptimeSeconds > 0);
+        assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[0].endTime, block.timestamp);
         assertEq(validation.periods[1].weight, newWeight);
@@ -429,8 +428,7 @@ contract ACP99ManagerTest is Test {
         // Assert
         IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
         assert(validation.status == IACP99Manager.ValidationStatus.Removing);
-        assertEq(validation.activeSeconds, block.timestamp - validation.periods[0].startTime);
-        assert(validation.uptimeSeconds > 0);
+        assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 1);
         assertEq(validation.periods[0].endTime, block.timestamp);
         assertEq(manager.l1TotalWeight(), VALIDATOR_WEIGHT);

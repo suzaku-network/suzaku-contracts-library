@@ -140,7 +140,8 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
                 IACP99Manager.ValidationPeriod({
                     weight: initialValidator.weight,
                     startTime: uint64(block.timestamp),
-                    endTime: 0
+                    endTime: 0,
+                    uptimeSeconds: 0
                 })
             );
             totalWeight += initialValidator.weight;
@@ -210,7 +211,9 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         Validation storage validation = l1Validations[validationID];
         validation.status = ValidationStatus.Registering;
         validation.nodeID = bytes32(nodeID);
-        validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
+        validation.periods.push(
+            ValidationPeriod({weight: weight, startTime: 0, endTime: 0, uptimeSeconds: 0})
+        );
         l1ValidatorValidations[bytes32(nodeID)].push(validationID);
 
         bytes32 registrationMessageID = warpMessenger.sendWarpMessage(registrationMessage);
@@ -266,7 +269,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         // Notify the SecurityModule of the validator registration
         securityModule.handleValidatorRegistration(
-            IACP99SecurityModule.ValidatiorRegistrationInfo({
+            IACP99SecurityModule.ValidatorRegistrationInfo({
                 nodeID: validation.nodeID,
                 validationID: validationID,
                 weight: validation.periods[0].weight,
@@ -277,6 +280,18 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         emit CompleteValidatorRegistration(
             validation.nodeID, validationID, validation.periods[0].weight
         );
+    }
+
+    function updateUptime(
+        bytes memory nodeID,
+        uint32 messageIndex
+    ) external returns (IACP99SecurityModule.ValidatorUptimeInfo memory) {
+        bytes32 validationID = activeValidators.get(bytes32(nodeID));
+        Validation storage validation = l1Validations[validationID];
+
+        _updateValidationUptime(validationID, validation, messageIndex);
+
+        return _getValidationUptimeInfo(validation, validation.periods.length - 1);
     }
 
     /// @inheritdoc IACP99Manager
@@ -294,38 +309,20 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         Validation storage validation = l1Validations[validationID];
 
         // Verify the uptime proof if it is included
-        uint64 uptimeSeconds;
         if (includesUptimeProof) {
-            (WarpMessage memory warpMessage, bool valid) =
-                warpMessenger.getVerifiedWarpMessage(messageIndex);
-            if (!valid) {
-                revert ACP99Manager__InvalidWarpMessage();
-            }
-
-            if (warpMessage.sourceChainID != warpMessenger.getBlockchainID()) {
-                revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
-            }
-            if (warpMessage.originSenderAddress != address(0)) {
-                revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
-            }
-
-            (bytes32 uptimeValidationID, uint64 uptime) =
-                ValidatorMessages.unpackValidationUptimeMessage(warpMessage.payload);
-            if (uptimeValidationID != validationID) {
-                revert ACP99Manager__InvalidUptimeValidationID(uptimeValidationID);
-            }
-            uptimeSeconds = uptime;
+            _updateValidationUptime(validationID, validation, messageIndex);
         }
 
-        validation.uptimeSeconds = uptimeSeconds;
-        ValidationPeriod storage currentPeriod = validation.periods[validation.periods.length - 1];
+        uint256 validationPeriodIndex = validation.periods.length - 1;
+        ValidationPeriod storage currentPeriod = validation.periods[validationPeriodIndex];
         currentPeriod.endTime = uint64(block.timestamp);
-        validation.activeSeconds += currentPeriod.endTime - currentPeriod.startTime;
 
         if (weight > 0) {
             validation.status = ValidationStatus.Updating;
             // The startTime is set to 0 to indicate that the period is not yet started
-            validation.periods.push(ValidationPeriod({weight: weight, startTime: 0, endTime: 0}));
+            validation.periods.push(
+                ValidationPeriod({weight: weight, startTime: 0, endTime: 0, uptimeSeconds: 0})
+            );
         } else {
             // If the weight is 0, the validator is being removed
             validation.status = ValidationStatus.Removing;
@@ -426,6 +423,73 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         return warpMessage;
     }
 
+    function _updateValidationUptime(
+        bytes32 validationID,
+        Validation storage validation,
+        uint32 messageIndex
+    ) private {
+        (WarpMessage memory warpMessage, bool valid) =
+            warpMessenger.getVerifiedWarpMessage(messageIndex);
+        if (!valid) {
+            revert ACP99Manager__InvalidWarpMessage();
+        }
+
+        if (warpMessage.sourceChainID != warpMessenger.getBlockchainID()) {
+            revert ACP99Manager__InvalidSourceChainID(warpMessage.sourceChainID);
+        }
+        if (warpMessage.originSenderAddress != address(0)) {
+            revert ACP99Manager__InvalidOriginSenderAddress(warpMessage.originSenderAddress);
+        }
+
+        (bytes32 uptimeValidationID, uint64 uptime) =
+            ValidatorMessages.unpackValidationUptimeMessage(warpMessage.payload);
+        if (uptimeValidationID != validationID) {
+            revert ACP99Manager__InvalidUptimeValidationID(uptimeValidationID);
+        }
+
+        uint256 validationPeriodIndex = validation.periods.length - 1;
+        ValidationPeriod storage currentPeriod = validation.periods[validationPeriodIndex];
+        if (validationPeriodIndex > 0) {
+            // Compute the uptime of the current period by removing the time difference between the current and previous period
+            ValidationPeriod storage previousPeriod = validation.periods[validationPeriodIndex - 1];
+            currentPeriod.uptimeSeconds =
+                uptime - (currentPeriod.startTime - previousPeriod.startTime);
+        } else {
+            currentPeriod.uptimeSeconds = uptime;
+        }
+    }
+
+    function _getValidationUptimeInfo(
+        Validation storage validation,
+        uint256 nonce
+    ) private view returns (IACP99SecurityModule.ValidatorUptimeInfo memory) {
+        // Compute the average weight of the validator during all periods
+        uint64 totalActiveSeconds;
+        uint64 totalUptimeSeconds;
+        uint256 totalActiveWeightSeconds;
+        uint256 totalUptimeWeightSeconds;
+        for (uint256 i; i < nonce; ++i) {
+            uint64 periodDuration = validation.periods[i].endTime - validation.periods[i].startTime;
+            uint64 periodUptimeSeconds = validation.periods[i].uptimeSeconds;
+            totalActiveSeconds += periodDuration;
+            totalUptimeSeconds += periodUptimeSeconds;
+            totalActiveWeightSeconds +=
+                uint256(validation.periods[i].weight) * uint256(periodDuration);
+            totalUptimeWeightSeconds +=
+                uint256(validation.periods[i].weight) * uint256(periodUptimeSeconds);
+        }
+
+        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo = IACP99SecurityModule
+            .ValidatorUptimeInfo({
+            activeSeconds: totalActiveSeconds,
+            uptimeSeconds: totalUptimeSeconds,
+            activeWeightSeconds: totalActiveWeightSeconds,
+            uptimeWeightSeconds: totalUptimeWeightSeconds
+        });
+
+        return uptimeInfo;
+    }
+
     function _notifySecurityModuleValidatorWeightUpdate(
         bytes32 validationID,
         uint64 nonce,
@@ -433,20 +497,8 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     ) private {
         Validation storage validation = l1Validations[validationID];
 
-        // Compute the average weight of the validator during all periods
-        uint256 averageWeight;
-        for (uint256 i; i < nonce; ++i) {
-            uint64 periodDuration = validation.periods[i].endTime - validation.periods[i].startTime;
-            averageWeight += validation.periods[i].weight * periodDuration;
-        }
-        averageWeight = averageWeight / validation.activeSeconds;
-
-        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo = IACP99SecurityModule
-            .ValidatorUptimeInfo({
-            activeSeconds: validation.activeSeconds,
-            uptimeSeconds: validation.uptimeSeconds,
-            averageWeight: uint64(averageWeight)
-        });
+        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo =
+            _getValidationUptimeInfo(validation, nonce);
 
         IACP99SecurityModule.ValidatorWeightChangeInfo memory validatorWeightChangeInfo =
         IACP99SecurityModule.ValidatorWeightChangeInfo({
@@ -486,6 +538,15 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         bytes32 validationID
     ) external view returns (Validation memory) {
         return l1Validations[validationID];
+    }
+
+    /// @inheritdoc IACP99Manager
+    function getValidationUptimeInfo(
+        bytes32 validationID
+    ) external view returns (IACP99SecurityModule.ValidatorUptimeInfo memory) {
+        Validation storage validation = l1Validations[validationID];
+
+        return _getValidationUptimeInfo(validation, validation.periods.length - 1);
     }
 
     /// @inheritdoc IACP99Manager

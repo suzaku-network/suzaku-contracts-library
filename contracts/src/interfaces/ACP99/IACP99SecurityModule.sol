@@ -17,7 +17,7 @@ interface IACP99SecurityModule {
      * @param weight The initial weight assigned to the validator
      * @param startTime The timestamp when the validation started
      */
-    struct ValidatiorRegistrationInfo {
+    struct ValidatorRegistrationInfo {
         bytes32 nodeID;
         bytes32 validationID;
         uint64 weight;
@@ -28,12 +28,14 @@ interface IACP99SecurityModule {
      * @notice Information about a validator's uptime
      * @param activeSeconds The total number of seconds the validator was active
      * @param uptimeSeconds The total number of seconds the validator was online
-     * @param averageWeight The average weight of the validator during the validation
+     * @param activeWeightSeconds The total weight x seconds the validator was active
+     * @param uptimeWeightSeconds The total weight x seconds the validator was online
      */
     struct ValidatorUptimeInfo {
         uint64 activeSeconds;
         uint64 uptimeSeconds;
-        uint64 averageWeight;
+        uint256 activeWeightSeconds;
+        uint256 uptimeWeightSeconds;
     }
 
     /**
@@ -63,7 +65,7 @@ interface IACP99SecurityModule {
      * @param validatorInfo The information about the validator
      */
     function handleValidatorRegistration(
-        ValidatiorRegistrationInfo memory validatorInfo
+        ValidatorRegistrationInfo memory validatorInfo
     ) external;
 
     /**
