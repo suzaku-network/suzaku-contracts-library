@@ -60,6 +60,20 @@ interface IACP99Manager {
         uint64 uptimeSeconds;
     }
 
+    /**
+     * @notice Information about a validator's uptime
+     * @param activeSeconds The total number of seconds the validator was active
+     * @param uptimeSeconds The total number of seconds the validator was online
+     * @param activeWeightSeconds The total weight x seconds the validator was active
+     * @param uptimeWeightSeconds The total weight x seconds the validator was online
+     */
+    struct ValidatorUptimeInfo {
+        uint64 activeSeconds;
+        uint64 uptimeSeconds;
+        uint256 activeWeightSeconds;
+        uint256 uptimeWeightSeconds;
+    }
+
     /// @notice Emitted when the security module address is set
     event SetSecurityModule(address indexed securityModule);
     /// @notice Emitted when an initial validator is registered
@@ -127,7 +141,7 @@ interface IACP99Manager {
     /// @notice Get the uptime information for a given validation ID
     function getValidationUptimeInfo(
         bytes32 validationID
-    ) external view returns (IACP99SecurityModule.ValidatorUptimeInfo memory);
+    ) external view returns (ValidatorUptimeInfo memory);
 
     /// @notice Get an L1 validator's active validation ID
     function getValidatorActiveValidation(

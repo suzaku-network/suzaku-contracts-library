@@ -373,7 +373,7 @@ contract ACP99ManagerTest is Test {
         vm.warp(1_706_745_600);
 
         // Act
-        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo =
+        IACP99Manager.ValidatorUptimeInfo memory uptimeInfo =
             manager.updateUptime(VALIDATOR_NODE_ID_01, VALIDATOR_UPTIME_MESSAGE_INDEX);
 
         // Assert
@@ -428,7 +428,7 @@ contract ACP99ManagerTest is Test {
         );
 
         // Assert
-        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo =
+        IACP99Manager.ValidatorUptimeInfo memory uptimeInfo =
             manager.getValidationUptimeInfo(VALIDATION_ID);
         assertEq(uptimeInfo.activeSeconds, 2_678_400);
         assertEq(uptimeInfo.uptimeSeconds, 2_544_480);

@@ -3,6 +3,8 @@
 
 pragma solidity 0.8.25;
 
+import {IACP99Manager} from "./IACP99Manager.sol";
+
 /*
  * @title IACP99SecurityModule
  * @author ADDPHO
@@ -25,20 +27,6 @@ interface IACP99SecurityModule {
     }
 
     /**
-     * @notice Information about a validator's uptime
-     * @param activeSeconds The total number of seconds the validator was active
-     * @param uptimeSeconds The total number of seconds the validator was online
-     * @param activeWeightSeconds The total weight x seconds the validator was active
-     * @param uptimeWeightSeconds The total weight x seconds the validator was online
-     */
-    struct ValidatorUptimeInfo {
-        uint64 activeSeconds;
-        uint64 uptimeSeconds;
-        uint256 activeWeightSeconds;
-        uint256 uptimeWeightSeconds;
-    }
-
-    /**
      * @notice Information about a change in a validator's weight
      * @param nodeID The NodeID of the validator node
      * @param validationID The ValidationID of the validation
@@ -51,7 +39,7 @@ interface IACP99SecurityModule {
         bytes32 validationID;
         uint64 nonce;
         uint64 newWeight;
-        ValidatorUptimeInfo uptimeInfo;
+        IACP99Manager.ValidatorUptimeInfo uptimeInfo;
     }
 
     error ACP99SecurityModule__ZeroAddressManager();
