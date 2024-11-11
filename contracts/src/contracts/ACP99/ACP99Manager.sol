@@ -463,13 +463,22 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         Validation storage validation,
         uint256 nonce
     ) private view returns (IACP99SecurityModule.ValidatorUptimeInfo memory) {
-        // Compute the average weight of the validator during all periods
+        // Compute the active and uptime seconds of the validator during all periods
         uint64 totalActiveSeconds;
         uint64 totalUptimeSeconds;
         uint256 totalActiveWeightSeconds;
         uint256 totalUptimeWeightSeconds;
-        for (uint256 i; i < nonce; ++i) {
-            uint64 periodDuration = validation.periods[i].endTime - validation.periods[i].startTime;
+        for (uint256 i; i <= nonce; ++i) {
+            // If the period is not yet started, skip it
+            if (validation.periods[i].startTime == 0) {
+                continue;
+            }
+            // If the period is not yet ended, use the current time as the end time
+            uint64 periodEndTime = validation.periods[i].endTime == 0
+                ? uint64(block.timestamp)
+                : validation.periods[i].endTime;
+
+            uint64 periodDuration = periodEndTime - validation.periods[i].startTime;
             uint64 periodUptimeSeconds = validation.periods[i].uptimeSeconds;
             totalActiveSeconds += periodDuration;
             totalUptimeSeconds += periodUptimeSeconds;
@@ -498,7 +507,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         Validation storage validation = l1Validations[validationID];
 
         IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo =
-            _getValidationUptimeInfo(validation, nonce);
+            _getValidationUptimeInfo(validation, nonce - 1);
 
         IACP99SecurityModule.ValidatorWeightChangeInfo memory validatorWeightChangeInfo =
         IACP99SecurityModule.ValidatorWeightChangeInfo({

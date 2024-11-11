@@ -224,8 +224,8 @@ contract ACP99PoAModuleTest is Test {
                 uptimeInfo: IACP99SecurityModule.ValidatorUptimeInfo({
                     activeSeconds: 1000,
                     uptimeSeconds: 900,
-                    activeWeightSeconds: 1000,
-                    uptimeWeightSeconds: 900
+                    activeWeightSeconds: 1000 * VALIDATOR_WEIGHT,
+                    uptimeWeightSeconds: 900 * VALIDATOR_WEIGHT
                 })
             })
         );

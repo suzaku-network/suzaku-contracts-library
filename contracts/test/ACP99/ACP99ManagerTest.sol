@@ -8,6 +8,7 @@ import {DeployACP99PoAModule} from "../../script/ACP99/SecurityModules/DeployACP
 import {ACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
 import {ACP99PoAModule} from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
 import {IACP99Manager} from "../../src/interfaces/ACP99/IACP99Manager.sol";
+import {IACP99SecurityModule} from "../../src/interfaces/ACP99/IACP99SecurityModule.sol";
 import {ACP77WarpMessengerTestMock} from "../../src/mocks/ACP77WarpMessengerTestMock.sol";
 import {
     ConversionData,
@@ -363,6 +364,27 @@ contract ACP99ManagerTest is Test {
         manager.completeValidatorRegistration(COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX);
     }
 
+    function testUpdateUptimeUpdatesState()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+
+        // Act
+        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo =
+            manager.updateUptime(VALIDATOR_NODE_ID_01, VALIDATOR_UPTIME_MESSAGE_INDEX);
+
+        // Assert
+        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assertEq(validation.periods[0].uptimeSeconds, 2_544_480);
+        assertEq(uptimeInfo.activeSeconds, 2_678_400);
+        assertEq(uptimeInfo.uptimeSeconds, 2_544_480);
+        assertEq(uptimeInfo.activeWeightSeconds, 2_678_400 * VALIDATOR_WEIGHT);
+        assertEq(uptimeInfo.uptimeWeightSeconds, 2_544_480 * VALIDATOR_WEIGHT);
+    }
+
     function testInitiateValidatorWeightUpdateUpdatesState()
         external
         validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
@@ -388,6 +410,30 @@ contract ACP99ManagerTest is Test {
         assertEq(validation.periods[1].startTime, 0);
         assertEq(validation.periods[1].endTime, 0);
         assertEq(manager.l1TotalWeight(), VALIDATOR_WEIGHT);
+    }
+
+    function testGetValidationUptimeInfoReturnsCorrectUptimeInfo()
+        external
+        validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
+    {
+        // Arrange
+        uint64 newWeight = 200;
+        // Warp to 2024-02-01 00:00:00
+        vm.warp(1_706_745_600);
+
+        // Act
+        vm.prank(address(poaModule));
+        manager.initiateValidatorWeightUpdate(
+            VALIDATOR_NODE_ID_01, newWeight, true, VALIDATOR_UPTIME_MESSAGE_INDEX
+        );
+
+        // Assert
+        IACP99SecurityModule.ValidatorUptimeInfo memory uptimeInfo =
+            manager.getValidationUptimeInfo(VALIDATION_ID);
+        assertEq(uptimeInfo.activeSeconds, 2_678_400);
+        assertEq(uptimeInfo.uptimeSeconds, 2_544_480);
+        assertEq(uptimeInfo.activeWeightSeconds, 2_678_400 * VALIDATOR_WEIGHT);
+        assertEq(uptimeInfo.uptimeWeightSeconds, 2_544_480 * VALIDATOR_WEIGHT);
     }
 
     function testInitiateValidatorWeightUpdateEmitsEvent()
