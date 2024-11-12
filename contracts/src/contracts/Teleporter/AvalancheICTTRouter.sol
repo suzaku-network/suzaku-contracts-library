@@ -5,20 +5,12 @@
 
 pragma solidity 0.8.18;
 
-import {
-    DestinationBridge,
-    IAvalancheICTTRouter
-} from "../../interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {DestinationBridge, IAvalancheICTTRouter} from "../../interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
-import {INativeTokenTransferrer} from
-    "@avalabs/avalanche-ictt/interfaces/INativeTokenTransferrer.sol";
-import {
-    SendAndCallInput,
-    SendTokensInput
-} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
-import {IWarpMessenger} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+import {INativeTokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/INativeTokenTransferrer.sol";
+import {SendAndCallInput, SendTokensInput} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
+import {IWarpMessenger} from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts@4.8.1/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/IERC20.sol";
@@ -48,22 +40,23 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      * @notice Destination chain ID => token address => DestinationBridge
      * @notice Address `0x0` is used for the native token
      */
-    mapping(
-        bytes32 destinationChainID => mapping(address token => DestinationBridge destinationBridge)
-    ) public tokenDestinationChainToDestinationBridge;
+    mapping(bytes32 destinationChainID => mapping(address token => DestinationBridge destinationBridge))
+        public tokenDestinationChainToDestinationBridge;
 
     /**
      * @notice Token Address => list of supported destination chains
      * @notice Address `0x0` is used for the native token
      */
-    mapping(address token => bytes32[] destinationChainIDsList) public
-        tokenToDestinationChainsIDList;
+    mapping(address token => bytes32[] destinationChainIDsList)
+        public tokenToDestinationChainsIDList;
 
     /// @notice Router chain ID
     bytes32 private immutable routerChainID;
 
     constructor() {
-        routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
+        routerChainID = IWarpMessenger(
+            0x0200000000000000000000000000000000000005
+        ).getBlockchainID();
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -99,16 +92,25 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         }
         if (destinationChainID == routerChainID) {
             revert AvalancheICTTRouter__SourceChainEqualsDestinationChain(
-                routerChainID, destinationChainID
+                routerChainID,
+                destinationChainID
             );
         }
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
-        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
-            destinationBridge;
+        DestinationBridge memory destinationBridge = DestinationBridge(
+            bridgeAddress,
+            requiredGasLimit,
+            isMultihop
+        );
+        tokenDestinationChainToDestinationBridge[destinationChainID][
+            tokenAddress
+        ] = destinationBridge;
         tokenToDestinationChainsIDList[tokenAddress].push(destinationChainID);
 
-        emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
+        emit RegisterDestinationTokenBridge(
+            tokenAddress,
+            destinationChainID,
+            destinationBridge
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -144,23 +146,34 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 secondaryRelayerFee
     ) external virtual nonReentrant {
         address bridgeSource = tokenToSourceBridge[tokenAddress];
-        DestinationBridge memory destinationBridge =
-            tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+        DestinationBridge
+            memory destinationBridge = tokenDestinationChainToDestinationBridge[
+                destinationChainID
+            ][tokenAddress];
 
-        uint256 adjustedAmount =
-            SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
+        uint256 adjustedAmount = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(tokenAddress),
+            amount
+        );
 
         uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
-            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+            IERC20(primaryFeeTokenAddress),
+            primaryRelayerFee
         );
 
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
         }
 
-        SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeSource, adjustedAmount);
         SafeERC20.safeIncreaseAllowance(
-            IERC20(primaryFeeTokenAddress), bridgeSource, adjustedPrimaryFee
+            IERC20(tokenAddress),
+            bridgeSource,
+            adjustedAmount
+        );
+        SafeERC20.safeIncreaseAllowance(
+            IERC20(primaryFeeTokenAddress),
+            bridgeSource,
+            adjustedPrimaryFee
         );
 
         SendTokensInput memory input = SendTokensInput(
@@ -175,7 +188,12 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
         IERC20TokenTransferrer(bridgeSource).send(input, adjustedAmount);
 
-        emit BridgeERC20(tokenAddress, destinationChainID, adjustedAmount, recipient);
+        emit BridgeERC20(
+            tokenAddress,
+            destinationChainID,
+            adjustedAmount,
+            recipient
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -193,23 +211,34 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 secondaryRelayerFee
     ) external virtual nonReentrant {
         address bridgeSource = tokenToSourceBridge[tokenAddress];
-        DestinationBridge memory destinationBridge =
-            tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+        DestinationBridge
+            memory destinationBridge = tokenDestinationChainToDestinationBridge[
+                destinationChainID
+            ][tokenAddress];
 
-        uint256 adjustedAmount =
-            SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
+        uint256 adjustedAmount = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(tokenAddress),
+            amount
+        );
 
         uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
-            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+            IERC20(primaryFeeTokenAddress),
+            primaryRelayerFee
         );
 
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
         }
 
-        SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeSource, adjustedAmount);
         SafeERC20.safeIncreaseAllowance(
-            IERC20(primaryFeeTokenAddress), bridgeSource, adjustedPrimaryFee
+            IERC20(tokenAddress),
+            bridgeSource,
+            adjustedAmount
+        );
+        SafeERC20.safeIncreaseAllowance(
+            IERC20(primaryFeeTokenAddress),
+            bridgeSource,
+            adjustedPrimaryFee
         );
 
         SendAndCallInput memory input = SendAndCallInput(
@@ -226,7 +255,12 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             secondaryRelayerFee
         );
         IERC20TokenTransferrer(bridgeSource).sendAndCall(input, adjustedAmount);
-        emit BridgeAndCallERC20(tokenAddress, destinationChainID, adjustedAmount, recipient);
+        emit BridgeAndCallERC20(
+            tokenAddress,
+            destinationChainID,
+            adjustedAmount,
+            recipient
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -239,15 +273,20 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 secondaryRelayerFee
     ) external payable virtual nonReentrant {
         address bridgeSource = tokenToSourceBridge[address(0)];
-        DestinationBridge memory destinationBridge =
-            tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+        DestinationBridge
+            memory destinationBridge = tokenDestinationChainToDestinationBridge[
+                destinationChainID
+            ][address(0)];
 
         uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
-            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+            IERC20(primaryFeeTokenAddress),
+            primaryRelayerFee
         );
 
         SafeERC20.safeIncreaseAllowance(
-            IERC20(primaryFeeTokenAddress), bridgeSource, adjustedPrimaryFee
+            IERC20(primaryFeeTokenAddress),
+            bridgeSource,
+            primaryRelayerFee
         );
 
         if (!destinationBridge.isMultihop) {
@@ -282,15 +321,20 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 secondaryRelayerFee
     ) external payable virtual nonReentrant {
         address bridgeSource = tokenToSourceBridge[address(0)];
-        DestinationBridge memory destinationBridge =
-            tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+        DestinationBridge
+            memory destinationBridge = tokenDestinationChainToDestinationBridge[
+                destinationChainID
+            ][address(0)];
 
         uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
-            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+            IERC20(primaryFeeTokenAddress),
+            primaryRelayerFee
         );
 
         SafeERC20.safeIncreaseAllowance(
-            IERC20(primaryFeeTokenAddress), bridgeSource, adjustedPrimaryFee
+            IERC20(primaryFeeTokenAddress),
+            bridgeSource,
+            adjustedPrimaryFee
         );
 
         if (!destinationBridge.isMultihop) {
@@ -311,7 +355,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             secondaryRelayerFee
         );
 
-        INativeTokenTransferrer(bridgeSource).sendAndCall{value: msg.value}(input);
+        INativeTokenTransferrer(bridgeSource).sendAndCall{value: msg.value}(
+            input
+        );
         emit BridgeAndCallNative(destinationChainID, msg.value, recipient);
     }
 
@@ -334,7 +380,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     }
 
     /// @inheritdoc IAvalancheICTTRouter
-    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory) {
+    function getDestinationChainsForToken(
+        address token
+    ) external view returns (bytes32[] memory) {
         return (tokenToDestinationChainsIDList[token]);
     }
 
@@ -358,12 +406,16 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      * @param token The address of the token
      * @param chainID The ID of the destination chain
      */
-    function _removeDestinationChainID(address token, bytes32 chainID) internal {
+    function _removeDestinationChainID(
+        address token,
+        bytes32 chainID
+    ) internal {
         uint256 chainsNumber = tokenToDestinationChainsIDList[token].length;
         for (uint256 i; i < chainsNumber; ++i) {
             if (tokenToDestinationChainsIDList[token][i] == chainID) {
-                tokenToDestinationChainsIDList[token][i] =
-                    tokenToDestinationChainsIDList[token][chainsNumber - 1];
+                tokenToDestinationChainsIDList[token][
+                    i
+                ] = tokenToDestinationChainsIDList[token][chainsNumber - 1];
                 tokenToDestinationChainsIDList[token].pop();
                 break;
             }

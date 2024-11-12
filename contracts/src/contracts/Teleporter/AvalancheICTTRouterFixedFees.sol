@@ -120,6 +120,12 @@ contract AvalancheICTTRouterFixedFees is
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
 
+        if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
+            revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
+                recipientGasLimit, destinationBridge.requiredGasLimit
+            );
+        }
+
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
 
@@ -202,6 +208,12 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+
+        if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
+            revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
+                recipientGasLimit, destinationBridge.requiredGasLimit
+            );
+        }
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
         uint256 secondaryFeeAmount = (msg.value * secondaryRelayerFeeBips) / 10_000;

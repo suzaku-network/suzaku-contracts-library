@@ -23,6 +23,9 @@ interface IAvalancheICTTRouter {
     error AvalancheICTTRouter__SourceChainEqualsDestinationChain(
         bytes32 sourceChain, bytes32 destinationChain
     );
+    error AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
+        uint256 recipientGasLimit, uint256 requiredGasLimit
+    );
 
     /**
      * @notice Emitted when the source bridge is registered for a token

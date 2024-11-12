@@ -118,6 +118,36 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertsWhenNativeTokensSentViaBridgeAndCallWithGasLimitTooHigh()
+        public
+        registerTokenBridge
+    {
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+        uint256 recipientGasLimitTooHigh = requiredGasLimit + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter
+                    .AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage
+                    .selector,
+                recipientGasLimitTooHigh,
+                requiredGasLimit
+            )
+        );
+
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
+            destinationChainID,
+            tokenDestination,
+            address(wrappedNativeToken),
+            payload,
+            bridger,
+            recipientGasLimitTooHigh,
+            multihopFallBackAddress
+        );
+
+        vm.stopPrank();
+    }
+
     function testBalancesWhenNativeTokensSentViaBridgeAndCall() public registerTokenBridge {
         vm.startPrank(bridger);
         uint256 balanceBridgerStart = bridger.balance;

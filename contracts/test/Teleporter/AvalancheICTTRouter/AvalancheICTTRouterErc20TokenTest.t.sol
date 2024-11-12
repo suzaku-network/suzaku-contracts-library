@@ -164,6 +164,43 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertsWhenERC20TokensSentViaBridgeAndCallWithGasLimitTooHigh()
+        public
+        registerTokenBridge
+        fundBridgerAccount
+        fundFeeBridgerAccount
+    {
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+        uint256 recipientGasLimitTooHigh = requiredGasLimit + 1;
+
+        erc20Token.approve(address(tokenBridgeRouter), amount);
+        feeToken.approve(address(tokenBridgeRouter), primaryRelayerFee);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter
+                    .AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage
+                    .selector,
+                recipientGasLimitTooHigh,
+                requiredGasLimit
+            )
+        );
+        tokenBridgeRouter.bridgeAndCallERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            tokenDestination,
+            payload,
+            bridger,
+            recipientGasLimitTooHigh,
+            multihopFallBackAddress,
+            address(feeToken),
+            primaryRelayerFee,
+            secondaryRelayerFee
+        );
+        vm.stopPrank();
+    }
+
     function testBalancesWhenERC20TokensSentViaBridgeAndCall()
         public
         registerTokenBridge
