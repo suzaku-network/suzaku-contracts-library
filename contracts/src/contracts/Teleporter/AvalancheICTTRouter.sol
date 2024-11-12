@@ -234,7 +234,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
-        address feeToken,
+        address primaryFeeTokenAddress,
         address multiHopFallback,
         uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee
@@ -243,7 +243,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
+        SafeERC20.safeIncreaseAllowance(
+            IERC20(primaryFeeTokenAddress), bridgeSource, primaryRelayerFee
+        );
 
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
@@ -253,7 +255,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             destinationChainID,
             destinationBridge.bridgeAddress,
             recipient,
-            feeToken,
+            primaryFeeTokenAddress,
             primaryRelayerFee,
             secondaryRelayerFee,
             destinationBridge.requiredGasLimit,
@@ -268,7 +270,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     function bridgeAndCallNative(
         bytes32 destinationChainID,
         address recipient,
-        address feeToken,
+        address primaryFeeTokenAddress,
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
@@ -281,7 +283,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
+        SafeERC20.safeIncreaseAllowance(
+            IERC20(primaryFeeTokenAddress), bridgeSource, primaryRelayerFee
+        );
 
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
@@ -296,7 +300,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
-            feeToken,
+            primaryFeeTokenAddress,
             primaryRelayerFee,
             secondaryRelayerFee
         );
