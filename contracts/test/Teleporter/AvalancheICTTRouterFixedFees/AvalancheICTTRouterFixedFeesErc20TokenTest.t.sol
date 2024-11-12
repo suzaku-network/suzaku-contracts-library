@@ -96,12 +96,10 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
     modifier fundBridgerAccount() {
         vm.startPrank(bridger);
         erc20Token.mint(bridger, 10 ether);
-        vm.stopPrank();
         _;
     }
 
     function testBalancesWhenERC20TokensSent() public registerTokenBridge fundBridgerAccount {
-        vm.startPrank(bridger);
         uint256 initialBalanceBridgerERC20Token = erc20Token.balanceOf(bridger);
         uint256 initialBalanceBridgeERC20Token = erc20Token.balanceOf(address(erc20TokenSource));
 
@@ -122,8 +120,6 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
     }
 
     function testEmitsWhenERC20TokensSent() public registerTokenBridge fundBridgerAccount {
-        vm.startPrank(bridger);
-
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
@@ -139,7 +135,6 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         registerTokenBridge
         fundBridgerAccount
     {
-        vm.startPrank(bridger);
         uint256 initialBalanceBridgerERC20Token = erc20Token.balanceOf(bridger);
         uint256 initialBalanceBridgeERC20Token = erc20Token.balanceOf(address(erc20TokenSource));
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
@@ -173,7 +168,6 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         registerTokenBridge
         fundBridgerAccount
     {
-        vm.startPrank(bridger);
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         erc20Token.approve(address(tokenBridgeRouter), amount);

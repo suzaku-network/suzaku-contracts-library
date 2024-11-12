@@ -151,8 +151,8 @@ interface IAvalancheICTTRouter {
      * @param recipient Address of the receiver of the tokens
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
-     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
-     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     function bridgeERC20(
         address tokenAddress,
@@ -175,8 +175,8 @@ interface IAvalancheICTTRouter {
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
-     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
-     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     function bridgeAndCallERC20(
         address tokenAddress,
@@ -199,8 +199,8 @@ interface IAvalancheICTTRouter {
      * @param recipient Address of the receiver of the tokens
      * @param feeToken Address of the fee token
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
-     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     function bridgeNative(
         bytes32 destinationChainID,
@@ -219,8 +219,8 @@ interface IAvalancheICTTRouter {
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFee Fee for the relayer transmitting the message to the destination chain
-     * @param secondaryRelayerFee Fee for the second relayer in the case of a multihop bridge
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     function bridgeAndCallNative(
         bytes32 destinationChainID,

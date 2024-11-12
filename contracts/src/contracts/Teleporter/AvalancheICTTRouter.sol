@@ -244,7 +244,6 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
-        WrappedNativeToken(payable(feeToken)).deposit{value: primaryRelayerFee}();
 
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
@@ -283,7 +282,6 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
-        WrappedNativeToken(payable(feeToken)).deposit{value: primaryRelayerFee}();
 
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
