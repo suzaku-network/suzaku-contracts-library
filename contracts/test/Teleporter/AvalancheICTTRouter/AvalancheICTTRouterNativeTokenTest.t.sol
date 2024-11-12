@@ -5,6 +5,7 @@ pragma solidity 0.8.18;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -131,6 +132,39 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertsWhenNativeTokensSentViaBridgeAndCallWithGasLimitTooHigh()
+        public
+        registerTokenBridge
+        fundRouterFeeToken
+    {
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+        uint256 recipientGasLimitTooHigh = requiredGasLimit + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter
+                    .AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage
+                    .selector,
+                recipientGasLimitTooHigh,
+                requiredGasLimit
+            )
+        );
+
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
+            destinationChainID,
+            tokenDestination,
+            address(wrappedNativeToken),
+            payload,
+            bridger,
+            recipientGasLimitTooHigh,
+            multihopFallBackAddress,
+            primaryRelayerFee,
+            secondaryRelayerFee
+        );
+
+        vm.stopPrank();
+    }
+
     function testBalancesWhenNativeTokensSentViaBridgeAndCall()
         public
         registerTokenBridge
@@ -148,7 +182,6 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             primaryRelayerFee,
             secondaryRelayerFee
@@ -178,7 +211,6 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             primaryRelayerFee,
             secondaryRelayerFee

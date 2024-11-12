@@ -44,7 +44,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
         address recipient = vm.envAddress("USERS_MOCK_CONTRACT");
         bytes memory recipientPayload = abi.encode(123);
         uint256 recipientGasLimit = 100_000;
-        uint256 requiredGasLimit = 10_000_000;
         address multiHopFallback = address(0);
 
         vm.etch(warpPrecompileAddress, address(mock).code);
@@ -59,7 +58,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
                 recipientPayload,
                 bridgerAddr,
                 recipientGasLimit,
-                requiredGasLimit,
                 multiHopFallback,
                 primaryRelayerFeeBips,
                 secondaryRelayerFeeBips
@@ -74,7 +72,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
                 recipientPayload,
                 bridgerAddr,
                 recipientGasLimit,
-                requiredGasLimit,
                 multiHopFallback,
                 primaryRelayerFeeBips,
                 secondaryRelayerFeeBips
@@ -92,7 +89,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback,
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
@@ -106,7 +102,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
             recipientPayload,
             recipientFallback,
             recipientGasLimit,
-            requiredGasLimit,
             multiHopFallback,
             tokenAddress,
             primaryRelayerFeeBips,
@@ -123,7 +118,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback,
         uint256 primaryRelayerFeeBips,
         uint256 secondaryRelayerFeeBips
@@ -135,7 +129,6 @@ contract TestSendAndCallFunctionICTTRouter is Script {
             recipientPayload,
             recipientFallback,
             recipientGasLimit,
-            requiredGasLimit,
             multiHopFallback,
             primaryRelayerFeeBips,
             secondaryRelayerFeeBips

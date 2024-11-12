@@ -6,6 +6,7 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -117,6 +118,36 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertsWhenNativeTokensSentViaBridgeAndCallWithGasLimitTooHigh()
+        public
+        registerTokenBridge
+    {
+        bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
+        uint256 recipientGasLimitTooHigh = requiredGasLimit + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouter
+                    .AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage
+                    .selector,
+                recipientGasLimitTooHigh,
+                requiredGasLimit
+            )
+        );
+
+        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
+            destinationChainID,
+            tokenDestination,
+            address(wrappedNativeToken),
+            payload,
+            bridger,
+            recipientGasLimitTooHigh,
+            multihopFallBackAddress
+        );
+
+        vm.stopPrank();
+    }
+
     function testBalancesWhenNativeTokensSentViaBridgeAndCall() public registerTokenBridge {
         vm.startPrank(bridger);
         uint256 balanceBridgerStart = bridger.balance;
@@ -131,7 +162,6 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
 
@@ -158,7 +188,6 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
         vm.stopPrank();

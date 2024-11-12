@@ -114,12 +114,17 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external nonReentrant {
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+
+        if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
+            revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
+                recipientGasLimit, destinationBridge.requiredGasLimit
+            );
+        }
 
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
@@ -140,7 +145,7 @@ contract AvalancheICTTRouterFixedFees is
             destinationBridge.bridgeAddress,
             recipient,
             recipientPayload,
-            requiredGasLimit,
+            destinationBridge.requiredGasLimit,
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
@@ -198,12 +203,17 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external payable nonReentrant {
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+
+        if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
+            revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
+                recipientGasLimit, destinationBridge.requiredGasLimit
+            );
+        }
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
         uint256 secondaryFeeAmount = (msg.value * secondaryRelayerFeeBips) / 10_000;
@@ -222,7 +232,7 @@ contract AvalancheICTTRouterFixedFees is
             destinationBridge.bridgeAddress,
             recipient,
             recipientPayload,
-            requiredGasLimit,
+            destinationBridge.requiredGasLimit,
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
@@ -263,7 +273,6 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory, /* recipientPayload */
         address, /* recipientFallback */
         uint256, /* recipientGasLimit */
-        uint256, /* requiredGasLimit */
         address, /* multiHopFallback */
         address, /* primaryFeeTokenAddress */
         uint256, /* primaryRelayerFeeBips */
@@ -292,7 +301,6 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory, /* recipientPayload */
         address, /* recipientFallback */
         uint256, /* recipientGasLimit */
-        uint256, /* requiredGasLimit */
         address, /* multiHopFallback */
         uint256, /* primaryRelayerFeeBips */
         uint256 /* secondaryRelayerFeeBips */
