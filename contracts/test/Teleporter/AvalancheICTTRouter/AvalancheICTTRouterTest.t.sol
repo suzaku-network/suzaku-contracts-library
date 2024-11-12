@@ -6,11 +6,10 @@ pragma solidity 0.8.18;
 import {
     AvalancheICTTRouter,
     DestinationBridge
-} from "../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
-import {IAvalancheICTTRouter} from "../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
-import {HelperConfig4Test} from "./HelperConfig4Test.t.sol";
+} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
-import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -27,38 +26,44 @@ contract AvalancheICTTRouterTest is Test {
         address indexed tokenAddress, bytes32 indexed destinationChainID
     );
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(address(0), 1);
-    AvalancheICTTRouter tokenBridgeRouter;
+    HelperConfig4Test helperConfig = new HelperConfig4Test(address(0), 0);
     uint256 deployerKey;
-    ERC20Mock erc20Token;
-    ERC20TokenHome tokenSource;
-    address tokenDestination;
-    bytes32 sourceChainID;
-    bytes32 destinationChainID;
     address owner;
     address bridger;
     bytes32 messageId;
+
+    ERC20Mock erc20Token;
+
+    ERC20TokenHome erc20TokenSource;
+    address tokenDestination;
+    AvalancheICTTRouter tokenBridgeRouter;
+    bytes32 sourceChainID;
+    bytes32 destinationChainID;
+
     uint256 requiredGasLimit = 10_000_000;
+    address multihopFallBackAddress = address(0);
 
     uint256 constant STARTING_GAS_BALANCE = 10 ether;
 
     function setUp() external {
         (
             deployerKey,
+            owner,
+            bridger,
+            messageId,
             ,
             ,
             erc20Token,
             ,
-            tokenSource,
+            ,
+            erc20TokenSource,
             ,
             tokenDestination,
-            ,
             tokenBridgeRouter,
+            ,
             sourceChainID,
             destinationChainID,
-            owner,
-            bridger,
-            messageId,
+            ,
             ,
         ) = helperConfig.activeNetworkConfigTest();
         vm.deal(bridger, STARTING_GAS_BALANCE);
@@ -85,7 +90,7 @@ contract AvalancheICTTRouterTest is Test {
             )
         );
         tokenBridgeRouter.registerSourceTokenBridge(
-            address(0x1111111111111111111111111111111111111111), address(tokenSource)
+            address(0x1111111111111111111111111111111111111111), address(erc20TokenSource)
         );
         vm.stopPrank();
     }
@@ -109,7 +114,7 @@ contract AvalancheICTTRouterTest is Test {
 
     modifier registerTokenBridge() {
         vm.startPrank(owner);
-        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
             address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
         );
@@ -120,8 +125,8 @@ contract AvalancheICTTRouterTest is Test {
     function testEmitsOnRegisterSourceTokenBridge() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit RegisterSourceTokenBridge(address(erc20Token), address(tokenSource));
-        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
+        emit RegisterSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         vm.stopPrank();
     }
 
@@ -140,7 +145,7 @@ contract AvalancheICTTRouterTest is Test {
     }
 
     function testGetSourceBridgeAfterRegister() public registerTokenBridge {
-        assert(tokenBridgeRouter.getSourceBridge(address(erc20Token)) == address(tokenSource));
+        assert(tokenBridgeRouter.getSourceBridge(address(erc20Token)) == address(erc20TokenSource));
     }
 
     function testGetDestinationBridgeConfigAfterRegister() public registerTokenBridge {
@@ -172,7 +177,7 @@ contract AvalancheICTTRouterTest is Test {
         vm.startPrank(owner);
         address[] memory startList = tokenBridgeRouter.getTokensList();
         assert(startList.length == 0);
-        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(tokenSource));
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         address[] memory endList = tokenBridgeRouter.getTokensList();
         assert(endList.length == 1 && endList[0] == address(erc20Token));
         vm.stopPrank();

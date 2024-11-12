@@ -76,18 +76,17 @@ contract AvalancheICTTRouterFixedFees is
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
 
-        uint256 primaryFeeAmount = (amount * primaryRelayerFeeBips) / 10_000;
-
-        uint256 secondaryFeeAmount = (amount * secondaryRelayerFeeBips) / 10_000;
-
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
+
+        uint256 primaryFeeAmount = (adjustedAmount * primaryRelayerFeeBips) / 10_000;
+        uint256 secondaryFeeAmount = (adjustedAmount * secondaryRelayerFeeBips) / 10_000;
 
         if (!destinationBridge.isMultihop) {
             secondaryFeeAmount = 0;
         }
 
-        uint256 bridgeAmount = adjustedAmount - (primaryFeeAmount + secondaryFeeAmount);
+        uint256 bridgeAmount = adjustedAmount - primaryFeeAmount;
 
         SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeSource, adjustedAmount);
 
@@ -122,18 +121,17 @@ contract AvalancheICTTRouterFixedFees is
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
 
-        uint256 primaryFeeAmount = (amount * primaryRelayerFeeBips) / 10_000;
-
-        uint256 secondaryFeeAmount = (amount * secondaryRelayerFeeBips) / 10_000;
-
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
+
+        uint256 primaryFeeAmount = (adjustedAmount * primaryRelayerFeeBips) / 10_000;
+        uint256 secondaryFeeAmount = (adjustedAmount * secondaryRelayerFeeBips) / 10_000;
 
         if (!destinationBridge.isMultihop) {
             secondaryFeeAmount = 0;
         }
 
-        uint256 bridgeAmount = adjustedAmount - (primaryFeeAmount + secondaryFeeAmount);
+        uint256 bridgeAmount = adjustedAmount - primaryFeeAmount;
 
         SafeERC20.safeIncreaseAllowance(IERC20(tokenAddress), bridgeSource, adjustedAmount);
 
@@ -166,7 +164,6 @@ contract AvalancheICTTRouterFixedFees is
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
-
         uint256 secondaryFeeAmount = (msg.value * secondaryRelayerFeeBips) / 10_000;
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
@@ -176,7 +173,7 @@ contract AvalancheICTTRouterFixedFees is
             secondaryFeeAmount = 0;
         }
 
-        uint256 bridgeAmount = msg.value - (primaryFeeAmount + secondaryFeeAmount);
+        uint256 bridgeAmount = msg.value - primaryFeeAmount;
 
         SendTokensInput memory input = SendTokensInput(
             destinationChainID,
@@ -209,7 +206,6 @@ contract AvalancheICTTRouterFixedFees is
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / 10_000;
-
         uint256 secondaryFeeAmount = (msg.value * secondaryRelayerFeeBips) / 10_000;
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
@@ -219,7 +215,7 @@ contract AvalancheICTTRouterFixedFees is
             secondaryFeeAmount = 0;
         }
 
-        uint256 bridgeAmount = msg.value - (primaryFeeAmount + secondaryFeeAmount);
+        uint256 bridgeAmount = msg.value - primaryFeeAmount;
 
         SendAndCallInput memory input = SendAndCallInput(
             destinationChainID,
@@ -251,6 +247,7 @@ contract AvalancheICTTRouterFixedFees is
         uint256, /*amount*/
         address, /*recipient*/
         address, /*multiHopFallback*/
+        address, /* primaryFeeTokenAddress */
         uint256, /*primaryRelayerFeeBips*/
         uint256 /*secondaryRelayerFeeBips*/
     ) external override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {
@@ -268,6 +265,7 @@ contract AvalancheICTTRouterFixedFees is
         uint256, /* recipientGasLimit */
         uint256, /* requiredGasLimit */
         address, /* multiHopFallback */
+        address, /* primaryFeeTokenAddress */
         uint256, /* primaryRelayerFeeBips */
         uint256 /* secondaryRelayerFeeBips */
     ) external override (AvalancheICTTRouter, IAvalancheICTTRouter) nonReentrant {

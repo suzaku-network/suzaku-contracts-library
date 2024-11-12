@@ -31,37 +31,38 @@ contract HelperConfig4Test is Script {
 
     struct NetworkConfigTest {
         uint256 deployerKey;
-        uint256 primaryRelayerFeeBips;
-        uint256 secondaryRelayerFeeBips;
-        ERC20Mock erc20Token;
-        WrappedNativeToken wrappedToken;
-        ERC20TokenHome erc20TokenSource;
-        NativeTokenHome nativeTokenSource;
-        address tokenRemote;
-        AvalancheICTTRouter tokenBridgeRouterF;
-        AvalancheICTTRouterFixedFees tokenBridgeRouterS;
-        bytes32 sourceChainID;
-        bytes32 remoteChainID;
         address owner;
         address bridger;
         bytes32 messageID;
         address warpPrecompileAddress;
         WarpMessengerTestMock warpMessengerTestMock;
+        ERC20Mock erc20Token;
+        WrappedNativeToken wrappedToken;
+        ERC20Mock feeToken;
+        ERC20TokenHome erc20TokenSource;
+        NativeTokenHome nativeTokenSource;
+        address tokenDestination;
+        AvalancheICTTRouter tokenBridgeRouterF;
+        AvalancheICTTRouterFixedFees tokenBridgeRouterS;
+        bytes32 sourceChainID;
+        bytes32 destinationChainID;
+        uint256 primaryRelayerFee;
+        uint256 secondaryRelayerFee;
+        uint256 amount;
     }
 
     uint256 private _deployerKey = DEPLOYER_PRIV_KEY;
-    address private _tokenRemote = makeAddr("bridgeremote");
+    address private _tokenDestination = makeAddr("bridgeremote");
     bytes32 private _sourceChainID = ANVIL_CHAIN_HEX;
-    bytes32 private _remoteChainID = DEST_CHAIN_HEX;
+    bytes32 private _destinationChainID = DEST_CHAIN_HEX;
     address private _owner = vm.addr(DEPLOYER_PRIV_KEY);
     address private _bridger = makeAddr("bridger");
     bytes32 private _messageID = MESSAGE_ID;
     address private _warpPrecompileAddress = WARP_PRECOMPILE;
-    uint256 private _primaryRelayerFeeBips = 20;
-    uint256 private _secondaryRelayerFeeBips = 0;
+
     uint256 private _initialReserveImbalance = 0;
     uint8 private _sourceTokenDecimals = 18;
-    uint8 private _remoteTokenDecimals = 18;
+    uint8 private _destinationTokenDecimals = 18;
     uint256 private _requiredGasLimit = 10_000_000;
 
     NetworkConfigTest public activeNetworkConfigTest;
@@ -76,19 +77,23 @@ contract HelperConfig4Test is Script {
         }
     }
 
-    function getNetworkConfigWoFees(
-        address _tokenSource
-    ) public returns (NetworkConfigTest memory) {
+    function getNetworkConfigWoFees(address _tokenSource)
+        public
+        returns (NetworkConfigTest memory)
+    {
+        uint256 _primaryRelayerFee = 0.01 ether;
+        uint256 _secondaryRelayerFee = 0.01 ether;
+        uint256 _amount = 1 ether;
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
-            _remoteChainID,
+            _destinationChainID,
             _messageID,
             _initialReserveImbalance,
             _sourceTokenDecimals,
-            _remoteTokenDecimals,
+            _destinationTokenDecimals,
             TELEPORTER_MESSENGER_ADDRESS,
             _tokenSource,
-            _tokenRemote,
+            _tokenDestination,
             _requiredGasLimit
         );
         vm.etch(_warpPrecompileAddress, address(warpMessengerTestMock).code);
@@ -109,41 +114,48 @@ contract HelperConfig4Test is Script {
             new NativeTokenHome(address(teleporterRegistry), _owner, address(_wrappedToken));
         vm.stopBroadcast();
         teleporterMessenger.receiveCrossChainMessage(1, address(0));
+        ERC20Mock _feeToken = new ERC20Mock("FeeTokenMock", "FTK", makeAddr("feeTokenHolder"), 0);
 
         return NetworkConfigTest({
             deployerKey: _deployerKey,
-            primaryRelayerFeeBips: _primaryRelayerFeeBips,
-            secondaryRelayerFeeBips: _secondaryRelayerFeeBips,
-            erc20Token: _erc20Token,
-            wrappedToken: _wrappedToken,
-            erc20TokenSource: _erc20TokenSource,
-            nativeTokenSource: _nativeTokenSource,
-            tokenRemote: _tokenRemote,
-            tokenBridgeRouterF: _tokenBridgeRouterF,
-            tokenBridgeRouterS: AvalancheICTTRouterFixedFees(address(0)),
-            sourceChainID: _sourceChainID,
-            remoteChainID: _remoteChainID,
             owner: _owner,
             bridger: _bridger,
             messageID: _messageID,
             warpPrecompileAddress: _warpPrecompileAddress,
-            warpMessengerTestMock: warpMessengerTestMock
+            warpMessengerTestMock: warpMessengerTestMock,
+            erc20Token: _erc20Token,
+            wrappedToken: _wrappedToken,
+            feeToken: _feeToken,
+            erc20TokenSource: _erc20TokenSource,
+            nativeTokenSource: _nativeTokenSource,
+            tokenDestination: _tokenDestination,
+            tokenBridgeRouterF: _tokenBridgeRouterF,
+            tokenBridgeRouterS: AvalancheICTTRouterFixedFees(address(0)),
+            sourceChainID: _sourceChainID,
+            destinationChainID: _destinationChainID,
+            primaryRelayerFee: _primaryRelayerFee,
+            secondaryRelayerFee: _secondaryRelayerFee,
+            amount: _amount
         });
     }
 
-    function getNetworkConfigWFees(
-        address _tokenSource
-    ) public returns (NetworkConfigTest memory) {
+    function getNetworkConfigWFees(address _tokenSource)
+        public
+        returns (NetworkConfigTest memory)
+    {
+        uint256 _primaryRelayerFeeBips = 10;
+        uint256 _secondaryRelayerFeeBips = 10;
+        uint256 _amount = 1 ether;
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
-            _remoteChainID,
+            _destinationChainID,
             _messageID,
             _initialReserveImbalance,
             _sourceTokenDecimals,
-            _remoteTokenDecimals,
+            _destinationTokenDecimals,
             TELEPORTER_MESSENGER_ADDRESS,
             _tokenSource,
-            _tokenRemote,
+            _tokenDestination,
             _requiredGasLimit
         );
         vm.etch(_warpPrecompileAddress, address(warpMessengerTestMock).code);
@@ -168,22 +180,24 @@ contract HelperConfig4Test is Script {
 
         return NetworkConfigTest({
             deployerKey: _deployerKey,
-            primaryRelayerFeeBips: _primaryRelayerFeeBips,
-            secondaryRelayerFeeBips: _secondaryRelayerFeeBips,
-            erc20Token: _erc20Token,
-            wrappedToken: _wrappedToken,
-            erc20TokenSource: _erc20TokenSource,
-            nativeTokenSource: _nativeTokenSource,
-            tokenRemote: _tokenRemote,
-            tokenBridgeRouterF: AvalancheICTTRouter(address(0)),
-            tokenBridgeRouterS: _tokenBridgeRouterS,
-            sourceChainID: _sourceChainID,
-            remoteChainID: _remoteChainID,
             owner: _owner,
             bridger: _bridger,
             messageID: _messageID,
             warpPrecompileAddress: _warpPrecompileAddress,
-            warpMessengerTestMock: warpMessengerTestMock
+            warpMessengerTestMock: warpMessengerTestMock,
+            erc20Token: _erc20Token,
+            wrappedToken: _wrappedToken,
+            feeToken: ERC20Mock(address(0)),
+            erc20TokenSource: _erc20TokenSource,
+            nativeTokenSource: _nativeTokenSource,
+            tokenDestination: _tokenDestination,
+            tokenBridgeRouterF: AvalancheICTTRouter(address(0)),
+            tokenBridgeRouterS: _tokenBridgeRouterS,
+            sourceChainID: _sourceChainID,
+            destinationChainID: _destinationChainID,
+            primaryRelayerFee: _primaryRelayerFeeBips,
+            secondaryRelayerFee: _secondaryRelayerFeeBips,
+            amount: _amount
         });
     }
 }
