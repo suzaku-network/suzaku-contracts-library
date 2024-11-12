@@ -211,16 +211,42 @@ contract AvalancheICTTRouterTest is Test {
 
     function testDestinationChainRemovedFromDestinationChainsListWhenRemovingTokenDestination()
         public
-        registerTokenBridge
     {
         vm.startPrank(owner);
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), bytes32("a"), tokenDestination, requiredGasLimit, false
+        );
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), bytes32("b"), tokenDestination, requiredGasLimit, false
+        );
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), bytes32("c"), tokenDestination, requiredGasLimit, false
+        );
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), bytes32("d"), tokenDestination, requiredGasLimit, false
+        );
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token), bytes32("e"), tokenDestination, requiredGasLimit, false
+        );
+
         bytes32[] memory startList =
             tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
-        assert(startList.length == 1 && startList[0] == destinationChainID);
-        tokenBridgeRouter.removeDestinationTokenBridge(address(erc20Token), destinationChainID);
+        assert(contains(startList, bytes32("b")));
+        tokenBridgeRouter.removeDestinationTokenBridge(address(erc20Token), bytes32("b"));
         bytes32[] memory endList =
             tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
-        assert(endList.length == 0);
+        assert(!contains(endList, bytes32("b")));
+        assert(endList.length == startList.length - 1);
         vm.stopPrank();
+    }
+
+    function contains(bytes32[] memory list, bytes32 element) internal pure returns (bool) {
+        for (uint256 i; i < list.length; i++) {
+            if (list[i] == element) {
+                return true;
+            }
+        }
+        return false;
     }
 }
