@@ -150,7 +150,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         }
         l1TotalWeight = totalWeight;
 
-        // Verify that the sha256 hash of the Subnet conversion data matches with the Warp message's subnetConversionID.
+        // Verify that the sha256 hash of the Subnet ConversionData matches with the Warp message's ConversionID.
         WarpMessage memory warpMessage = _getPChainWarpMessage(messageIndex);
         // Parse the Warp message into SubnetToL1ConversionMessage
         bytes32 messageConversionID =
@@ -158,7 +158,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         bytes memory encodedConversion = ValidatorMessages.packConversionData(conversionData);
         bytes32 conversionID = sha256(encodedConversion);
         if (conversionID != messageConversionID) {
-            revert ACP99Manager__InvalidSubnetConversionID(conversionID, messageConversionID);
+            revert ACP99Manager__InvalidConversionID(conversionID, messageConversionID);
         }
 
         initializedValidatorSet = true;
