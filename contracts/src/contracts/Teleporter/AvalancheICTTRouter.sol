@@ -248,6 +248,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
+        uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+        );
+
         SafeERC20.safeIncreaseAllowance(
             IERC20(primaryFeeTokenAddress), bridgeSource, primaryRelayerFee
         );
@@ -261,7 +265,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             destinationBridge.bridgeAddress,
             recipient,
             primaryFeeTokenAddress,
-            primaryRelayerFee,
+            adjustedPrimaryFee,
             secondaryRelayerFee,
             destinationBridge.requiredGasLimit,
             multiHopFallback
@@ -293,6 +297,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             );
         }
 
+        uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+        );
+
         SafeERC20.safeIncreaseAllowance(
             IERC20(primaryFeeTokenAddress), bridgeSource, primaryRelayerFee
         );
@@ -311,7 +319,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             multiHopFallback,
             recipientFallback,
             primaryFeeTokenAddress,
-            primaryRelayerFee,
+            adjustedPrimaryFee,
             secondaryRelayerFee
         );
 

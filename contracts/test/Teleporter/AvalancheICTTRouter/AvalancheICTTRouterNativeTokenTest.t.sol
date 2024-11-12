@@ -90,10 +90,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
     modifier fundRouterFeeToken() {
         vm.startPrank(bridger);
         wrappedNativeToken.deposit{value: primaryRelayerFee}();
-        IERC20(address(wrappedNativeToken)).approve(bridger, primaryRelayerFee);
-        IERC20(address(wrappedNativeToken)).transferFrom(
-            bridger, address(tokenBridgeRouter), primaryRelayerFee
-        );
+        IERC20(address(wrappedNativeToken)).approve(address(tokenBridgeRouter), primaryRelayerFee);
         _;
     }
 
