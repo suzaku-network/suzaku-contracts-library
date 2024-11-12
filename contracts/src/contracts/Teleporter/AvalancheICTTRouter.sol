@@ -283,6 +283,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryRelayerFee
         );
 
+        uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(primaryFeeTokenAddress), primaryRelayerFee
+        );
+
         SafeERC20.safeIncreaseAllowance(
             IERC20(primaryFeeTokenAddress),
             bridgeSource,
@@ -329,6 +333,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
             IERC20(primaryFeeTokenAddress),
             primaryRelayerFee
+        );
+
+        uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(primaryFeeTokenAddress), primaryRelayerFee
         );
 
         SafeERC20.safeIncreaseAllowance(
