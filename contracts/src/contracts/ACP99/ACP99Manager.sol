@@ -25,8 +25,8 @@ import {EnumerableMap} from "@openzeppelin/contracts@4.9.6/utils/structs/Enumera
 /**
  * @title ACP99Manager
  * @author ADDPHO
- * @notice The ACP99Manager contract is responsible for managing the validator set of a Subnet.
- * It is meant to be used as the Subnet manager address in the `ConvertSubnetTx`.
+ * @notice The ACP99Manager contract is responsible for managing the validator set of an L1.
+ * It is meant to be used as the Validator Manager address in the `ConvertSubnetToL1Tx`.
  * @custom:security-contact security@suzaku.network
  */
 contract ACP99Manager is Ownable2Step, IACP99Manager {
