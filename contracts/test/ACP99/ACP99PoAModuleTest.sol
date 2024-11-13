@@ -37,9 +37,9 @@ contract ACP99PoAModuleTest is Test {
     bytes public constant VALIDATOR_NODE_ID_02 =
         bytes(hex"2345678123456781234567812345678123456781234567812345678123456781");
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
-    uint64 constant VALIDATOR_WEIGHT = 100;
+    uint64 constant VALIDATOR_WEIGHT = 20;
     bytes32 constant VALIDATION_ID =
-        0x6bc851f1cf9fe68ddb8c6fe4b72f467aeeff662677d4d65e1a387085bfdda283;
+        0x3a41d4db60b49389d4b121c2137a1382431a89369c5445c2a46877c3929dd9c6;
     PChainOwner public P_CHAIN_OWNER;
 
     ACP99PoAModule poaModule;
@@ -53,12 +53,12 @@ contract ACP99PoAModuleTest is Test {
         (deployerKey, subnetID) = helperConfig.activeNetworkConfig();
         deployerAddress = vm.addr(deployerKey);
 
-        ACP77WarpMessengerTestMock warpMessengerTestMock =
-            new ACP77WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
-        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
-
         DeployACP99PoAModule poaModuleDeployer = new DeployACP99PoAModule();
         (manager, poaModule) = poaModuleDeployer.run();
+
+        ACP77WarpMessengerTestMock warpMessengerTestMock =
+            new ACP77WarpMessengerTestMock(address(manager));
+        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
 
         address[] memory addresses = new address[](1);
         addresses[0] = 0x1234567812345678123456781234567812345678;
@@ -140,7 +140,7 @@ contract ACP99PoAModuleTest is Test {
         validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
-        uint64 newWeight = 200;
+        uint64 newWeight = 40;
         vm.warp(1_706_745_600); // Warp to 2024-02-01 00:00:00
 
         // Act

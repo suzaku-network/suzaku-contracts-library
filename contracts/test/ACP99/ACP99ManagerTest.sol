@@ -65,9 +65,9 @@ contract ACP99ManagerTest is Test {
     bytes public constant VALIDATOR_NODE_ID_03 =
         bytes(hex"3456781234567812345678123456781234567812345678123456781234567812");
     bytes constant VALIDATOR_BLS_PUBLIC_KEY = new bytes(48);
-    uint64 constant VALIDATOR_WEIGHT = 100;
+    uint64 constant VALIDATOR_WEIGHT = 20;
     bytes32 constant VALIDATION_ID =
-        0x6bc851f1cf9fe68ddb8c6fe4b72f467aeeff662677d4d65e1a387085bfdda283;
+        0x3a41d4db60b49389d4b121c2137a1382431a89369c5445c2a46877c3929dd9c6;
     PChainOwner public P_CHAIN_OWNER;
 
     ACP99Manager manager;
@@ -81,12 +81,12 @@ contract ACP99ManagerTest is Test {
         (deployerKey, subnetID) = helperConfig.activeNetworkConfig();
         deployerAddress = vm.addr(deployerKey);
 
-        ACP77WarpMessengerTestMock warpMessengerTestMock =
-            new ACP77WarpMessengerTestMock(makeAddr("tokenHome"), makeAddr("tokenRemote"));
-        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
-
         DeployACP99PoAModule validatorSetManagerDeployer = new DeployACP99PoAModule();
         (manager, poaModule) = validatorSetManagerDeployer.run();
+
+        ACP77WarpMessengerTestMock warpMessengerTestMock =
+            new ACP77WarpMessengerTestMock(address(manager));
+        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
 
         address[] memory addresses = new address[](1);
         addresses[0] = 0x1234567812345678123456781234567812345678;
@@ -164,12 +164,12 @@ contract ACP99ManagerTest is Test {
         InitialValidator[] memory initialValidators = new InitialValidator[](2);
         initialValidators[0] = InitialValidator({
             nodeID: VALIDATOR_NODE_ID_02,
-            weight: 100,
+            weight: 180,
             blsPublicKey: VALIDATOR_BLS_PUBLIC_KEY
         });
         initialValidators[1] = InitialValidator({
             nodeID: VALIDATOR_NODE_ID_03,
-            weight: 100,
+            weight: 20,
             blsPublicKey: VALIDATOR_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
@@ -198,7 +198,7 @@ contract ACP99ManagerTest is Test {
         Validation memory validation =
             manager.getValidation(sha256(abi.encodePacked(conversionData.subnetID, uint32(0))));
         assertEq(validation.nodeID, bytes32(VALIDATOR_NODE_ID_02));
-        assertEq(validation.periods[0].weight, 100);
+        assertEq(validation.periods[0].weight, 180);
         assertEq(validation.periods[0].startTime, block.timestamp);
     }
 
@@ -210,8 +210,8 @@ contract ACP99ManagerTest is Test {
         vm.prank(deployerAddress);
         // We don't check the validationID
         vm.expectEmit(true, false, false, false, address(manager));
-        emit RegisterInitialValidator(bytes32(VALIDATOR_NODE_ID_02), VALIDATION_ID, 100);
-        emit RegisterInitialValidator(bytes32(VALIDATOR_NODE_ID_03), VALIDATION_ID, 100);
+        emit RegisterInitialValidator(bytes32(VALIDATOR_NODE_ID_02), VALIDATION_ID, 180);
+        emit RegisterInitialValidator(bytes32(VALIDATOR_NODE_ID_03), VALIDATION_ID, 20);
         manager.initializeValidatorSet(conversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX);
     }
 
@@ -395,7 +395,7 @@ contract ACP99ManagerTest is Test {
         validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
-        uint64 newWeight = 200;
+        uint64 newWeight = 40;
         // Warp to 2024-02-01 00:00:00
         vm.warp(1_706_745_600);
 
@@ -422,7 +422,7 @@ contract ACP99ManagerTest is Test {
         validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
-        uint64 newWeight = 200;
+        uint64 newWeight = 40;
         // Warp to 2024-02-01 00:00:00
         vm.warp(1_706_745_600);
 
@@ -515,7 +515,7 @@ contract ACP99ManagerTest is Test {
         validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
-        uint64 newWeight = 200;
+        uint64 newWeight = 40;
         // Warp to 2024-02-01 00:00:00
         vm.warp(1_706_745_600);
         vm.startPrank(address(poaModule));
@@ -541,7 +541,7 @@ contract ACP99ManagerTest is Test {
         validatorRegistrationCompleted(VALIDATOR_NODE_ID_01, VALIDATOR_WEIGHT)
     {
         // Arrange
-        uint64 newWeight = 200;
+        uint64 newWeight = 40;
         // Warp to 2024-02-01 00:00:00
         vm.warp(1_706_745_600);
         vm.startPrank(address(poaModule));
