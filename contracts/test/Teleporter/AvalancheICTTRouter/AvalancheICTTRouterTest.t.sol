@@ -232,16 +232,16 @@ contract AvalancheICTTRouterTest is Test {
 
         bytes32[] memory startList =
             tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
-        assert(contains(startList, bytes32("b")));
+        assert(_contains(startList, bytes32("b")));
         tokenBridgeRouter.removeDestinationTokenBridge(address(erc20Token), bytes32("b"));
         bytes32[] memory endList =
             tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
-        assert(!contains(endList, bytes32("b")));
-        assert(endList.length == startList.length - 1);
+        assert(!_contains(endList, bytes32("b")));
+        assertEq(endList.length, startList.length - 1);
         vm.stopPrank();
     }
 
-    function contains(bytes32[] memory list, bytes32 element) internal pure returns (bool) {
+    function _contains(bytes32[] memory list, bytes32 element) internal pure returns (bool) {
         for (uint256 i; i < list.length; i++) {
             if (list[i] == element) {
                 return true;
