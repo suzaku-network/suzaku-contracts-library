@@ -18,16 +18,16 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     event BridgeNative(
         bytes32 indexed destinationChainID,
-        uint256 amount,
         address recipient,
+        uint256 amount,
         uint256 primaryRelaryFee,
         uint256 secondaryRelayerFee
     );
 
     event BridgeAndCallNative(
         bytes32 indexed destinationChainID,
-        uint256 amount,
         address recipient,
+        uint256 amount,
         uint256 primaryRelaryFee,
         uint256 secondaryRelayerFee
     );
@@ -127,7 +127,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
     function testEmitsWhenNativeTokensSent() public registerTokenBridge fundRouterFeeToken {
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
         emit BridgeNative(
-            destinationChainID, amount, bridger, primaryRelayerFee, secondaryRelayerFee
+            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
         );
 
         tokenBridgeRouter.bridgeNative{value: amount}(
@@ -179,7 +179,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
         emit BridgeAndCallNative(
-            destinationChainID, amount, bridger, primaryRelayerFee, secondaryRelayerFee
+            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
         );
 
         tokenBridgeRouter.bridgeAndCallNative{value: amount}(

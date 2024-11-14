@@ -19,8 +19,8 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
     event BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
-        uint256 amount,
         address recipient,
+        uint256 amount,
         uint256 primaryRelaryFee,
         uint256 secondaryRelayerFee
     );
@@ -28,8 +28,8 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
     event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
-        uint256 amount,
         address recipient,
+        uint256 amount,
         uint256 primaryRelaryFee,
         uint256 secondaryRelayerFee
     );
@@ -130,8 +130,8 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         emit BridgeERC20(
             address(erc20Token),
             destinationChainID,
-            amount,
             bridger,
+            amount,
             (amount * primaryRelayerFeeBips) / 10_000,
             0
         );
@@ -186,8 +186,8 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         emit BridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
-            amount,
             tokenDestination,
+            amount,
             (amount * primaryRelayerFeeBips) / 10_000,
             0
         );

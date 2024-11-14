@@ -41,7 +41,7 @@ contract AvalancheICTTRouterFixedFees is
     uint256 public secondaryRelayerFeeBips;
 
     /// @notice Constant to calculate the value of the relayer fees from the basis points
-    uint256 private constant basisPointsDivider = 10_000;
+    uint256 private constant BASIS_POINTS_DIVIDER = 10_000;
 
     constructor(
         uint256 primaryRelayerFeeBips_,
@@ -56,9 +56,13 @@ contract AvalancheICTTRouterFixedFees is
         uint256 primaryRelayerFeeBips_,
         uint256 secondaryRelayerFeeBips_
     ) external onlyOwner {
-        if ((primaryRelayerFeeBips_ + secondaryRelayerFeeBips_) >= basisPointsDivider) {
-            revert AvalancheICTTRouterFixedFees__FeesBipsTooHigh(
-                primaryRelayerFeeBips_, secondaryRelayerFeeBips_
+        if (
+            (primaryRelayerFeeBips_ + secondaryRelayerFeeBips_) >=
+            BASIS_POINTS_DIVIDER
+        ) {
+            revert AvalancheICTTRouterFixedFees__CumulatedFeesExceed100percent(
+                primaryRelayerFeeBips_,
+                secondaryRelayerFeeBips_
             );
         }
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
@@ -89,9 +93,9 @@ contract AvalancheICTTRouterFixedFees is
         );
 
         uint256 primaryFeeAmount = (adjustedAmount * primaryRelayerFeeBips) /
-            basisPointsDivider;
+            BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
-            ? (amount * secondaryRelayerFeeBips) / basisPointsDivider
+            ? (amount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
 
         uint256 bridgeAmount = adjustedAmount - primaryFeeAmount;
@@ -117,8 +121,8 @@ contract AvalancheICTTRouterFixedFees is
         emit BridgeERC20(
             tokenAddress,
             destinationChainID,
-            bridgeAmount,
             recipient,
+            bridgeAmount,
             primaryFeeAmount,
             secondaryFeeAmount
         );
@@ -146,10 +150,15 @@ contract AvalancheICTTRouterFixedFees is
             amount
         );
 
+        uint256 adjustedAmount = SafeERC20TransferFrom.safeTransferFrom(
+            IERC20(tokenAddress),
+            amount
+        );
+
         uint256 primaryFeeAmount = (adjustedAmount * primaryRelayerFeeBips) /
-            basisPointsDivider;
+            BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
-            ? (amount * secondaryRelayerFeeBips) / basisPointsDivider
+            ? (amount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
 
         uint256 bridgeAmount = adjustedAmount - primaryFeeAmount;
@@ -177,8 +186,8 @@ contract AvalancheICTTRouterFixedFees is
         emit BridgeAndCallERC20(
             tokenAddress,
             destinationChainID,
-            bridgeAmount,
             recipient,
+            bridgeAmount,
             primaryFeeAmount,
             secondaryFeeAmount
         );
@@ -198,9 +207,9 @@ contract AvalancheICTTRouterFixedFees is
             ][address(0)];
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) /
-            basisPointsDivider;
+            BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
-            ? (msg.value * secondaryRelayerFeeBips) / basisPointsDivider
+            ? (msg.value * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
 
         SafeERC20.safeIncreaseAllowance(
@@ -228,8 +237,8 @@ contract AvalancheICTTRouterFixedFees is
         INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
         emit BridgeNative(
             destinationChainID,
-            bridgeAmount,
             recipient,
+            bridgeAmount,
             primaryFeeAmount,
             secondaryFeeAmount
         );
@@ -251,10 +260,17 @@ contract AvalancheICTTRouterFixedFees is
                 destinationChainID
             ][address(0)];
 
+        if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
+            revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
+                recipientGasLimit,
+                destinationBridge.requiredGasLimit
+            );
+        }
+
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) /
-            basisPointsDivider;
+            BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
-            ? (msg.value * secondaryRelayerFeeBips) / basisPointsDivider
+            ? (msg.value * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
 
         SafeERC20.safeIncreaseAllowance(
@@ -287,8 +303,8 @@ contract AvalancheICTTRouterFixedFees is
         );
         emit BridgeAndCallNative(
             destinationChainID,
-            bridgeAmount,
             recipient,
+            bridgeAmount,
             primaryFeeAmount,
             secondaryFeeAmount
         );
