@@ -16,10 +16,20 @@ import {Vm} from "forge-std/Vm.sol";
 contract AvalancheICTTRouterNativeTokenTest is Test {
     address private constant TOKEN_SOURCE = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
 
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event BridgeNative(
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
+    );
 
     event BridgeAndCallNative(
-        bytes32 indexed destinationChainID, uint256 amount, address recipient
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
@@ -116,7 +126,9 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     function testEmitsWhenNativeTokensSent() public registerTokenBridge fundRouterFeeToken {
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeNative(destinationChainID, amount, bridger);
+        emit BridgeNative(
+            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
+        );
 
         tokenBridgeRouter.bridgeNative{value: amount}(
             destinationChainID,
@@ -166,7 +178,9 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallNative(destinationChainID, amount, bridger);
+        emit BridgeAndCallNative(
+            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
+        );
 
         tokenBridgeRouter.bridgeAndCallNative{value: amount}(
             destinationChainID,

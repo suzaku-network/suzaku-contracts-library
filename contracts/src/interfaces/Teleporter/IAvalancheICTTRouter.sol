@@ -62,46 +62,68 @@ interface IAvalancheICTTRouter {
      * @notice Emitted when ERC20 tokens are bridged
      * @param tokenAddress Address of the ERC20 token contract
      * @param destinationBlockchainID ID of the destination chain
-     * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
+     * @param amount Amount of token bridged
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
+        address recipient,
         uint256 amount,
-        address recipient
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     /**
      * @notice Emitted when ERC20 tokens are bridged with calldata for a contract recipient
      * @param tokenAddress Address of the ERC20 token contract
      * @param destinationBlockchainID ID of the destination chain
-     * @param amount Amount of token bridged
      * @param recipient Address of the contract receiving the tokens
+     * @param amount Amount of token bridged
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
+        address recipient,
         uint256 amount,
-        address recipient
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     /**
      * @notice Emitted when native tokens are bridged
      * @param destinationChainID ID of the destination chain
-     * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
+     * @param amount Amount of token bridged
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event BridgeNative(
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
+    );
 
     /**
      * @notice Emitted when native tokens are bridged with calldata for a contract recipient
      * @param destinationChainID ID of the destination chain
-     * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
+     * @param amount Amount of token bridged
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeAndCallNative(
-        bytes32 indexed destinationChainID, uint256 amount, address recipient
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     /**
@@ -131,7 +153,9 @@ interface IAvalancheICTTRouter {
      * @notice Remove the source bridge for a token
      * @param tokenAddress Address of the ERC20 token contract
      */
-    function removeSourceTokenBridge(address tokenAddress) external;
+    function removeSourceTokenBridge(
+        address tokenAddress
+    ) external;
 
     /**
      * @notice Remove a destination bridge for a token
@@ -240,7 +264,9 @@ interface IAvalancheICTTRouter {
      * @param token The address of the ERC20 token
      * @return sourceBridge Address of the bridge source instance
      */
-    function getSourceBridge(address token) external view returns (address);
+    function getSourceBridge(
+        address token
+    ) external view returns (address);
 
     /**
      * @notice Get the destinationBridge for a token and a destination chain
@@ -264,5 +290,7 @@ interface IAvalancheICTTRouter {
      * @param token The address of the token
      * @return destinationChainIDsList The list of destination chain IDs
      */
-    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory);
+    function getDestinationChainsForToken(
+        address token
+    ) external view returns (bytes32[] memory);
 }

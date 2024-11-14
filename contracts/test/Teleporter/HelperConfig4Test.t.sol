@@ -77,10 +77,9 @@ contract HelperConfig4Test is Script {
         }
     }
 
-    function getNetworkConfigWoFees(address _tokenSource)
-        public
-        returns (NetworkConfigTest memory)
-    {
+    function getNetworkConfigWoFees(
+        address _tokenSource
+    ) public returns (NetworkConfigTest memory) {
         uint256 _primaryRelayerFee = 0.01 ether;
         uint256 _secondaryRelayerFee = 0.01 ether;
         uint256 _amount = 1 ether;
@@ -139,10 +138,9 @@ contract HelperConfig4Test is Script {
         });
     }
 
-    function getNetworkConfigWFees(address _tokenSource)
-        public
-        returns (NetworkConfigTest memory)
-    {
+    function getNetworkConfigWFees(
+        address _tokenSource
+    ) public returns (NetworkConfigTest memory) {
         uint256 _primaryRelayerFeeBips = 10;
         uint256 _secondaryRelayerFeeBips = 10;
         uint256 _amount = 1 ether;

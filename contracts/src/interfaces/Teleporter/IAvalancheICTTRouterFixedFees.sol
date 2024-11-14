@@ -16,6 +16,9 @@ pragma solidity 0.8.18;
  */
 interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     error AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
+    error AvalancheICTTRouterFixedFees__CumulatedFeesExceed100Percent(
+        uint256 primaryRelayerFeeBips, uint256 secondaryRelayerFeeBips
+    );
 
     /**
      * @notice Emitted when the value of the fixes relayer fees are updated
