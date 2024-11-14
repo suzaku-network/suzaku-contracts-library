@@ -194,6 +194,9 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             revert ACP99Manager__InvalidSignatureLength(blsPublicKey.length);
         }
 
+        _validatePChainOwner(remainingBalanceOwner);
+        _validatePChainOwner(disableOwner);
+
         (bytes32 validationID, bytes memory registrationMessage) = ValidatorMessages
             .packRegisterL1ValidatorMessage(
             ValidatorMessages.ValidationPeriod({
@@ -380,7 +383,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     }
 
     function _validatePChainOwner(
-        PChainOwner calldata pChainOwner
+        PChainOwner memory pChainOwner
     ) internal pure {
         // If threshold is 0, addresses must be empty.
         if (pChainOwner.threshold == 0 && pChainOwner.addresses.length != 0) {
