@@ -93,7 +93,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         bytes32 destinationChainID,
         address bridgeAddress,
         uint256 requiredGasLimit,
-        bool isMultihop
+        bool isMultihop,
+        uint256 minimalPrimaryFee,
+        uint256 minimalSecondaryFee
     ) external onlyOwner {
         if (tokenAddress != address(0) && !tokenAddress.isContract()) {
             revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
@@ -106,8 +108,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
                 routerChainID, destinationChainID
             );
         }
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
+        DestinationBridge memory destinationBridge = DestinationBridge(
+            bridgeAddress, requiredGasLimit, isMultihop, minimalPrimaryFee, minimalSecondaryFee
+        );
         tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
             destinationBridge;
         EnumerableSet.add(tokenToDestinationChainsIDList[tokenAddress], destinationChainID);
@@ -150,6 +153,15 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+
+        if (
+            primaryRelayerFee < destinationBridge.minimalPrimaryFee
+                || secondaryRelayerFee < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
 
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
@@ -206,6 +218,15 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+
+        if (
+            primaryRelayerFee < destinationBridge.minimalPrimaryFee
+                || secondaryRelayerFee < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
 
         if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
             revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
@@ -266,6 +287,15 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
+        if (
+            primaryRelayerFee < destinationBridge.minimalPrimaryFee
+                || secondaryRelayerFee < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
+
         uint256 adjustedPrimaryFee = SafeERC20TransferFrom.safeTransferFrom(
             IERC20(primaryFeeTokenAddress), primaryRelayerFee
         );
@@ -310,6 +340,15 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+
+        if (
+            primaryRelayerFee < destinationBridge.minimalPrimaryFee
+                || secondaryRelayerFee < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
 
         if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
             revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(

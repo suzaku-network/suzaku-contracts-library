@@ -84,6 +84,17 @@ contract AvalancheICTTRouterFixedFees is
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
 
+        if (
+            (amount * primaryRelayerFeeBips) / basisPointsDivider
+                < destinationBridge.minimalPrimaryFee
+                || (amount * secondaryRelayerFeeBips) / basisPointsDivider
+                    < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
+
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
 
@@ -132,6 +143,17 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+
+        if (
+            (amount * primaryRelayerFeeBips) / basisPointsDivider
+                < destinationBridge.minimalPrimaryFee
+                || (amount * secondaryRelayerFeeBips) / basisPointsDivider
+                    < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
 
         if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
             revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
@@ -186,6 +208,17 @@ contract AvalancheICTTRouterFixedFees is
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
 
+        if (
+            (msg.value * primaryRelayerFeeBips) / basisPointsDivider
+                < destinationBridge.minimalPrimaryFee
+                || (msg.value * secondaryRelayerFeeBips) / basisPointsDivider
+                    < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
+
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / basisPointsDivider;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
             ? (msg.value * secondaryRelayerFeeBips) / basisPointsDivider
@@ -226,6 +259,17 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+
+        if (
+            (msg.value * primaryRelayerFeeBips) / basisPointsDivider
+                < destinationBridge.minimalPrimaryFee
+                || (msg.value * secondaryRelayerFeeBips) / basisPointsDivider
+                    < destinationBridge.minimalSecondaryFee
+        ) {
+            revert AvalancheICTTRouter__FeesTooLow(
+                destinationBridge.minimalPrimaryFee, destinationBridge.minimalSecondaryFee
+            );
+        }
 
         if (recipientGasLimit >= destinationBridge.requiredGasLimit) {
             revert AvalancheICTTRouter__GasForContractSuperiorToGasForTheMessage(
