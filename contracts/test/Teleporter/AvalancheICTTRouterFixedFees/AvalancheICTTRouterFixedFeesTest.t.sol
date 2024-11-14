@@ -74,7 +74,7 @@ contract AvalancheICTTRouterFixedFeesTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAvalancheICTTRouterFixedFees
-                    .AvalancheICTTRouterFixedFees__CumulatedFeesExceed100percent
+                    .AvalancheICTTRouterFixedFees__CumulatedFeesExceed100Percent
                     .selector,
                 5000,
                 5000
