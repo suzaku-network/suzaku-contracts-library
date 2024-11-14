@@ -153,7 +153,9 @@ interface IAvalancheICTTRouter {
      * @notice Remove the source bridge for a token
      * @param tokenAddress Address of the ERC20 token contract
      */
-    function removeSourceTokenBridge(address tokenAddress) external;
+    function removeSourceTokenBridge(
+        address tokenAddress
+    ) external;
 
     /**
      * @notice Remove a destination bridge for a token
@@ -262,7 +264,9 @@ interface IAvalancheICTTRouter {
      * @param token The address of the ERC20 token
      * @return sourceBridge Address of the bridge source instance
      */
-    function getSourceBridge(address token) external view returns (address);
+    function getSourceBridge(
+        address token
+    ) external view returns (address);
 
     /**
      * @notice Get the destinationBridge for a token and a destination chain
@@ -286,5 +290,7 @@ interface IAvalancheICTTRouter {
      * @param token The address of the token
      * @return destinationChainIDsList The list of destination chain IDs
      */
-    function getDestinationChainsForToken(address token) external view returns (bytes32[] memory);
+    function getDestinationChainsForToken(
+        address token
+    ) external view returns (bytes32[] memory);
 }
