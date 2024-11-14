@@ -172,14 +172,21 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             destinationBridge.bridgeAddress,
             recipient,
             primaryFeeTokenAddress,
-            primaryRelayerFee,
+            adjustedPrimaryFee,
             secondaryRelayerFee,
             destinationBridge.requiredGasLimit,
             multiHopFallback
         );
         IERC20TokenTransferrer(bridgeSource).send(input, adjustedAmount);
 
-        emit BridgeERC20(tokenAddress, destinationChainID, adjustedAmount, recipient);
+        emit BridgeERC20(
+            tokenAddress,
+            destinationChainID,
+            adjustedAmount,
+            recipient,
+            adjustedPrimaryFee,
+            secondaryRelayerFee
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -236,7 +243,14 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             secondaryRelayerFee
         );
         IERC20TokenTransferrer(bridgeSource).sendAndCall(input, adjustedAmount);
-        emit BridgeAndCallERC20(tokenAddress, destinationChainID, adjustedAmount, recipient);
+        emit BridgeAndCallERC20(
+            tokenAddress,
+            destinationChainID,
+            adjustedAmount,
+            recipient,
+            adjustedPrimaryFee,
+            secondaryRelayerFee
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -276,7 +290,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: msg.value}(input);
-        emit BridgeNative(destinationChainID, msg.value, recipient);
+        emit BridgeNative(
+            destinationChainID, msg.value, recipient, adjustedPrimaryFee, secondaryRelayerFee
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -328,7 +344,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
 
         INativeTokenTransferrer(bridgeSource).sendAndCall{value: msg.value}(input);
-        emit BridgeAndCallNative(destinationChainID, msg.value, recipient);
+        emit BridgeAndCallNative(
+            destinationChainID, msg.value, recipient, adjustedPrimaryFee, secondaryRelayerFee
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter

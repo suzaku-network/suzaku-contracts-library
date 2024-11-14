@@ -20,14 +20,18 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
-        address recipient
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
-        address recipient
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 1);
@@ -123,7 +127,14 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
+        emit BridgeERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            bridger,
+            (amount * primaryRelayerFeeBips) / 10_000,
+            0
+        );
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token), destinationChainID, amount, bridger, multihopFallBackAddress
         );
@@ -204,7 +215,14 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         erc20Token.approve(address(tokenBridgeRouter), amount);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
+        emit BridgeAndCallERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            tokenDestination,
+            (amount * primaryRelayerFeeBips) / 10_000,
+            0
+        );
         tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
