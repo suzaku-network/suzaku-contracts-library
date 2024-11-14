@@ -62,6 +62,11 @@ contract AvalancheICTTRouterFixedFees is
         uint256 primaryRelayerFeeBips_,
         uint256 secondaryRelayerFeeBips_
     ) external onlyOwner {
+        if ((primaryRelayerFeeBips_ + secondaryRelayerFeeBips_) >= basisPointsDivider) {
+            revert AvalancheICTTRouterFixedFees__FeesBipsTooHigh(
+                primaryRelayerFeeBips_, secondaryRelayerFeeBips_
+            );
+        }
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
         secondaryRelayerFeeBips = secondaryRelayerFeeBips_;
         emit UpdateRelayerFees(primaryRelayerFeeBips_, secondaryRelayerFeeBips_);
