@@ -161,9 +161,6 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryRelayerFee
         );
 
-        uint256 adjustedRequiredGasLimit = destinationBridge.requiredGasLimit +
-            (destinationBridge.requiredGasLimit / 64);
-
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
         }
@@ -186,7 +183,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryFeeTokenAddress,
             primaryRelayerFee,
             secondaryRelayerFee,
-            adjustedRequiredGasLimit,
+            destinationBridge.requiredGasLimit,
             multiHopFallback
         );
         IERC20TokenTransferrer(bridgeSource).send(input, adjustedAmount);
@@ -229,9 +226,6 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryRelayerFee
         );
 
-        uint256 adjustedRequiredGasLimit = destinationBridge.requiredGasLimit +
-            (destinationBridge.requiredGasLimit / 64);
-
         if (!destinationBridge.isMultihop) {
             secondaryRelayerFee = 0;
         }
@@ -252,7 +246,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             destinationBridge.bridgeAddress,
             recipient,
             recipientPayload,
-            adjustedRequiredGasLimit,
+            destinationBridge.requiredGasLimit,
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
@@ -289,9 +283,6 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryRelayerFee
         );
 
-        uint256 adjustedRequiredGasLimit = destinationBridge.requiredGasLimit +
-            (destinationBridge.requiredGasLimit / 64);
-
         SafeERC20.safeIncreaseAllowance(
             IERC20(primaryFeeTokenAddress),
             bridgeSource,
@@ -309,7 +300,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryFeeTokenAddress,
             adjustedPrimaryFee,
             secondaryRelayerFee,
-            adjustedRequiredGasLimit,
+            destinationBridge.requiredGasLimit,
             multiHopFallback
         );
 
@@ -340,9 +331,6 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             primaryRelayerFee
         );
 
-        uint256 adjustedRequiredGasLimit = destinationBridge.requiredGasLimit +
-            (destinationBridge.requiredGasLimit / 64);
-
         SafeERC20.safeIncreaseAllowance(
             IERC20(primaryFeeTokenAddress),
             bridgeSource,
@@ -358,7 +346,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             destinationBridge.bridgeAddress,
             recipient,
             recipientPayload,
-            adjustedRequiredGasLimit,
+            destinationBridge.requiredGasLimit,
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
