@@ -113,7 +113,9 @@ contract AvalancheICTTRouterFixedFees is
             tokenAddress,
             destinationChainID,
             bridgeAmount,
-            recipient
+            recipient,
+            primaryFeeAmount,
+            secondaryFeeAmount
         );
     }
 
@@ -171,7 +173,9 @@ contract AvalancheICTTRouterFixedFees is
             tokenAddress,
             destinationChainID,
             bridgeAmount,
-            recipient
+            recipient,
+            primaryFeeAmount,
+            secondaryFeeAmount
         );
     }
 
@@ -217,7 +221,13 @@ contract AvalancheICTTRouterFixedFees is
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
-        emit BridgeNative(destinationChainID, bridgeAmount, recipient);
+        emit BridgeNative(
+            destinationChainID,
+            bridgeAmount,
+            recipient,
+            primaryFeeAmount,
+            secondaryFeeAmount
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
@@ -270,7 +280,13 @@ contract AvalancheICTTRouterFixedFees is
         INativeTokenTransferrer(bridgeSource).sendAndCall{value: bridgeAmount}(
             input
         );
-        emit BridgeAndCallNative(destinationChainID, bridgeAmount, recipient);
+        emit BridgeAndCallNative(
+            destinationChainID,
+            bridgeAmount,
+            recipient,
+            primaryFeeAmount,
+            secondaryFeeAmount
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees

@@ -64,12 +64,16 @@ interface IAvalancheICTTRouter {
      * @param destinationBlockchainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
-        address recipient
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     /**
@@ -78,12 +82,16 @@ interface IAvalancheICTTRouter {
      * @param destinationBlockchainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the contract receiving the tokens
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
-        address recipient
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     /**
@@ -91,17 +99,31 @@ interface IAvalancheICTTRouter {
      * @param destinationChainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event BridgeNative(
+        bytes32 indexed destinationChainID,
+        uint256 amount,
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
+    );
 
     /**
      * @notice Emitted when native tokens are bridged with calldata for a contract recipient
      * @param destinationChainID ID of the destination chain
      * @param amount Amount of token bridged
      * @param recipient Address of the receiver of the tokens
+     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeAndCallNative(
-        bytes32 indexed destinationChainID, uint256 amount, address recipient
+        bytes32 indexed destinationChainID,
+        uint256 amount,
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     /**
