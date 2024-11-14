@@ -194,8 +194,8 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         emit BridgeERC20(
             tokenAddress,
             destinationChainID,
-            adjustedAmount,
             recipient,
+            adjustedAmount,
             adjustedPrimaryFee,
             secondaryRelayerFee
         );
@@ -263,8 +263,8 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         emit BridgeAndCallERC20(
             tokenAddress,
             destinationChainID,
-            adjustedAmount,
             recipient,
+            adjustedAmount,
             adjustedPrimaryFee,
             secondaryRelayerFee
         );
@@ -314,8 +314,8 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         INativeTokenTransferrer(bridgeSource).send{value: msg.value}(input);
         emit BridgeNative(
             destinationChainID,
-            msg.value,
             recipient,
+            msg.value,
             adjustedPrimaryFee,
             secondaryRelayerFee
         );
@@ -373,8 +373,8 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
         emit BridgeAndCallNative(
             destinationChainID,
-            msg.value,
             recipient,
+            msg.value,
             adjustedPrimaryFee,
             secondaryRelayerFee
         );

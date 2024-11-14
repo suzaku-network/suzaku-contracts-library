@@ -73,7 +73,9 @@ contract AvalancheICTTRouterFixedFeesTest is Test {
         vm.startPrank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAvalancheICTTRouterFixedFees.AvalancheICTTRouterFixedFees__FeesBipsTooHigh.selector,
+                IAvalancheICTTRouterFixedFees
+                    .AvalancheICTTRouterFixedFees__CumulatedFeesExceed100percent
+                    .selector,
                 5000,
                 5000
             )
