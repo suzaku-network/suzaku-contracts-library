@@ -103,7 +103,14 @@ contract AvalancheICTTRouterFixedFees is
         );
         IERC20TokenTransferrer(bridgeSource).send(input, bridgeAmount);
 
-        emit BridgeERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
+        emit BridgeERC20(
+            tokenAddress,
+            destinationChainID,
+            bridgeAmount,
+            recipient,
+            primaryFeeAmount,
+            secondaryFeeAmount
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
@@ -153,7 +160,14 @@ contract AvalancheICTTRouterFixedFees is
             secondaryFeeAmount
         );
         IERC20TokenTransferrer(bridgeSource).sendAndCall(input, bridgeAmount);
-        emit BridgeAndCallERC20(tokenAddress, destinationChainID, bridgeAmount, recipient);
+        emit BridgeAndCallERC20(
+            tokenAddress,
+            destinationChainID,
+            bridgeAmount,
+            recipient,
+            primaryFeeAmount,
+            secondaryFeeAmount
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
@@ -189,7 +203,9 @@ contract AvalancheICTTRouterFixedFees is
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: bridgeAmount}(input);
-        emit BridgeNative(destinationChainID, bridgeAmount, recipient);
+        emit BridgeNative(
+            destinationChainID, bridgeAmount, recipient, primaryFeeAmount, secondaryFeeAmount
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
@@ -237,7 +253,9 @@ contract AvalancheICTTRouterFixedFees is
         );
 
         INativeTokenTransferrer(bridgeSource).sendAndCall{value: bridgeAmount}(input);
-        emit BridgeAndCallNative(destinationChainID, bridgeAmount, recipient);
+        emit BridgeAndCallNative(
+            destinationChainID, bridgeAmount, recipient, primaryFeeAmount, secondaryFeeAmount
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees

@@ -191,7 +191,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             destinationBridge.bridgeAddress,
             recipient,
             primaryFeeTokenAddress,
-            primaryRelayerFee,
+            adjustedPrimaryFee,
             secondaryRelayerFee,
             destinationBridge.requiredGasLimit,
             multiHopFallback
@@ -202,7 +202,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             tokenAddress,
             destinationChainID,
             adjustedAmount,
-            recipient
+            recipient,
+            adjustedPrimaryFee,
+            secondaryRelayerFee
         );
     }
 
@@ -269,7 +271,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             tokenAddress,
             destinationChainID,
             adjustedAmount,
-            recipient
+            recipient,
+            adjustedPrimaryFee,
+            secondaryRelayerFee
         );
     }
 
@@ -315,7 +319,13 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         );
 
         INativeTokenTransferrer(bridgeSource).send{value: msg.value}(input);
-        emit BridgeNative(destinationChainID, msg.value, recipient);
+        emit BridgeNative(
+            destinationChainID,
+            msg.value,
+            recipient,
+            adjustedPrimaryFee,
+            secondaryRelayerFee
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -368,7 +378,13 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         INativeTokenTransferrer(bridgeSource).sendAndCall{value: msg.value}(
             input
         );
-        emit BridgeAndCallNative(destinationChainID, msg.value, recipient);
+        emit BridgeAndCallNative(
+            destinationChainID,
+            msg.value,
+            recipient,
+            adjustedPrimaryFee,
+            secondaryRelayerFee
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter

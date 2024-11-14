@@ -19,14 +19,18 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
-        address recipient
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
         uint256 amount,
-        address recipient
+        address recipient,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
@@ -149,7 +153,14 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         feeToken.approve(address(tokenBridgeRouter), primaryRelayerFee);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
+        emit BridgeERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            bridger,
+            primaryRelayerFee,
+            secondaryRelayerFee
+        );
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token),
             destinationChainID,
@@ -252,7 +263,14 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         feeToken.approve(address(tokenBridgeRouter), primaryRelayerFee);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
+        emit BridgeAndCallERC20(
+            address(erc20Token),
+            destinationChainID,
+            amount,
+            tokenDestination,
+            primaryRelayerFee,
+            secondaryRelayerFee
+        );
         tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
