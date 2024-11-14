@@ -26,8 +26,11 @@ interface IBalancerValidatorManager is IValidatorManager {
 
     error BalancerValidatorManager__SecurityModuleAlreadyRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleNotRegistered(address securityModule);
-    error BalancerValidatorManager__SecurityModuleMaxWeightReached(
-        address securityModule, uint256 maxWeight
+    error BalancerValidatorManager__SecurityModuleMaxWeightExceeded(
+        address securityModule, uint64 weight, uint64 maxWeight
+    );
+    error BalancerValidatorManager__SecurityModuleNewMaxWeightLowerThanCurrentWeight(
+        address securityModule, uint64 newMaxWeight, uint64 currentWeight
     );
     error BalancerValidatorManager__UnknownSecurityModule(address sender);
     error BalancerValidatorManager__NewWeightIsZero();

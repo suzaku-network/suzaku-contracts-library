@@ -35,10 +35,11 @@ contract BalancerValidatorManager is
     /// @custom:storage-location erc7201:suzaku.storage.BalancerValidatorManager
     struct BalancerValidatorManagerStorage {
         /// @notice The total weight of the validators on the L1
-        uint256 l1TotalWeight;
+        // TODO: Reenable this once this issue is fixed: https://github.com/ava-labs/teleporter/issues/645
+        // uint256 l1TotalWeight;
         /// @notice The registered security modules along with their maximum weight
         EnumerableMap.AddressToUintMap securityModules;
-        /// @notice The weight of all validators for a given security module
+        /// @notice The total weight of all validators for a given security module
         mapping(address securityModule => uint64 weight) securityModuleWeight;
         /// @notice The security module to which each validator belongs
         mapping(bytes32 validationID => address securityModule) validatorSecurityModule;
@@ -184,10 +185,11 @@ contract BalancerValidatorManager is
         }
 
         _checkValidatorSecurityModule(validationID, msg.sender);
+        uint64 oldWeight = getValidator(validationID).weight;
         (, bytes32 messageID) = _setValidatorWeight(validationID, newWeight);
 
         // Update the security module weight
-        uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] + newWeight;
+        uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] + newWeight - oldWeight;
         _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
 
         $.validatorPendingWeightUpdate[validationID] = messageID;
@@ -296,6 +298,13 @@ contract BalancerValidatorManager is
 
     function _setupSecurityModule(address securityModule, uint64 maxWeight) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
+        uint64 currentWeight = $.securityModuleWeight[securityModule];
+
+        if (maxWeight < currentWeight) {
+            revert BalancerValidatorManager__SecurityModuleNewMaxWeightLowerThanCurrentWeight(
+                securityModule, maxWeight, currentWeight
+            );
+        }
 
         if (maxWeight == 0) {
             if (!$.securityModules.remove(securityModule)) {
@@ -310,9 +319,12 @@ contract BalancerValidatorManager is
 
     function _updateSecurityModuleWeight(address securityModule, uint64 weight) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
+        uint64 maxWeight = uint64($.securityModules.get(securityModule));
 
-        if (weight > uint64($.securityModules.get(securityModule))) {
-            revert BalancerValidatorManager__SecurityModuleMaxWeightReached(securityModule, weight);
+        if (weight > maxWeight) {
+            revert BalancerValidatorManager__SecurityModuleMaxWeightExceeded(
+                securityModule, weight, maxWeight
+            );
         }
 
         $.securityModuleWeight[securityModule] = weight;

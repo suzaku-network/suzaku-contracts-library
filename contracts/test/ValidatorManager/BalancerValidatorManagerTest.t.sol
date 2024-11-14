@@ -92,14 +92,12 @@ contract BalancerValidatorManagerTest is Test {
         validatorManager.initializeValidatorSet(
             _generateTestConversionData(), INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX
         );
-        vm.stopPrank();
         _;
     }
 
     modifier securityModulesSetUp() {
-        vm.startPrank(deployerAddress);
+        vm.prank(deployerAddress);
         validatorManager.setupSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
-        vm.stopPrank();
         _;
     }
 
@@ -194,6 +192,25 @@ contract BalancerValidatorManagerTest is Test {
         validatorManager.setupSecurityModule(testSecurityModules[1], 0);
     }
 
+    function testSetupSecurityModuleRevertsIfMaxWeightLowerThanCurrentWeight()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        vm.prank(deployerAddress);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager
+                    .BalancerValidatorManager__SecurityModuleNewMaxWeightLowerThanCurrentWeight
+                    .selector,
+                testSecurityModules[0],
+                10,
+                20
+            )
+        );
+        validatorManager.setupSecurityModule(testSecurityModules[0], 10);
+    }
+
     function testSetupSecurityModuleEmitsEvent() public {
         vm.prank(deployerAddress);
         vm.expectEmit(true, false, false, true);
@@ -216,6 +233,8 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(validator.weight, VALIDATOR_WEIGHT);
         assertEq(validator.startedAt, 0);
         assertEq(validator.endedAt, 0);
+        (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+        assertEq(weight, VALIDATOR_WEIGHT);
     }
 
     function testCompleteValidatorRegistration()
@@ -269,6 +288,52 @@ contract BalancerValidatorManagerTest is Test {
         validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
     }
 
+    function testInitializeValidatorWeightUpdateRevertsIfPendingUpdate()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        // Warp to 2024-01-01 02:00:00 to exit the churn period (1 hour)
+        vm.warp(1_704_067_200 + 2 hours);
+
+        vm.startPrank(testSecurityModules[0]);
+        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager.BalancerValidatorManager__PendingWeightUpdate.selector,
+                VALIDATION_ID_01
+            )
+        );
+        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 50);
+    }
+
+    function testInitializeValidatorWeightUpdateRevertsIfExceedsMaxWeight()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        // Lower the max weight of the security module
+        vm.prank(deployerAddress);
+        validatorManager.setupSecurityModule(testSecurityModules[0], 30);
+
+        // Warp to 2024-01-01 02:00:00 to exit the churn period (1 hour)
+        vm.warp(1_704_067_200 + 2 hours);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager
+                    .BalancerValidatorManager__SecurityModuleMaxWeightExceeded
+                    .selector,
+                testSecurityModules[0],
+                40,
+                30
+            )
+        );
+        vm.prank(testSecurityModules[0]);
+        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+    }
+
     function testCompleteValidatorWeightUpdate()
         public
         validatorSetInitialized
@@ -287,6 +352,8 @@ contract BalancerValidatorManagerTest is Test {
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assertEq(validator.weight, 40);
         assert(!validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
+        (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+        assertEq(weight, 40);
     }
 
     function testResendValidatorWeightUpdate()
