@@ -10,7 +10,7 @@ import {
     ACP99PoAModule,
     IACP99SecurityModule
 } from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
-import {ACP77WarpMessengerTestMock} from "../../src/mocks/ACP77WarpMessengerTestMock.sol";
+import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 import {Test, console} from "forge-std/Test.sol";
 

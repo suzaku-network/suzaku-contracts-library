@@ -20,6 +20,8 @@ import {
 import {Script, console} from "forge-std/Script.sol";
 
 contract HelperConfig4Test is Script {
+    address private constant TELEPORTER_MESSENGER_ADDRESS =
+        0xF2E246BB76DF876Cef8b38ae84130F4F55De395b;
     bytes32 private constant ANVIL_CHAIN_HEX =
         0x7a69000000000000000000000000000000000000000000000000000000000000;
     bytes32 private constant DEST_CHAIN_HEX =
@@ -87,7 +89,7 @@ contract HelperConfig4Test is Script {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
             _destinationChainID,
-            _messageID,
+            MESSAGE_ID,
             _initialReserveImbalance,
             _sourceTokenDecimals,
             _destinationTokenDecimals,
@@ -120,7 +122,7 @@ contract HelperConfig4Test is Script {
             deployerKey: _deployerKey,
             owner: _owner,
             bridger: _bridger,
-            messageID: _messageID,
+            messageID: MESSAGE_ID,
             warpPrecompileAddress: _warpPrecompileAddress,
             warpMessengerTestMock: warpMessengerTestMock,
             erc20Token: _erc20Token,
@@ -148,7 +150,7 @@ contract HelperConfig4Test is Script {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
             _destinationChainID,
-            _messageID,
+            MESSAGE_ID,
             _initialReserveImbalance,
             _sourceTokenDecimals,
             _destinationTokenDecimals,

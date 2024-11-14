@@ -7,9 +7,9 @@ import {HelperConfig} from "../../script/ACP99/HelperConfig.s.sol";
 import {DeployACP99PoAModule} from "../../script/ACP99/SecurityModules/DeployACP99PoAModule.s.sol";
 import {ACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
 import {ACP99PoAModule} from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
+import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {IACP99Manager} from "../../src/interfaces/ACP99/IACP99Manager.sol";
 import {IACP99SecurityModule} from "../../src/interfaces/ACP99/IACP99SecurityModule.sol";
-import {ACP77WarpMessengerTestMock} from "../../src/mocks/ACP77WarpMessengerTestMock.sol";
 import {
     ConversionData,
     ValidatorMessages

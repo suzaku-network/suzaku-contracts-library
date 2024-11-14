@@ -58,7 +58,6 @@ contract ACP77WarpMessengerTestMock {
     }
 
     // Mocks valid warp messages for testing
-    // messageIndex = 1: RegisterRemoteMessage used for AvalancheICTTRouter tests
     // messageIndex = 2: InitializeValidatorSetMessage used for ACP99Manager tests
     // messageIndex = 3: SubnetValidatorRegistrationMessage used for ACP99Manager tests
     // messageIndex = 4: ValidatorUptimeMessage used for ACP99Manager tests
