@@ -5,7 +5,10 @@ pragma solidity 0.8.18;
 
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
+
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouterFixedFees} from
+    "../../../src/interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -63,6 +66,19 @@ contract AvalancheICTTRouterFixedFeesTest is Test {
         assert(primaryRelayerFeeBipsStart != primaryRelayerFeeBipsEnd);
         assert(secondaryRelayerFeeBipsStart != secondaryRelayerFeeBipsEnd);
         assert(primaryRelayerFeeBipsEnd == 50 && secondaryRelayerFeeBipsEnd == 20);
+        vm.stopPrank();
+    }
+
+    function testRevertsOnRelayerFeesSetIfFeesBipsTooHigh() public {
+        vm.startPrank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouterFixedFees.AvalancheICTTRouterFixedFees__FeesBipsTooHigh.selector,
+                5000,
+                5000
+            )
+        );
+        tokenBridgeRouter.updateRelayerFeesBips(5000, 5000);
         vm.stopPrank();
     }
 
