@@ -74,8 +74,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
             revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
         }
         tokenToSourceBridge[tokenAddress] = bridgeAddress;
-        // tokensList.push(tokenAddress);
-        EnumerableSet.add(tokensList, tokenAddress);
+        tokensList.add(tokenAddress);
 
         emit RegisterSourceTokenBridge(tokenAddress, bridgeAddress);
     }
@@ -108,10 +107,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         tokenDestinationChainToDestinationBridge[destinationChainID][
             tokenAddress
         ] = destinationBridge;
-        EnumerableSet.add(
-            tokenToDestinationChainsIDList[tokenAddress],
-            destinationChainID
-        );
+        tokenToDestinationChainsIDList[tokenAddress].add(destinationChainID);
 
         emit RegisterDestinationTokenBridge(
             tokenAddress,
@@ -123,7 +119,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     /// @inheritdoc IAvalancheICTTRouter
     function removeSourceTokenBridge(address tokenAddress) external onlyOwner {
         delete tokenToSourceBridge[tokenAddress];
-        EnumerableSet.remove(tokensList, tokenAddress);
+        tokensList.remove(tokenAddress);
 
         emit RemoveSourceTokenBridge(tokenAddress);
     }
@@ -136,10 +132,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         delete tokenDestinationChainToDestinationBridge[destinationChainID][
             tokenAddress
         ];
-        EnumerableSet.remove(
-            tokenToDestinationChainsIDList[tokenAddress],
-            destinationChainID
-        );
+        tokenToDestinationChainsIDList[tokenAddress].remove(destinationChainID);
 
         emit RemoveDestinationTokenBridge(tokenAddress, destinationChainID);
     }
@@ -402,13 +395,13 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
 
     /// @inheritdoc IAvalancheICTTRouter
     function getTokensList() external view returns (address[] memory) {
-        return (EnumerableSet.values(tokensList));
+        return (tokensList.values());
     }
 
     /// @inheritdoc IAvalancheICTTRouter
     function getDestinationChainsForToken(
         address token
     ) external view returns (bytes32[] memory) {
-        return (EnumerableSet.values(tokenToDestinationChainsIDList[token]));
+        return (tokenToDestinationChainsIDList[token].values());
     }
 }
