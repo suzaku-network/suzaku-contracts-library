@@ -357,7 +357,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         for (uint256 i; i < chainsNumber; ++i) {
             if (tokenToDestinationChainsIDList[token][i] == chainID) {
                 tokenToDestinationChainsIDList[token][i] =
-                    tokenToDestinationChainsIDList[token][tokensList.length - 1];
+                    tokenToDestinationChainsIDList[token][chainsNumber - 1];
                 tokenToDestinationChainsIDList[token].pop();
                 break;
             }
