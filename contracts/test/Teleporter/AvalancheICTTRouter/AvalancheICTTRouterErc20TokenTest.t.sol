@@ -5,6 +5,7 @@ pragma solidity 0.8.18;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -186,7 +187,6 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             address(feeToken),
             primaryRelayerFee,
@@ -224,7 +224,6 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             address(feeToken),
             primaryRelayerFee,

@@ -114,7 +114,6 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external nonReentrant {
         address bridgeSource = tokenToSourceBridge[tokenAddress];
@@ -140,7 +139,7 @@ contract AvalancheICTTRouterFixedFees is
             destinationBridge.bridgeAddress,
             recipient,
             recipientPayload,
-            requiredGasLimit,
+            destinationBridge.requiredGasLimit,
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
@@ -198,7 +197,6 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external payable nonReentrant {
         address bridgeSource = tokenToSourceBridge[address(0)];
@@ -222,7 +220,7 @@ contract AvalancheICTTRouterFixedFees is
             destinationBridge.bridgeAddress,
             recipient,
             recipientPayload,
-            requiredGasLimit,
+            destinationBridge.requiredGasLimit,
             recipientGasLimit,
             multiHopFallback,
             recipientFallback,
@@ -263,7 +261,6 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory, /* recipientPayload */
         address, /* recipientFallback */
         uint256, /* recipientGasLimit */
-        uint256, /* requiredGasLimit */
         address, /* multiHopFallback */
         address, /* primaryFeeTokenAddress */
         uint256, /* primaryRelayerFeeBips */
@@ -292,7 +289,6 @@ contract AvalancheICTTRouterFixedFees is
         bytes memory, /* recipientPayload */
         address, /* recipientFallback */
         uint256, /* recipientGasLimit */
-        uint256, /* requiredGasLimit */
         address, /* multiHopFallback */
         uint256, /* primaryRelayerFeeBips */
         uint256 /* secondaryRelayerFeeBips */

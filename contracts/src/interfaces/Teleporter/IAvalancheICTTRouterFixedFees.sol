@@ -65,6 +65,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param recipient Contract on the destination chain
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
+     * @param recipientGasLimit Gas amount provided to the recipient contract
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      */
     function bridgeAndCallERC20(
@@ -75,7 +76,6 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external;
 
@@ -101,6 +101,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
+     * @param recipientGasLimit Gas amount provided to the recipient contract
      */
     function bridgeAndCallNative(
         bytes32 destinationChainID,
@@ -109,7 +110,6 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external payable;
 }

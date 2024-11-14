@@ -173,6 +173,7 @@ interface IAvalancheICTTRouter {
      * @param recipient Contract on the destination chain
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
+     * @param recipientGasLimit Gas amount provided to the recipient contract
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
      * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
@@ -186,7 +187,6 @@ interface IAvalancheICTTRouter {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback,
         address primaryFeeTokenAddress,
         uint256 primaryRelayerFee,
@@ -197,7 +197,7 @@ interface IAvalancheICTTRouter {
      * @notice Bridge native token to a destination chain
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
-     * @param feeToken Address of the fee token
+     * @param primaryFeeTokenAddress Address of the fee token
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
      * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
@@ -205,7 +205,7 @@ interface IAvalancheICTTRouter {
     function bridgeNative(
         bytes32 destinationChainID,
         address recipient,
-        address feeToken,
+        address primaryFeeTokenAddress,
         address multiHopFallback,
         uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee
@@ -215,9 +215,10 @@ interface IAvalancheICTTRouter {
      * @notice Bridge native token and call a contract function on the destination chain
      * @param destinationChainID ID of the destination chain
      * @param recipient Contract on the destination chain
-     * @param feeToken Address of the fee token
+     * @param primaryFeeTokenAddress Address of the fee token
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
+     * @param recipientGasLimit Gas amount provided to the recipient contract
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
      * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
@@ -225,11 +226,10 @@ interface IAvalancheICTTRouter {
     function bridgeAndCallNative(
         bytes32 destinationChainID,
         address recipient,
-        address feeToken,
+        address primaryFeeTokenAddress,
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback,
         uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee

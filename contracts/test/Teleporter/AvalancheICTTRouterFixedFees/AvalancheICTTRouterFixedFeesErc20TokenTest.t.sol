@@ -149,7 +149,6 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
 
@@ -182,7 +181,6 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
         vm.stopPrank();

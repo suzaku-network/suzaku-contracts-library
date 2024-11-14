@@ -6,6 +6,7 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -131,7 +132,6 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
 
@@ -158,7 +158,6 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
         vm.stopPrank();
