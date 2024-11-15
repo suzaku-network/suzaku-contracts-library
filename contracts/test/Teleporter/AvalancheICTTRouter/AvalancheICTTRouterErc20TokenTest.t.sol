@@ -92,7 +92,13 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         vm.stopPrank();
         _;

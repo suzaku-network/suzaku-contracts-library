@@ -9,6 +9,8 @@ struct DestinationBridge {
     address bridgeAddress;
     uint256 requiredGasLimit;
     bool isMultihop;
+    uint256 minimalPrimaryRelayerFee;
+    uint256 minimalSecondaryRelayerFee;
 }
 
 /**
@@ -22,6 +24,9 @@ interface IAvalancheICTTRouter {
     error AvalancheICTTRouter__BridgeAddrNotAContract(address contractAddress);
     error AvalancheICTTRouter__SourceChainEqualsDestinationChain(
         bytes32 sourceChain, bytes32 destinationChain
+    );
+    error AvalancheICTTRouter__RelayerFeesTooLow(
+        uint256 minimalPrimaryRelayerFee, uint256 minimalSecondaryRelayerFee
     );
 
     /**
@@ -140,13 +145,17 @@ interface IAvalancheICTTRouter {
      * @param bridgeAddress Address of the destination bridge contract
      * @param requiredGasLimit Gas limit requirement for sending to a token bridge
      * @param isMultihop True if this bridge is a multihop one
+     * @param minimalPrimaryRelayerFee Enforced minimal primary relayer fee
+     * @param minimalSecondaryRelayerFee Enforced minimal secondary relayer fee
      */
     function registerDestinationTokenBridge(
         address tokenAddress,
         bytes32 destinationChainID,
         address bridgeAddress,
         uint256 requiredGasLimit,
-        bool isMultihop
+        bool isMultihop,
+        uint256 minimalPrimaryRelayerFee,
+        uint256 minimalSecondaryRelayerFee
     ) external;
 
     /**

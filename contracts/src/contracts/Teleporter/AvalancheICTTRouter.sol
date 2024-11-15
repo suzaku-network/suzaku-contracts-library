@@ -92,7 +92,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         bytes32 destinationChainID,
         address bridgeAddress,
         uint256 requiredGasLimit,
-        bool isMultihop
+        bool isMultihop,
+        uint256 minimalPrimaryRelayerFee,
+        uint256 minimalSecondaryRelayerFee
     ) external onlyOwner {
         if (tokenAddress != address(0) && !tokenAddress.isContract()) {
             revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
@@ -105,8 +107,13 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
                 routerChainID, destinationChainID
             );
         }
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
+        DestinationBridge memory destinationBridge = DestinationBridge(
+            bridgeAddress,
+            requiredGasLimit,
+            isMultihop,
+            minimalPrimaryRelayerFee,
+            minimalSecondaryRelayerFee
+        );
         tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
             destinationBridge;
         tokenToDestinationChainsIDList[tokenAddress].add(destinationChainID);

@@ -107,7 +107,13 @@ contract AvalancheICTTRouterTest is Test {
             )
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), sourceChainID, tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            sourceChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         vm.stopPrank();
     }
@@ -116,7 +122,13 @@ contract AvalancheICTTRouterTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         vm.stopPrank();
         _;
@@ -132,14 +144,21 @@ contract AvalancheICTTRouterTest is Test {
 
     function testEmitsOnRegisterDestinationTokenBridge() public {
         vm.startPrank(owner);
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(tokenDestination, requiredGasLimit, false);
+        DestinationBridge memory destinationBridge = DestinationBridge(
+            tokenDestination, requiredGasLimit, false, 0.00001 ether, 0.00001 ether
+        );
         vm.expectEmit(true, true, true, false, address(tokenBridgeRouter));
         emit RegisterDestinationTokenBridge(
             address(erc20Token), destinationChainID, destinationBridge
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         vm.stopPrank();
     }
@@ -201,7 +220,13 @@ contract AvalancheICTTRouterTest is Test {
             tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
         assert(startList.length == 0);
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         bytes32[] memory endList =
             tokenBridgeRouter.getDestinationChainsForToken(address(erc20Token));
@@ -215,19 +240,49 @@ contract AvalancheICTTRouterTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), bytes32("a"), tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            bytes32("a"),
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), bytes32("b"), tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            bytes32("b"),
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), bytes32("c"), tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            bytes32("c"),
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), bytes32("d"), tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            bytes32("d"),
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), bytes32("e"), tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            bytes32("e"),
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            0.00001 ether,
+            0.00001 ether
         );
 
         bytes32[] memory startList =
