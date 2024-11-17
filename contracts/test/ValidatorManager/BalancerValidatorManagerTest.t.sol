@@ -6,7 +6,6 @@ pragma solidity 0.8.25;
 import {DeployBalancerValidatorManager} from
     "../../script/ValidatorManager/DeployBalancerValidatorManager.s.sol";
 import {HelperConfig} from "../../script/ValidatorManager/HelperConfig.s.sol";
-
 import {BalancerValidatorManager} from
     "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
 import {IBalancerValidatorManager} from
@@ -27,8 +26,8 @@ import {Test, console} from "forge-std/Test.sol";
 contract BalancerValidatorManagerTest is Test {
     DeployBalancerValidatorManager deployer;
     BalancerValidatorManager validatorManager;
-    uint256 deployerKey;
-    address deployerAddress;
+    uint256 validatorManagerOwnerKey;
+    address validatorManagerOwnerAddress;
     bytes32 subnetID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
@@ -64,16 +63,17 @@ contract BalancerValidatorManagerTest is Test {
         deployer = new DeployBalancerValidatorManager();
 
         HelperConfig helperConfig = new HelperConfig();
-        (deployerKey, subnetID, churnPeriodSeconds, maximumChurnPercentage) =
+        (, validatorManagerOwnerKey, subnetID, churnPeriodSeconds, maximumChurnPercentage) =
             helperConfig.activeNetworkConfig();
-        deployerAddress = vm.addr(deployerKey);
+        validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
         testSecurityModules = new address[](3);
         testSecurityModules[0] = makeAddr("securityModule1");
         testSecurityModules[1] = makeAddr("securityModule2");
         testSecurityModules[2] = makeAddr("securityModule3");
 
-        address validatorManagerAddress = deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT);
+        address validatorManagerAddress =
+            deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT, new bytes[](0));
         validatorManager = BalancerValidatorManager(validatorManagerAddress);
 
         ACP77WarpMessengerTestMock warpMessengerTestMock =
@@ -96,7 +96,7 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     modifier securityModulesSetUp() {
-        vm.prank(deployerAddress);
+        vm.prank(validatorManagerOwnerAddress);
         validatorManager.setupSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
         _;
     }
@@ -157,7 +157,7 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     function testBalancerValidatorManagerInitializesCorrectly() public view {
-        assertEq(validatorManager.owner(), deployerAddress);
+        assertEq(validatorManager.owner(), validatorManagerOwnerAddress);
         assertEq(validatorManager.getChurnPeriodSeconds(), churnPeriodSeconds);
         address[] memory securityModules = validatorManager.getSecurityModules();
         assertEq(securityModules.length, 1);
@@ -166,7 +166,7 @@ contract BalancerValidatorManagerTest is Test {
 
     function testSetupSecurityModule() public {
         // Call setupSecurityModule as owner
-        vm.prank(deployerAddress);
+        vm.prank(validatorManagerOwnerAddress);
         validatorManager.setupSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
 
         // Check that the security module was registered
@@ -180,7 +180,7 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     function testSetupSecurityModuleWithZeroMaxWeightReverts() public {
-        vm.prank(deployerAddress);
+        vm.prank(validatorManagerOwnerAddress);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IBalancerValidatorManager
@@ -197,7 +197,7 @@ contract BalancerValidatorManagerTest is Test {
         validatorSetInitialized
         validatorRegistrationCompleted
     {
-        vm.prank(deployerAddress);
+        vm.prank(validatorManagerOwnerAddress);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IBalancerValidatorManager
@@ -212,7 +212,7 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     function testSetupSecurityModuleEmitsEvent() public {
-        vm.prank(deployerAddress);
+        vm.prank(validatorManagerOwnerAddress);
         vm.expectEmit(true, false, false, true);
         emit IBalancerValidatorManager.SetupSecurityModule(
             testSecurityModules[1], DEFAULT_MAX_WEIGHT
@@ -314,7 +314,7 @@ contract BalancerValidatorManagerTest is Test {
         validatorRegistrationCompleted
     {
         // Lower the max weight of the security module
-        vm.prank(deployerAddress);
+        vm.prank(validatorManagerOwnerAddress);
         validatorManager.setupSecurityModule(testSecurityModules[0], 30);
 
         // Warp to 2024-01-01 02:00:00 to exit the churn period (1 hour)
