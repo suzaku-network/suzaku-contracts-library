@@ -3,10 +3,11 @@
 
 pragma solidity 0.8.25;
 
-import {IBalancerValidatorManager} from
-    "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+import {
+    BalancerValidatorManagerSettings,
+    IBalancerValidatorManager
+} from "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {ValidatorManager} from "@avalabs/teleporter/validator-manager/ValidatorManager.sol";
-
 import {ValidatorMessages} from "@avalabs/teleporter/validator-manager/ValidatorMessages.sol";
 import {
     IValidatorManager,
@@ -81,29 +82,32 @@ contract BalancerValidatorManager is
     }
 
     function initialize(
-        ValidatorManagerSettings calldata settings,
-        address initialOwner,
-        address initialSecurityModule,
-        uint64 initialSecurityModuleWeight
+        BalancerValidatorManagerSettings calldata settings
     ) external initializer {
-        __BalancerValidatorManager_init(
-            settings, initialOwner, initialSecurityModule, initialSecurityModuleWeight
-        );
+        __BalancerValidatorManager_init(settings);
     }
 
     function __BalancerValidatorManager_init(
-        ValidatorManagerSettings calldata settings,
-        address initialOwner,
-        address initialSecurityModule,
-        uint64 initialSecurityModuleWeight
+        BalancerValidatorManagerSettings calldata settings
     ) internal onlyInitializing {
-        __ValidatorManager_init(settings);
-        __Ownable_init(initialOwner);
-        _setupSecurityModule(initialSecurityModule, initialSecurityModuleWeight);
+        __ValidatorManager_init(settings.baseSettings);
+        __Ownable_init(settings.initialOwner);
+        __BalancerValidatorManager_init_unchained(
+            settings.initialSecurityModule,
+            settings.initialSecurityModuleMaxWeight,
+            settings.migratedValidators
+        );
     }
 
     // solhint-disable-next-line no-empty-blocks
-    function __BalancerValidatorManager_init_unchained() internal onlyInitializing {}
+    function __BalancerValidatorManager_init_unchained(
+        address initialSecurityModule,
+        uint64 initialSecurityModuleMaxWeight,
+        bytes[] calldata migratedValidators
+    ) internal onlyInitializing {
+        _setupSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
+        _migrateValidators(migratedValidators);
+    }
 
     // solhint-enable func-name-mixedcase
 
@@ -328,5 +332,26 @@ contract BalancerValidatorManager is
         }
 
         $.securityModuleWeight[securityModule] = weight;
+    }
+
+    function _migrateValidators(
+        bytes[] calldata migratedValidators
+    ) internal {
+        BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
+
+        // Add the migrated validators to the initial security module
+        uint64 migratedValidatorsTotalWeight = 0;
+        for (uint256 i = 0; i < migratedValidators.length; i++) {
+            bytes32 validationID = registeredValidators(migratedValidators[i]);
+            Validator memory validator = getValidator(validationID);
+            $.validatorSecurityModule[validationID] = $.securityModules.keys()[0];
+            migratedValidatorsTotalWeight += validator.weight;
+        }
+
+        // Update the initial security module weight
+        _updateSecurityModuleWeight($.securityModules.keys()[0], migratedValidatorsTotalWeight);
+
+        // TODO: Check that the migrated validators total weight equals the current L1 total weight
+        // Can only be done once this issue is fixed: https://github.com/ava-labs/teleporter/issues/645
     }
 }

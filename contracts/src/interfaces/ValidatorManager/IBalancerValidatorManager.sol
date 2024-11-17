@@ -7,8 +7,20 @@ pragma solidity 0.8.25;
 
 import {
     IValidatorManager,
+    ValidatorManagerSettings,
     ValidatorRegistrationInput
 } from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+
+/**
+ * @dev Balancer Validator Manager settings, used to initialize the Balancer Validator Manager
+ */
+struct BalancerValidatorManagerSettings {
+    ValidatorManagerSettings baseSettings;
+    address initialOwner;
+    address initialSecurityModule;
+    uint64 initialSecurityModuleMaxWeight;
+    bytes[] migratedValidators;
+}
 
 /**
  * @title IBalancerValidatorManager
