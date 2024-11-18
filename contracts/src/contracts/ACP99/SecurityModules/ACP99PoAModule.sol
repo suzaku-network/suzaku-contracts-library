@@ -6,7 +6,8 @@ pragma solidity 0.8.25;
 import {IACP99Manager} from "../../../interfaces/ACP99/IACP99Manager.sol";
 import {IACP99SecurityModule} from "../../../interfaces/ACP99/IACP99SecurityModule.sol";
 import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
-import {Ownable2Step} from "@openzeppelin/contracts@4.9.6/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts@5.0.2/access/Ownable2Step.sol";
 
 /**
  * @title ACP99PoAModule
@@ -21,7 +22,7 @@ contract ACP99PoAModule is Ownable2Step, IACP99SecurityModule {
 
     constructor(
         address _manager
-    ) Ownable2Step() {
+    ) Ownable(msg.sender) {
         if (_manager == address(0)) {
             revert ACP99SecurityModule__ZeroAddressManager();
         }

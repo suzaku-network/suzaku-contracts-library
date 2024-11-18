@@ -19,8 +19,9 @@ import {
     InitialValidator,
     PChainOwner
 } from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
-import {Ownable2Step} from "@openzeppelin/contracts@4.9.6/access/Ownable2Step.sol";
-import {EnumerableMap} from "@openzeppelin/contracts@4.9.6/utils/structs/EnumerableMap.sol";
+import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts@5.0.2/access/Ownable2Step.sol";
+import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
 
 /**
  * @title ACP99Manager
@@ -73,7 +74,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         _;
     }
 
-    constructor(bytes32 subnetID_, address securityModule_) Ownable2Step() {
+    constructor(bytes32 subnetID_, address securityModule_) Ownable(msg.sender) {
         if (securityModule_ == address(0)) {
             revert ACP99Manager__ZeroAddressSecurityModule();
         }

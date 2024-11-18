@@ -10,9 +10,9 @@ import {
     BalancerValidatorManagerSettings
 } from "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts@5.0.2/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
-    "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 import {Script} from "forge-std/Script.sol";
 
