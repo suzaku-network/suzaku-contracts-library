@@ -44,7 +44,6 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__SecurityModuleNewMaxWeightLowerThanCurrentWeight(
         address securityModule, uint64 newMaxWeight, uint64 currentWeight
     );
-    error BalancerValidatorManager__UnknownSecurityModule(address sender);
     error BalancerValidatorManager__NewWeightIsZero();
     error BalancerValidatorManager__ValidatorNotBelongingToSecurityModule(
         bytes32 validationID, address securityModule
