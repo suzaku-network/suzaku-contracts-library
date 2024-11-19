@@ -27,7 +27,10 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     error AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
         uint256 primaryRelayerFee, uint256 secondaryRelayerFee, MinBridgeFees minBridgeFees
     );
-    error AvalancheICTTRouterFixedFees__CustomMinBridgeFeesNeeded();
+    error AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNoMultihop(
+        uint256 minSecondaryRelayerFee, bool multihop
+    );
+    error AvalancheICTTRouterFixedFees__MissingMinBridgeFeesParams();
 
     /**
      * @notice Emitted when the value of the fixes relayer fees are updated
@@ -43,7 +46,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param bridgeAddress Address of the destination bridge contract
      * @param requiredGasLimit Gas limit requirement for sending to a token bridge
      * @param isMultihop True if this bridge is a multihop one
-     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the optional Teleporter message fee
+     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the Teleporter message fee
      * @param minSecondaryRelayerFee Minimal amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     function registerDestinationTokenBridge(

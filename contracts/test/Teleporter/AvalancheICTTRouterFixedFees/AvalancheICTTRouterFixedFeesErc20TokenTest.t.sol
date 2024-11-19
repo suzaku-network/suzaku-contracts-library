@@ -104,6 +104,22 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
             requiredGasLimit,
             false,
             minPrimaryRelayerFee,
+            0
+        );
+        vm.stopPrank();
+        _;
+    }
+
+    modifier registerTokenBridgeMultihop() {
+        vm.startPrank(owner);
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            true,
+            minPrimaryRelayerFee,
             minSecondaryRelayerFee
         );
         vm.stopPrank();
@@ -124,6 +140,37 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         uint256 tooLittleAmount = 0.000000001 ether;
 
         uint256 primaryRelayerFee = (tooLittleAmount * primaryRelayerFeeBips) / 10_000;
+        MinBridgeFees memory minBridgeFees = MinBridgeFees(minPrimaryRelayerFee, 0);
+
+        erc20Token.approve(address(tokenBridgeRouter), tooLittleAmount);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouterFixedFees
+                    .AvalancheICTTRouterFixedFees__RelayerFeesTooLow
+                    .selector,
+                primaryRelayerFee,
+                0,
+                minBridgeFees
+            )
+        );
+        tokenBridgeRouter.bridgeERC20(
+            address(erc20Token),
+            destinationChainID,
+            tooLittleAmount,
+            bridger,
+            multihopFallBackAddress
+        );
+    }
+
+    function testRevertsIfBridgedAmountNotEnoughToPayMinBridgeFeesMultihop()
+        public
+        registerTokenBridgeMultihop
+        fundBridgerAccount
+    {
+        uint256 tooLittleAmount = 0.000000001 ether;
+
+        uint256 primaryRelayerFee = (tooLittleAmount * primaryRelayerFeeBips) / 10_000;
+        uint256 secondaryRelayerFee = (tooLittleAmount * secondaryRelayerFeeBips) / 10_000;
         MinBridgeFees memory minBridgeFees =
             MinBridgeFees(minPrimaryRelayerFee, minSecondaryRelayerFee);
 
@@ -134,7 +181,7 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
                     .AvalancheICTTRouterFixedFees__RelayerFeesTooLow
                     .selector,
                 primaryRelayerFee,
-                0,
+                secondaryRelayerFee,
                 minBridgeFees
             )
         );

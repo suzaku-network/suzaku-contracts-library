@@ -90,6 +90,11 @@ contract AvalancheICTTRouterFixedFees is
                 routerChainID, destinationChainID
             );
         }
+        if (!isMultihop && minSecondaryRelayerFee != 0) {
+            revert AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNoMultihop(
+                minSecondaryRelayerFee, isMultihop
+            );
+        }
         DestinationBridge memory destinationBridge =
             DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
         MinBridgeFees memory minBridgeFees =
@@ -142,7 +147,10 @@ contract AvalancheICTTRouterFixedFees is
 
         if (
             primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
-                || (secondaryFeeAmount > 0 && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee)
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
         ) {
             revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
                 primaryFeeAmount, secondaryFeeAmount, minBridgeFees
@@ -202,7 +210,10 @@ contract AvalancheICTTRouterFixedFees is
 
         if (
             primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
-                || (secondaryFeeAmount > 0 && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee)
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
         ) {
             revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
                 primaryFeeAmount, secondaryFeeAmount, minBridgeFees
@@ -257,7 +268,10 @@ contract AvalancheICTTRouterFixedFees is
 
         if (
             primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
-                || (secondaryFeeAmount > 0 && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee)
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
         ) {
             revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
                 primaryFeeAmount, secondaryFeeAmount, minBridgeFees
@@ -309,7 +323,10 @@ contract AvalancheICTTRouterFixedFees is
 
         if (
             primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
-                || (secondaryFeeAmount > 0 && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee)
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
         ) {
             revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
                 primaryFeeAmount, secondaryFeeAmount, minBridgeFees
@@ -354,7 +371,7 @@ contract AvalancheICTTRouterFixedFees is
         uint256, /* requiredGasLimit */
         bool /* isMultihop */
     ) external view override (AvalancheICTTRouter, IAvalancheICTTRouter) onlyOwner {
-        revert AvalancheICTTRouterFixedFees__CustomMinBridgeFeesNeeded();
+        revert AvalancheICTTRouterFixedFees__MissingMinBridgeFeesParams();
     }
 
     /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
