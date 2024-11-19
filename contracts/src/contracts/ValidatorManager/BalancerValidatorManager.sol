@@ -68,7 +68,7 @@ contract BalancerValidatorManager is
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
         if (!$.securityModules.contains(msg.sender)) {
-            revert BalancerValidatorManager__UnknownSecurityModule(msg.sender);
+            revert BalancerValidatorManager__SecurityModuleNotRegistered(msg.sender);
         }
         _;
     }
@@ -123,10 +123,6 @@ contract BalancerValidatorManager is
     ) external onlySecurityModule returns (bytes32 validationID) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
-        if (!$.securityModules.contains(msg.sender)) {
-            revert BalancerValidatorManager__SecurityModuleNotRegistered(msg.sender);
-        }
-
         validationID = _initializeValidatorRegistration(registrationInput, weight);
 
         // Update the security module weight
@@ -145,7 +141,7 @@ contract BalancerValidatorManager is
 
         // Ensure the validator weight is not being updated
         if ($.validatorPendingWeightUpdate[validationID] != 0) {
-            revert BalancerValidatorManager__NoPendingWeightUpdate(validationID);
+            revert BalancerValidatorManager__PendingWeightUpdate(validationID);
         }
 
         _checkValidatorSecurityModule(validationID, msg.sender);
