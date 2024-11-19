@@ -215,6 +215,16 @@ interface IACP99Manager {
     ) external;
 
     /**
+     * @notice Updates the uptime of a validator for a given validation ID
+     * @param nodeID The ID of the node to update the uptime for
+     * @param messageIndex The index of the Warp message to be received providing the uptime proof
+     */
+    function updateUptime(
+        bytes memory nodeID,
+        uint32 messageIndex
+    ) external returns (ValidatorUptimeInfo memory);
+
+    /**
      * @notice Initiate a validator weight update by issuing a SetL1ValidatorWeightTx Warp message.
      * If the weight is 0, this initiates the removal of the validator from the L1. An uptime proof can be
      * included. This proof might be required to claim validator rewards (handled by the security module).

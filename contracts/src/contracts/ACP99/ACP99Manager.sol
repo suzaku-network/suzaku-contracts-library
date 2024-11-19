@@ -285,6 +285,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         );
     }
 
+    /// @inheritdoc IACP99Manager
     function updateUptime(
         bytes memory nodeID,
         uint32 messageIndex
