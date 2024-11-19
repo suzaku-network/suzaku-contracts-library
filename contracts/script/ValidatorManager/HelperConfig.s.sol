@@ -17,22 +17,42 @@ contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
     constructor() {
-        // if (block.chainid == 43_113) {
-        //     activeNetworkConfig = getAvalancheFujiConfig();
-        // } else {
-        activeNetworkConfig = getOrCreateAnvilConfig();
-        // }
+        if (block.chainid == 43_117) {
+            activeNetworkConfig = getAvalancheEtnaConfig();
+        } else {
+            activeNetworkConfig = getOrCreateAnvilConfig();
+        }
     }
 
     function getOrCreateAnvilConfig() public returns (NetworkConfig memory) {
         (, uint256 proxyAdminOwnerKey) = makeAddrAndKey("proxyAdminOwner");
-        (, uint256 validatorManagerOwnerKey) = makeAddrAndKey("validatorManagerOwner");
-        return NetworkConfig({
-            proxyAdminOwnerKey: proxyAdminOwnerKey,
-            validatorManagerOwnerKey: validatorManagerOwnerKey,
-            subnetID: 0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9,
-            churnPeriodSeconds: 1 hours,
-            maximumChurnPercentage: 20
-        });
+        (, uint256 validatorManagerOwnerKey) = makeAddrAndKey(
+            "validatorManagerOwner"
+        );
+        return
+            NetworkConfig({
+                proxyAdminOwnerKey: proxyAdminOwnerKey,
+                validatorManagerOwnerKey: validatorManagerOwnerKey,
+                subnetID: 0x0bf528ffc3be7a65742ccdfe72d9c913685e2d5eee224a27ce0aff7502db855a,
+                churnPeriodSeconds: 1 hours,
+                maximumChurnPercentage: 20
+            });
+    }
+
+    function getAvalancheEtnaConfig()
+        public
+        view
+        returns (NetworkConfig memory)
+    {
+        uint256 proxyAdminOwnerKey = vm.envUint("PK");
+        uint256 validatorManagerOwnerKey = vm.envUint("PK");
+        return
+            NetworkConfig({
+                proxyAdminOwnerKey: proxyAdminOwnerKey,
+                validatorManagerOwnerKey: validatorManagerOwnerKey,
+                subnetID: 0x0bf528ffc3be7a65742ccdfe72d9c913685e2d5eee224a27ce0aff7502db855a,
+                churnPeriodSeconds: 1 hours,
+                maximumChurnPercentage: 20
+            });
     }
 }
