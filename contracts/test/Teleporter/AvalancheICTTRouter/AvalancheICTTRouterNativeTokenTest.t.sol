@@ -91,13 +91,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(token, address(nativeTokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            token,
-            destinationChainID,
-            tokenDestination,
-            requiredGasLimit,
-            false,
-            0.00001 ether,
-            0.00001 ether
+            token, destinationChainID, tokenDestination, requiredGasLimit, false
         );
         vm.stopPrank();
         _;
