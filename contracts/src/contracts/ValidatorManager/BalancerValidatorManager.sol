@@ -19,12 +19,13 @@ import {
 import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
-import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 
 /**
  * @title BalancerValidatorManager
  * @author ADDPHO
  * @notice The Balancer Validator Manager contract allows to balance the weight of an L1 between multiple security modules.
+ * @custom:oz-upgrades-unsafe-allow external-library-linking
+ * @custom:oz-upgrades-from PoAValidatorManager
  */
 contract BalancerValidatorManager is
     IBalancerValidatorManager,
@@ -73,17 +74,14 @@ contract BalancerValidatorManager is
         _;
     }
 
-    constructor(
-        ICMInitializable init
-    ) {
-        if (init == ICMInitializable.Disallowed) {
-            _disableInitializers();
-        }
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
     function initialize(
         BalancerValidatorManagerSettings calldata settings
-    ) external initializer {
+    ) external reinitializer(2) {
         __BalancerValidatorManager_init(settings);
     }
 

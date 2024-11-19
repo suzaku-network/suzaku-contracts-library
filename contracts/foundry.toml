@@ -4,6 +4,11 @@ out = "out"
 libs = ["lib"]
 via_ir = true
 gas_reports = ["ACP99Manager", "ACP99PoAModule", "AvalancheICTTRouter"]
+# Needed for OZ Upgrades
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
 
 [fmt]
 line_length = 100
