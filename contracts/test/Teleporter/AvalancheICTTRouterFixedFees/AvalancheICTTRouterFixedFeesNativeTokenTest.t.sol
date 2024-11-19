@@ -58,6 +58,8 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
     uint256 requiredGasLimit = 10_000_000;
     uint256 recipientGasLimit = 100_000;
     address multihopFallBackAddress = address(0);
+    uint256 minPrimaryRelayerFee = 0.00001 ether;
+    uint256 minSecondaryRelayerFee = 0;
 
     uint256 constant STARTING_GAS_BALANCE = 10 ether;
 
@@ -92,7 +94,13 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(token, address(nativeTokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            token, destinationChainID, tokenDestination, requiredGasLimit, false
+            token,
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            minPrimaryRelayerFee,
+            minSecondaryRelayerFee
         );
         vm.stopPrank();
         _;

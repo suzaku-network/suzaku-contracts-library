@@ -7,6 +7,10 @@ import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {
+    IAvalancheICTTRouterFixedFees,
+    MinBridgeFees
+} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -52,11 +56,14 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
     bytes32 destinationChainID;
 
     uint256 primaryRelayerFeeBips;
+    uint256 secondaryRelayerFeeBips;
     uint256 amount;
 
     uint256 requiredGasLimit = 10_000_000;
     uint256 recipientGasLimit = 100_000;
     address multihopFallBackAddress = address(0);
+    uint256 minPrimaryRelayerFee = 0.00001 ether;
+    uint256 minSecondaryRelayerFee = 0.00001 ether;
 
     uint256 constant STARTING_GAS_BALANCE = 10 ether;
 
@@ -79,7 +86,7 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
             sourceChainID,
             destinationChainID,
             primaryRelayerFeeBips,
-            ,
+            secondaryRelayerFeeBips,
             amount
         ) = helperConfig.activeNetworkConfigTest();
         vm.deal(bridger, STARTING_GAS_BALANCE);
@@ -91,7 +98,29 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            address(erc20Token), destinationChainID, tokenDestination, requiredGasLimit, false
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            minPrimaryRelayerFee,
+            0
+        );
+        vm.stopPrank();
+        _;
+    }
+
+    modifier registerTokenBridgeMultihop() {
+        vm.startPrank(owner);
+        tokenBridgeRouter.registerSourceTokenBridge(address(erc20Token), address(erc20TokenSource));
+        tokenBridgeRouter.registerDestinationTokenBridge(
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            true,
+            minPrimaryRelayerFee,
+            minSecondaryRelayerFee
         );
         vm.stopPrank();
         _;
@@ -101,6 +130,68 @@ contract AvalancheICTTRouterFixedFeesErc20TokenTest is Test {
         vm.startPrank(bridger);
         erc20Token.mint(bridger, 10 ether);
         _;
+    }
+
+    function testRevertsIfBridgedAmountNotEnoughToPayMinBridgeFees()
+        public
+        registerTokenBridge
+        fundBridgerAccount
+    {
+        uint256 tooLittleAmount = 0.000000001 ether;
+
+        uint256 primaryRelayerFee = (tooLittleAmount * primaryRelayerFeeBips) / 10_000;
+        MinBridgeFees memory minBridgeFees = MinBridgeFees(minPrimaryRelayerFee, 0);
+
+        erc20Token.approve(address(tokenBridgeRouter), tooLittleAmount);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouterFixedFees
+                    .AvalancheICTTRouterFixedFees__RelayerFeesTooLow
+                    .selector,
+                primaryRelayerFee,
+                0,
+                minBridgeFees
+            )
+        );
+        tokenBridgeRouter.bridgeERC20(
+            address(erc20Token),
+            destinationChainID,
+            tooLittleAmount,
+            bridger,
+            multihopFallBackAddress
+        );
+    }
+
+    function testRevertsIfBridgedAmountNotEnoughToPayMinBridgeFeesMultihop()
+        public
+        registerTokenBridgeMultihop
+        fundBridgerAccount
+    {
+        uint256 tooLittleAmount = 0.000000001 ether;
+
+        uint256 primaryRelayerFee = (tooLittleAmount * primaryRelayerFeeBips) / 10_000;
+        uint256 secondaryRelayerFee = (tooLittleAmount * secondaryRelayerFeeBips) / 10_000;
+        MinBridgeFees memory minBridgeFees =
+            MinBridgeFees(minPrimaryRelayerFee, minSecondaryRelayerFee);
+
+        erc20Token.approve(address(tokenBridgeRouter), tooLittleAmount);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAvalancheICTTRouterFixedFees
+                    .AvalancheICTTRouterFixedFees__RelayerFeesTooLow
+                    .selector,
+                primaryRelayerFee,
+                secondaryRelayerFee,
+                minBridgeFees
+            )
+        );
+        tokenBridgeRouter.bridgeERC20(
+            address(erc20Token),
+            destinationChainID,
+            tooLittleAmount,
+            bridger,
+            multihopFallBackAddress
+        );
     }
 
     function testBalancesWhenERC20TokensSent() public registerTokenBridge fundBridgerAccount {

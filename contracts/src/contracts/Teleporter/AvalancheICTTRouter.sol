@@ -39,13 +39,13 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /// @notice List of tokens supported by this router on the source chain
-    EnumerableSet.AddressSet private tokensList;
+    EnumerableSet.AddressSet internal tokensList;
 
     /**
      * @notice Token address => source bridge address
      * @notice Address `0x0` is used for the native token
      */
-    mapping(address token => address sourceBridge) public tokenToSourceBridge;
+    mapping(address token => address sourceBridge) internal tokenToSourceBridge;
 
     /**
      * @notice Destination chain ID => token address => DestinationBridge
@@ -53,17 +53,17 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
      */
     mapping(
         bytes32 destinationChainID => mapping(address token => DestinationBridge destinationBridge)
-    ) public tokenDestinationChainToDestinationBridge;
+    ) internal tokenDestinationChainToDestinationBridge;
 
     /**
      * @notice Token Address => list of supported destination chains
      * @notice Address `0x0` is used for the native token
      */
-    mapping(address token => EnumerableSet.Bytes32Set destinationChainIDsList) private
+    mapping(address token => EnumerableSet.Bytes32Set destinationChainIDsList) internal
         tokenToDestinationChainsIDList;
 
     /// @notice Router chain ID
-    bytes32 private immutable routerChainID;
+    bytes32 internal immutable routerChainID;
 
     constructor() {
         routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
@@ -93,7 +93,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address bridgeAddress,
         uint256 requiredGasLimit,
         bool isMultihop
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         if (tokenAddress != address(0) && !tokenAddress.isContract()) {
             revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
         }

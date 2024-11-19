@@ -64,7 +64,7 @@ interface IAvalancheICTTRouter {
      * @param destinationBlockchainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
      * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeERC20(
@@ -72,7 +72,7 @@ interface IAvalancheICTTRouter {
         bytes32 indexed destinationBlockchainID,
         address recipient,
         uint256 amount,
-        uint256 primaryRelaryFee,
+        uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee
     );
 
@@ -82,7 +82,7 @@ interface IAvalancheICTTRouter {
      * @param destinationBlockchainID ID of the destination chain
      * @param recipient Address of the contract receiving the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
      * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeAndCallERC20(
@@ -90,7 +90,7 @@ interface IAvalancheICTTRouter {
         bytes32 indexed destinationBlockchainID,
         address recipient,
         uint256 amount,
-        uint256 primaryRelaryFee,
+        uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee
     );
 
@@ -99,14 +99,14 @@ interface IAvalancheICTTRouter {
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
      * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeNative(
         bytes32 indexed destinationChainID,
         address recipient,
         uint256 amount,
-        uint256 primaryRelaryFee,
+        uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee
     );
 
@@ -115,14 +115,14 @@ interface IAvalancheICTTRouter {
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelaryFee Amount of tokens to pay as the optional Teleporter message fee
+     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
      * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
      */
     event BridgeAndCallNative(
         bytes32 indexed destinationChainID,
         address recipient,
         uint256 amount,
-        uint256 primaryRelaryFee,
+        uint256 primaryRelayerFee,
         uint256 secondaryRelayerFee
     );
 

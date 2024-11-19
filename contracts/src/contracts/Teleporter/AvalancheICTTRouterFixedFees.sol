@@ -9,8 +9,10 @@ import {
     DestinationBridge,
     IAvalancheICTTRouter
 } from "../../interfaces/Teleporter/IAvalancheICTTRouter.sol";
-import {IAvalancheICTTRouterFixedFees} from
-    "../../interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
+import {
+    IAvalancheICTTRouterFixedFees,
+    MinBridgeFees
+} from "../../interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
 import {AvalancheICTTRouter} from "./AvalancheICTTRouter.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
 import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
@@ -27,6 +29,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts@4.8.1/security/Reentrancy
 import {IERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
+import {EnumerableSet} from "@openzeppelin/contracts@4.8.1/utils/structs/EnumerableSet.sol";
 import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
 
 /**
@@ -42,6 +45,15 @@ contract AvalancheICTTRouterFixedFees is
     IAvalancheICTTRouterFixedFees
 {
     using Address for address;
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
+    /**
+     * @notice Destination chain ID => token address => MinBridgeFees
+     * @notice Address `0x0` is used for the native token
+     */
+    mapping(bytes32 destinationChainID => mapping(address token => MinBridgeFees minBridgeFees))
+        public destinationChainTokenToMinBridgeFees;
 
     /// @notice Relayer fee enforced by the router (in basis points)
     uint256 public primaryRelayerFeeBips;
@@ -55,6 +67,45 @@ contract AvalancheICTTRouterFixedFees is
     constructor(uint256 primaryRelayerFeeBips_, uint256 secondaryRelayerFeeBips_) {
         primaryRelayerFeeBips = primaryRelayerFeeBips_;
         secondaryRelayerFeeBips = secondaryRelayerFeeBips_;
+    }
+
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
+    function registerDestinationTokenBridge(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        address bridgeAddress,
+        uint256 requiredGasLimit,
+        bool isMultihop,
+        uint256 minPrimaryRelayerFee,
+        uint256 minSecondaryRelayerFee
+    ) external onlyOwner {
+        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
+            revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
+        }
+        if (bridgeAddress == address(0)) {
+            revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
+        }
+        if (destinationChainID == routerChainID) {
+            revert AvalancheICTTRouter__SourceChainEqualsDestinationChain(
+                routerChainID, destinationChainID
+            );
+        }
+        if (!isMultihop && minSecondaryRelayerFee != 0) {
+            revert AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNoMultihop(
+                minSecondaryRelayerFee, isMultihop
+            );
+        }
+        DestinationBridge memory destinationBridge =
+            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
+        MinBridgeFees memory minBridgeFees =
+            MinBridgeFees(minPrimaryRelayerFee, minSecondaryRelayerFee);
+
+        destinationChainTokenToMinBridgeFees[destinationChainID][tokenAddress] = minBridgeFees;
+        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
+            destinationBridge;
+        tokenToDestinationChainsIDList[tokenAddress].add(destinationChainID);
+
+        emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
@@ -83,6 +134,8 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+        MinBridgeFees memory minBridgeFees =
+            destinationChainTokenToMinBridgeFees[destinationChainID][tokenAddress];
 
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
@@ -91,6 +144,18 @@ contract AvalancheICTTRouterFixedFees is
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
             ? (amount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
+
+        if (
+            primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
+        ) {
+            revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
+                primaryFeeAmount, secondaryFeeAmount, minBridgeFees
+            );
+        }
 
         uint256 bridgeAmount = adjustedAmount - primaryFeeAmount;
 
@@ -132,6 +197,8 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[tokenAddress];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress];
+        MinBridgeFees memory minBridgeFees =
+            destinationChainTokenToMinBridgeFees[destinationChainID][tokenAddress];
 
         uint256 adjustedAmount =
             SafeERC20TransferFrom.safeTransferFrom(IERC20(tokenAddress), amount);
@@ -140,6 +207,18 @@ contract AvalancheICTTRouterFixedFees is
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
             ? (amount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
+
+        if (
+            primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
+        ) {
+            revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
+                primaryFeeAmount, secondaryFeeAmount, minBridgeFees
+            );
+        }
 
         uint256 bridgeAmount = adjustedAmount - primaryFeeAmount;
 
@@ -179,11 +258,25 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+        MinBridgeFees memory minBridgeFees =
+            destinationChainTokenToMinBridgeFees[destinationChainID][address(0)];
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
             ? (msg.value * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
+
+        if (
+            primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
+        ) {
+            revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
+                primaryFeeAmount, secondaryFeeAmount, minBridgeFees
+            );
+        }
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
         WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
@@ -220,11 +313,25 @@ contract AvalancheICTTRouterFixedFees is
         address bridgeSource = tokenToSourceBridge[address(0)];
         DestinationBridge memory destinationBridge =
             tokenDestinationChainToDestinationBridge[destinationChainID][address(0)];
+        MinBridgeFees memory minBridgeFees =
+            destinationChainTokenToMinBridgeFees[destinationChainID][address(0)];
 
         uint256 primaryFeeAmount = (msg.value * primaryRelayerFeeBips) / BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
             ? (msg.value * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
+
+        if (
+            primaryFeeAmount < minBridgeFees.minPrimaryRelayerFee
+                || (
+                    minBridgeFees.minSecondaryRelayerFee > 0
+                        && secondaryFeeAmount < minBridgeFees.minSecondaryRelayerFee
+                )
+        ) {
+            revert AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
+                primaryFeeAmount, secondaryFeeAmount, minBridgeFees
+            );
+        }
 
         SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
         WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
@@ -254,6 +361,17 @@ contract AvalancheICTTRouterFixedFees is
     /// @inheritdoc IAvalancheICTTRouterFixedFees
     function getRelayerFeesBips() external view returns (uint256, uint256) {
         return (primaryRelayerFeeBips, secondaryRelayerFeeBips);
+    }
+
+    /// @notice Always revert as you need to input minimal bridge fees for a token on a destination chain
+    function registerDestinationTokenBridge(
+        address, /* tokenAddress */
+        bytes32, /* destinationChainID */
+        address, /* bridgeAddress */
+        uint256, /* requiredGasLimit */
+        bool /* isMultihop */
+    ) external view override (AvalancheICTTRouter, IAvalancheICTTRouter) onlyOwner {
+        revert AvalancheICTTRouterFixedFees__MissingMinBridgeFeesParams();
     }
 
     /// @notice Always revert as custom relayer fees are not allowed in AvalancheICTTRouterFixedFees
