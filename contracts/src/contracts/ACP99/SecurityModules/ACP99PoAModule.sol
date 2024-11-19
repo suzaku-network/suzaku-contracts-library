@@ -4,7 +4,11 @@
 pragma solidity 0.8.25;
 
 import {IACP99Manager} from "../../../interfaces/ACP99/IACP99Manager.sol";
-import {IACP99SecurityModule} from "../../../interfaces/ACP99/IACP99SecurityModule.sol";
+import {
+    IACP99SecurityModule,
+    ValidatorRegistrationInfo,
+    ValidatorWeightChangeInfo
+} from "../../../interfaces/ACP99/IACP99SecurityModule.sol";
 import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 import {Ownable2Step} from "@openzeppelin/contracts@4.9.6/access/Ownable2Step.sol";
 

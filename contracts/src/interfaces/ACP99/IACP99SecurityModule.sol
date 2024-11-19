@@ -3,7 +3,37 @@
 
 pragma solidity 0.8.25;
 
-import {IACP99Manager} from "./IACP99Manager.sol";
+import {IACP99Manager, ValidatorUptimeInfo} from "./IACP99Manager.sol";
+
+/**
+ * @notice Information about a validator registration
+ * @param nodeID The NodeID of the validator node
+ * @param validationID The ValidationID of the validation
+ * @param weight The initial weight assigned to the validator
+ * @param startTime The timestamp when the validation started
+ */
+struct ValidatorRegistrationInfo {
+    bytes32 nodeID;
+    bytes32 validationID;
+    uint64 weight;
+    uint64 startTime;
+}
+
+/**
+ * @notice Information about a change in a validator's weight
+ * @param nodeID The NodeID of the validator node
+ * @param validationID The ValidationID of the validation
+ * @param nonce A sequential number to order weight changes
+ * @param newWeight The new weight assigned to the validator
+ * @param uptime The uptime information for the validator
+ */
+struct ValidatorWeightChangeInfo {
+    bytes32 nodeID;
+    bytes32 validationID;
+    uint64 nonce;
+    uint64 newWeight;
+    ValidatorUptimeInfo uptimeInfo;
+}
 
 /*
  * @title IACP99SecurityModule
@@ -12,36 +42,6 @@ import {IACP99Manager} from "./IACP99Manager.sol";
  * @custom:security-contact security@suzaku.network
  */
 interface IACP99SecurityModule {
-    /**
-     * @notice Information about a validator registration
-     * @param nodeID The NodeID of the validator node
-     * @param validationID The ValidationID of the validation
-     * @param weight The initial weight assigned to the validator
-     * @param startTime The timestamp when the validation started
-     */
-    struct ValidatorRegistrationInfo {
-        bytes32 nodeID;
-        bytes32 validationID;
-        uint64 weight;
-        uint64 startTime;
-    }
-
-    /**
-     * @notice Information about a change in a validator's weight
-     * @param nodeID The NodeID of the validator node
-     * @param validationID The ValidationID of the validation
-     * @param nonce A sequential number to order weight changes
-     * @param newWeight The new weight assigned to the validator
-     * @param uptime The uptime information for the validator
-     */
-    struct ValidatorWeightChangeInfo {
-        bytes32 nodeID;
-        bytes32 validationID;
-        uint64 nonce;
-        uint64 newWeight;
-        IACP99Manager.ValidatorUptimeInfo uptimeInfo;
-    }
-
     error ACP99SecurityModule__ZeroAddressManager();
     error ACP99SecurityModule__OnlyManager(address sender, address manager);
 

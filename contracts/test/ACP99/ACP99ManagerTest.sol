@@ -8,7 +8,12 @@ import {DeployACP99PoAModule} from "../../script/ACP99/SecurityModules/DeployACP
 import {ACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
 import {ACP99PoAModule} from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
-import {IACP99Manager} from "../../src/interfaces/ACP99/IACP99Manager.sol";
+import {
+    IACP99Manager,
+    Validation,
+    ValidationStatus,
+    ValidatorUptimeInfo
+} from "../../src/interfaces/ACP99/IACP99Manager.sol";
 import {IACP99SecurityModule} from "../../src/interfaces/ACP99/IACP99SecurityModule.sol";
 import {
     ConversionData,
@@ -190,7 +195,7 @@ contract ACP99ManagerTest is Test {
         assertEq(manager.getActiveValidatorSet().length, 2);
         assertEq(manager.getActiveValidatorSet()[0], bytes32(VALIDATOR_NODE_ID_02));
         assertEq(manager.getActiveValidatorSet()[1], bytes32(VALIDATOR_NODE_ID_03));
-        IACP99Manager.Validation memory validation =
+        Validation memory validation =
             manager.getValidation(sha256(abi.encodePacked(conversionData.subnetID, uint32(0))));
         assertEq(validation.nodeID, bytes32(VALIDATOR_NODE_ID_02));
         assertEq(validation.periods[0].weight, 100);
@@ -238,8 +243,8 @@ contract ACP99ManagerTest is Test {
         );
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(validationID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Registering);
+        Validation memory validation = manager.getValidation(validationID);
+        assert(validation.status == ValidationStatus.Registering);
         assert(manager.pendingRegisterValidationMessages(validationID).length > 0);
         assertEq(validation.nodeID, bytes32(VALIDATOR_NODE_ID_01));
         assertEq(validation.periods.length, 1);
@@ -341,8 +346,8 @@ contract ACP99ManagerTest is Test {
         manager.completeValidatorRegistration(COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX);
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Active);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Active);
         assertEq(validation.periods[0].startTime, block.timestamp);
 
         bytes32 validationID = manager.getValidatorActiveValidation(VALIDATOR_NODE_ID_01);
@@ -373,11 +378,11 @@ contract ACP99ManagerTest is Test {
         vm.warp(1_706_745_600);
 
         // Act
-        IACP99Manager.ValidatorUptimeInfo memory uptimeInfo =
+        ValidatorUptimeInfo memory uptimeInfo =
             manager.updateUptime(VALIDATOR_NODE_ID_01, VALIDATOR_UPTIME_MESSAGE_INDEX);
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
         assertEq(validation.periods[0].uptimeSeconds, 2_544_480);
         assertEq(uptimeInfo.activeSeconds, 2_678_400);
         assertEq(uptimeInfo.uptimeSeconds, 2_544_480);
@@ -401,8 +406,8 @@ contract ACP99ManagerTest is Test {
         );
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Updating);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Updating);
         assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[0].endTime, block.timestamp);
@@ -428,8 +433,7 @@ contract ACP99ManagerTest is Test {
         );
 
         // Assert
-        IACP99Manager.ValidatorUptimeInfo memory uptimeInfo =
-            manager.getValidationUptimeInfo(VALIDATION_ID);
+        ValidatorUptimeInfo memory uptimeInfo = manager.getValidationUptimeInfo(VALIDATION_ID);
         assertEq(uptimeInfo.activeSeconds, 2_678_400);
         assertEq(uptimeInfo.uptimeSeconds, 2_544_480);
         assertEq(uptimeInfo.activeWeightSeconds, 2_678_400 * VALIDATOR_WEIGHT);
@@ -472,8 +476,8 @@ contract ACP99ManagerTest is Test {
         );
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Removing);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Removing);
         assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 1);
         assertEq(validation.periods[0].endTime, block.timestamp);
@@ -524,8 +528,8 @@ contract ACP99ManagerTest is Test {
         manager.completeValidatorWeightUpdate(COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX);
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Active);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Active);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, block.timestamp);
         assertEq(validation.periods[1].endTime, 0);
@@ -572,8 +576,8 @@ contract ACP99ManagerTest is Test {
         manager.completeValidatorWeightUpdate(COMPLETE_VALIDATION_MESSAGE_INDEX);
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Completed);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Completed);
         assertEq(manager.l1TotalWeight(), 0);
 
         vm.expectRevert(

@@ -5,8 +5,18 @@
 
 pragma solidity 0.8.25;
 
-import {IACP99Manager} from "../../interfaces/ACP99/IACP99Manager.sol";
-import {IACP99SecurityModule} from "../../interfaces/ACP99/IACP99SecurityModule.sol";
+import {
+    IACP99Manager,
+    Validation,
+    ValidationPeriod,
+    ValidationStatus,
+    ValidatorUptimeInfo
+} from "../../interfaces/ACP99/IACP99Manager.sol";
+import {
+    IACP99SecurityModule,
+    ValidatorRegistrationInfo,
+    ValidatorWeightChangeInfo
+} from "../../interfaces/ACP99/IACP99SecurityModule.sol";
 import {
     IWarpMessenger,
     WarpMessage
@@ -137,7 +147,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
             validation.status = ValidationStatus.Active;
             validation.nodeID = bytes32(nodeID);
             validation.periods.push(
-                IACP99Manager.ValidationPeriod({
+                ValidationPeriod({
                     weight: initialValidator.weight,
                     startTime: uint64(block.timestamp),
                     endTime: 0,
@@ -272,7 +282,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
         // Notify the SecurityModule of the validator registration
         securityModule.handleValidatorRegistration(
-            IACP99SecurityModule.ValidatorRegistrationInfo({
+            ValidatorRegistrationInfo({
                 nodeID: validation.nodeID,
                 validationID: validationID,
                 weight: validation.periods[0].weight,
@@ -289,7 +299,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     function updateUptime(
         bytes memory nodeID,
         uint32 messageIndex
-    ) external returns (IACP99Manager.ValidatorUptimeInfo memory) {
+    ) external returns (ValidatorUptimeInfo memory) {
         bytes32 validationID = activeValidators.get(bytes32(nodeID));
         Validation storage validation = l1Validations[validationID];
 
@@ -466,7 +476,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     function _getValidationUptimeInfo(
         Validation storage validation,
         uint256 nonce
-    ) private view returns (IACP99Manager.ValidatorUptimeInfo memory) {
+    ) private view returns (ValidatorUptimeInfo memory) {
         // Compute the active and uptime seconds of the validator during all periods
         uint64 totalActiveSeconds;
         uint64 totalUptimeSeconds;
@@ -492,7 +502,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
                 uint256(validation.periods[i].weight) * uint256(periodUptimeSeconds);
         }
 
-        IACP99Manager.ValidatorUptimeInfo memory uptimeInfo = IACP99Manager.ValidatorUptimeInfo({
+        ValidatorUptimeInfo memory uptimeInfo = ValidatorUptimeInfo({
             activeSeconds: totalActiveSeconds,
             uptimeSeconds: totalUptimeSeconds,
             activeWeightSeconds: totalActiveWeightSeconds,
@@ -509,11 +519,9 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     ) private {
         Validation storage validation = l1Validations[validationID];
 
-        IACP99Manager.ValidatorUptimeInfo memory uptimeInfo =
-            _getValidationUptimeInfo(validation, nonce - 1);
+        ValidatorUptimeInfo memory uptimeInfo = _getValidationUptimeInfo(validation, nonce - 1);
 
-        IACP99SecurityModule.ValidatorWeightChangeInfo memory validatorWeightChangeInfo =
-        IACP99SecurityModule.ValidatorWeightChangeInfo({
+        ValidatorWeightChangeInfo memory validatorWeightChangeInfo = ValidatorWeightChangeInfo({
             nodeID: validation.nodeID,
             validationID: validationID,
             nonce: nonce,
@@ -555,7 +563,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     /// @inheritdoc IACP99Manager
     function getValidationUptimeInfo(
         bytes32 validationID
-    ) external view returns (IACP99Manager.ValidatorUptimeInfo memory) {
+    ) external view returns (ValidatorUptimeInfo memory) {
         Validation storage validation = l1Validations[validationID];
 
         return _getValidationUptimeInfo(validation, validation.periods.length - 1);

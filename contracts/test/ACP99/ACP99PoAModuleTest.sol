@@ -5,10 +5,18 @@ pragma solidity ^0.8.0;
 
 import {HelperConfig} from "../../script/ACP99/HelperConfig.s.sol";
 import {DeployACP99PoAModule} from "../../script/ACP99/SecurityModules/DeployACP99PoAModule.s.sol";
-import {ACP99Manager, IACP99Manager} from "../../src/contracts/ACP99/ACP99Manager.sol";
+import {
+    ACP99Manager,
+    IACP99Manager,
+    Validation,
+    ValidationStatus,
+    ValidatorUptimeInfo
+} from "../../src/contracts/ACP99/ACP99Manager.sol";
 import {
     ACP99PoAModule,
-    IACP99SecurityModule
+    IACP99SecurityModule,
+    ValidatorRegistrationInfo,
+    ValidatorWeightChangeInfo
 } from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
@@ -121,8 +129,8 @@ contract ACP99PoAModuleTest is Test {
         );
 
         // Assert
-        ACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Registering);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Registering);
         assert(validation.nodeID == bytes32(VALIDATOR_NODE_ID_01));
         assert(validation.periods[0].weight == VALIDATOR_WEIGHT);
     }
@@ -140,8 +148,8 @@ contract ACP99PoAModuleTest is Test {
         poaModule.updateValidatorWeight(VALIDATOR_NODE_ID_01, newWeight);
 
         // Assert: Check the validation status after initiating the update
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Updating);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Updating);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[1].weight, newWeight);
 
@@ -151,7 +159,7 @@ contract ACP99PoAModuleTest is Test {
 
         // Assert: Check the validation status after completing the update
         validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Active);
+        assert(validation.status == ValidationStatus.Active);
         assertEq(validation.periods.length, 2);
         assertEq(validation.periods[1].weight, newWeight);
         assertEq(validation.periods[1].startTime, block.timestamp);
@@ -171,8 +179,8 @@ contract ACP99PoAModuleTest is Test {
         poaModule.removeValidator(VALIDATOR_NODE_ID_01, true, VALIDATOR_UPTIME_MESSAGE_INDEX);
 
         // Assert
-        IACP99Manager.Validation memory validation = manager.getValidation(VALIDATION_ID);
-        assert(validation.status == IACP99Manager.ValidationStatus.Removing);
+        Validation memory validation = manager.getValidation(VALIDATION_ID);
+        assert(validation.status == ValidationStatus.Removing);
         assert(validation.periods[0].uptimeSeconds > 0);
         assertEq(validation.periods.length, 1);
         assertEq(validation.periods[0].endTime, block.timestamp);
@@ -199,7 +207,7 @@ contract ACP99PoAModuleTest is Test {
             )
         );
         poaModule.handleValidatorRegistration(
-            IACP99SecurityModule.ValidatorRegistrationInfo({
+            ValidatorRegistrationInfo({
                 nodeID: bytes32(VALIDATOR_NODE_ID_01),
                 validationID: VALIDATION_ID,
                 weight: VALIDATOR_WEIGHT,
@@ -216,12 +224,12 @@ contract ACP99PoAModuleTest is Test {
             )
         );
         poaModule.handleValidatorWeightChange(
-            IACP99SecurityModule.ValidatorWeightChangeInfo({
+            ValidatorWeightChangeInfo({
                 nodeID: bytes32(VALIDATOR_NODE_ID_01),
                 validationID: VALIDATION_ID,
                 nonce: 0,
                 newWeight: VALIDATOR_WEIGHT,
-                uptimeInfo: IACP99Manager.ValidatorUptimeInfo({
+                uptimeInfo: ValidatorUptimeInfo({
                     activeSeconds: 1000,
                     uptimeSeconds: 900,
                     activeWeightSeconds: 1000 * VALIDATOR_WEIGHT,

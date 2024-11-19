@@ -13,6 +13,60 @@ import {
     PChainOwner
 } from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 
+/// @notice L1 validation status
+enum ValidationStatus {
+    Registering,
+    Active,
+    Updating,
+    Removing,
+    Completed,
+    Expired
+}
+
+/**
+ * @notice L1 validation
+ * @param status The validation status
+ * @param nodeID The NodeID of the validator
+ * @param startTime The start time of the validation
+ * @param endTime The end time of the validation
+ * @param periods The list of validation periods.
+ * The index is the nonce associated with the weight update.
+ * @param activeSeconds The time during which the validator was active during this validation
+ * @param uptimeSeconds The uptime of the validator for this validation
+ */
+struct Validation {
+    ValidationStatus status;
+    bytes32 nodeID;
+    ValidationPeriod[] periods;
+}
+
+/**
+ * @notice L1 validation period
+ * @param weight The weight of the validator during the period
+ * @param startTime The start time of the validation period
+ * @param endTime The end time of the validation period (only ≠ 0 when the period is over)
+ */
+struct ValidationPeriod {
+    uint64 weight;
+    uint64 startTime;
+    uint64 endTime;
+    uint64 uptimeSeconds;
+}
+
+/**
+ * @notice Information about a validator's uptime
+ * @param activeSeconds The total number of seconds the validator was active
+ * @param uptimeSeconds The total number of seconds the validator was online
+ * @param activeWeightSeconds The total weight x seconds the validator was active
+ * @param uptimeWeightSeconds The total weight x seconds the validator was online
+ */
+struct ValidatorUptimeInfo {
+    uint64 activeSeconds;
+    uint64 uptimeSeconds;
+    uint256 activeWeightSeconds;
+    uint256 uptimeWeightSeconds;
+}
+
 /*
  * @title IACP99Manager
  * @author ADDPHO
@@ -20,60 +74,6 @@ import {
  * @custom:security-contact security@suzaku.network
  */
 interface IACP99Manager {
-    /// @notice L1 validation status
-    enum ValidationStatus {
-        Registering,
-        Active,
-        Updating,
-        Removing,
-        Completed,
-        Expired
-    }
-
-    /**
-     * @notice L1 validation
-     * @param status The validation status
-     * @param nodeID The NodeID of the validator
-     * @param startTime The start time of the validation
-     * @param endTime The end time of the validation
-     * @param periods The list of validation periods.
-     * The index is the nonce associated with the weight update.
-     * @param activeSeconds The time during which the validator was active during this validation
-     * @param uptimeSeconds The uptime of the validator for this validation
-     */
-    struct Validation {
-        ValidationStatus status;
-        bytes32 nodeID;
-        ValidationPeriod[] periods;
-    }
-
-    /**
-     * @notice L1 validation period
-     * @param weight The weight of the validator during the period
-     * @param startTime The start time of the validation period
-     * @param endTime The end time of the validation period (only ≠ 0 when the period is over)
-     */
-    struct ValidationPeriod {
-        uint64 weight;
-        uint64 startTime;
-        uint64 endTime;
-        uint64 uptimeSeconds;
-    }
-
-    /**
-     * @notice Information about a validator's uptime
-     * @param activeSeconds The total number of seconds the validator was active
-     * @param uptimeSeconds The total number of seconds the validator was online
-     * @param activeWeightSeconds The total weight x seconds the validator was active
-     * @param uptimeWeightSeconds The total weight x seconds the validator was online
-     */
-    struct ValidatorUptimeInfo {
-        uint64 activeSeconds;
-        uint64 uptimeSeconds;
-        uint256 activeWeightSeconds;
-        uint256 uptimeWeightSeconds;
-    }
-
     /// @notice Emitted when the security module address is set
     event SetSecurityModule(address indexed securityModule);
     /// @notice Emitted when an initial validator is registered
