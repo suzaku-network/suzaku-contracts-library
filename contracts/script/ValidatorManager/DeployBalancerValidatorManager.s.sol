@@ -10,10 +10,7 @@ import {
     BalancerValidatorManagerSettings
 } from "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts@5.0.2/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ICMInitializable} from "@utilities/ICMInitializable.sol";
+import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
 contract DeployBalancerValidatorManager is Script {
@@ -34,8 +31,6 @@ contract DeployBalancerValidatorManager is Script {
         address validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
         vm.startBroadcast(proxyAdminOwnerKey);
-        BalancerValidatorManager validatorSetManager =
-            new BalancerValidatorManager(ICMInitializable.Allowed);
 
         ValidatorManagerSettings memory settings = ValidatorManagerSettings({
             subnetID: subnetID,
@@ -50,16 +45,14 @@ contract DeployBalancerValidatorManager is Script {
             migratedValidators: migratedValidators
         });
 
-        ProxyAdmin proxyAdmin = new ProxyAdmin(proxyAdminOwnerAddress);
-
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(validatorSetManager),
-            address(proxyAdmin),
-            abi.encodeWithSelector(BalancerValidatorManager.initialize.selector, balancerSettings)
+        address proxy = Upgrades.deployTransparentProxy(
+            "BalancerValidatorManager.sol:BalancerValidatorManager",
+            proxyAdminOwnerAddress,
+            abi.encodeCall(BalancerValidatorManager.initialize, balancerSettings)
         );
 
         vm.stopBroadcast();
 
-        return address(proxy);
+        return proxy;
     }
 }
