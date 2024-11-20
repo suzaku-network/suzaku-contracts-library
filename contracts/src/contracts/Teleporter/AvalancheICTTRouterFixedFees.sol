@@ -278,7 +278,7 @@ contract AvalancheICTTRouterFixedFees is
             );
         }
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
+        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, primaryFeeAmount);
         WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
 
         uint256 bridgeAmount = msg.value - primaryFeeAmount;
@@ -333,7 +333,7 @@ contract AvalancheICTTRouterFixedFees is
             );
         }
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, msg.value);
+        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, primaryFeeAmount);
         WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
 
         uint256 bridgeAmount = msg.value - primaryFeeAmount;
