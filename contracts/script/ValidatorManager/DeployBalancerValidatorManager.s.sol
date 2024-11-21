@@ -9,6 +9,8 @@ import {
     BalancerValidatorManager,
     BalancerValidatorManagerSettings
 } from "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
+import {PoASecurityModule} from
+    "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
@@ -18,7 +20,7 @@ contract DeployBalancerValidatorManager is Script {
         address initialSecurityModule,
         uint64 initialSecurityModuleWeight,
         bytes[] calldata migratedValidators
-    ) external returns (address) {
+    ) external returns (address, address) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 proxyAdminOwnerKey,
@@ -29,6 +31,15 @@ contract DeployBalancerValidatorManager is Script {
         ) = helperConfig.activeNetworkConfig();
         address proxyAdminOwnerAddress = vm.addr(proxyAdminOwnerKey);
         address validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
+
+        // Predict the address where PoASecurityModule will be deployed if deployPoASecurityModule is true
+        // This will be the next address after the proxy deployment
+        bool deployPoASecurityModule = initialSecurityModule == address(0);
+        if (deployPoASecurityModule) {
+            initialSecurityModule = vm.computeCreateAddress(
+                proxyAdminOwnerAddress, vm.getNonce(proxyAdminOwnerAddress) + 2
+            );
+        }
 
         vm.startBroadcast(proxyAdminOwnerKey);
 
@@ -51,8 +62,17 @@ contract DeployBalancerValidatorManager is Script {
             abi.encodeCall(BalancerValidatorManager.initialize, balancerSettings)
         );
 
+        address securityModuleDeploymentAddress;
+        if (deployPoASecurityModule) {
+            securityModuleDeploymentAddress =
+                address(new PoASecurityModule(proxy, validatorManagerOwnerAddress));
+            if (securityModuleDeploymentAddress != initialSecurityModule) {
+                revert("PoASecurityModule deployed at unexpected address");
+            }
+        }
+
         vm.stopBroadcast();
 
-        return proxy;
+        return (proxy, initialSecurityModule);
     }
 }
