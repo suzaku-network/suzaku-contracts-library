@@ -27,7 +27,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     error AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
         uint256 primaryRelayerFee, uint256 secondaryRelayerFee, MinBridgeFees minBridgeFees
     );
-    error AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNoMultihop(
+    error AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNotMultihop(
         uint256 minSecondaryRelayerFee, bool multihop
     );
     error AvalancheICTTRouterFixedFees__MissingMinBridgeFeesParams();

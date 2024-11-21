@@ -94,24 +94,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 requiredGasLimit,
         bool isMultihop
     ) external virtual onlyOwner {
-        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
-            revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
-        }
-        if (bridgeAddress == address(0)) {
-            revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
-        }
-        if (destinationChainID == routerChainID) {
-            revert AvalancheICTTRouter__SourceChainEqualsDestinationChain(
-                routerChainID, destinationChainID
-            );
-        }
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
-        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
-            destinationBridge;
-        tokenToDestinationChainsIDList[tokenAddress].add(destinationChainID);
-
-        emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
+        _registerDestinationTokenBridge(
+            tokenAddress, destinationChainID, bridgeAddress, requiredGasLimit, isMultihop
+        );
     }
 
     /// @inheritdoc IAvalancheICTTRouter
@@ -363,5 +348,32 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address token
     ) external view returns (bytes32[] memory) {
         return (tokenToDestinationChainsIDList[token].values());
+    }
+
+    function _registerDestinationTokenBridge(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        address bridgeAddress,
+        uint256 requiredGasLimit,
+        bool isMultihop
+    ) internal {
+        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
+            revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
+        }
+        if (bridgeAddress == address(0)) {
+            revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
+        }
+        if (destinationChainID == routerChainID) {
+            revert AvalancheICTTRouter__SourceChainEqualsDestinationChain(
+                routerChainID, destinationChainID
+            );
+        }
+        DestinationBridge memory destinationBridge =
+            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
+        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
+            destinationBridge;
+        tokenToDestinationChainsIDList[tokenAddress].add(destinationChainID);
+
+        emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
     }
 }
