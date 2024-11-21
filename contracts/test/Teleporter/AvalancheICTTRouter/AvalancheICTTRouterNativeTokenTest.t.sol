@@ -5,6 +5,7 @@ pragma solidity 0.8.18;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -15,10 +16,20 @@ import {Vm} from "forge-std/Vm.sol";
 contract AvalancheICTTRouterNativeTokenTest is Test {
     address private constant TOKEN_SOURCE = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
 
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event BridgeNative(
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
+    );
 
     event BridgeAndCallNative(
-        bytes32 indexed destinationChainID, uint256 amount, address recipient
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
@@ -89,10 +100,7 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
     modifier fundRouterFeeToken() {
         vm.startPrank(bridger);
         wrappedNativeToken.deposit{value: primaryRelayerFee}();
-        IERC20(address(wrappedNativeToken)).approve(bridger, primaryRelayerFee);
-        IERC20(address(wrappedNativeToken)).transferFrom(
-            bridger, address(tokenBridgeRouter), primaryRelayerFee
-        );
+        IERC20(address(wrappedNativeToken)).approve(address(tokenBridgeRouter), primaryRelayerFee);
         _;
     }
 
@@ -118,7 +126,9 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     function testEmitsWhenNativeTokensSent() public registerTokenBridge fundRouterFeeToken {
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeNative(destinationChainID, amount, bridger);
+        emit BridgeNative(
+            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
+        );
 
         tokenBridgeRouter.bridgeNative{value: amount}(
             destinationChainID,
@@ -148,7 +158,6 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             primaryRelayerFee,
             secondaryRelayerFee
@@ -169,7 +178,9 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallNative(destinationChainID, amount, bridger);
+        emit BridgeAndCallNative(
+            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
+        );
 
         tokenBridgeRouter.bridgeAndCallNative{value: amount}(
             destinationChainID,
@@ -178,7 +189,6 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             primaryRelayerFee,
             secondaryRelayerFee

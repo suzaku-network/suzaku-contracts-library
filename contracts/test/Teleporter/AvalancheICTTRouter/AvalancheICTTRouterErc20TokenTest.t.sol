@@ -5,6 +5,7 @@ pragma solidity 0.8.18;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
 import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
@@ -17,15 +18,19 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
     event BridgeERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
+        address recipient,
         uint256 amount,
-        address recipient
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     event BridgeAndCallERC20(
         address indexed tokenAddress,
         bytes32 indexed destinationBlockchainID,
+        address recipient,
         uint256 amount,
-        address recipient
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
@@ -148,7 +153,14 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         feeToken.approve(address(tokenBridgeRouter), primaryRelayerFee);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeERC20(address(erc20Token), destinationChainID, amount, bridger);
+        emit BridgeERC20(
+            address(erc20Token),
+            destinationChainID,
+            bridger,
+            amount,
+            primaryRelayerFee,
+            secondaryRelayerFee
+        );
         tokenBridgeRouter.bridgeERC20(
             address(erc20Token),
             destinationChainID,
@@ -186,7 +198,6 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             address(feeToken),
             primaryRelayerFee,
@@ -215,7 +226,14 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         feeToken.approve(address(tokenBridgeRouter), primaryRelayerFee);
 
         vm.expectEmit(true, true, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallERC20(address(erc20Token), destinationChainID, amount, tokenDestination);
+        emit BridgeAndCallERC20(
+            address(erc20Token),
+            destinationChainID,
+            tokenDestination,
+            amount,
+            primaryRelayerFee,
+            secondaryRelayerFee
+        );
         tokenBridgeRouter.bridgeAndCallERC20(
             address(erc20Token),
             destinationChainID,
@@ -224,7 +242,6 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress,
             address(feeToken),
             primaryRelayerFee,

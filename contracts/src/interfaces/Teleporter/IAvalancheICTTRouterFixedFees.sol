@@ -7,6 +7,11 @@ import {DestinationBridge, IAvalancheICTTRouter} from "./IAvalancheICTTRouter.so
 
 pragma solidity 0.8.18;
 
+struct MinBridgeFees {
+    uint256 minPrimaryRelayerFee;
+    uint256 minSecondaryRelayerFee;
+}
+
 /**
  * @title IAvalancheICTTRouterFixedFees
  * @author ADDPHO
@@ -16,6 +21,16 @@ pragma solidity 0.8.18;
  */
 interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     error AvalancheICTTRouterFixedFees__CustomRelayerFeesNotAllowed();
+    error AvalancheICTTRouterFixedFees__CumulatedFeesExceed100Percent(
+        uint256 primaryRelayerFeeBips, uint256 secondaryRelayerFeeBips
+    );
+    error AvalancheICTTRouterFixedFees__RelayerFeesTooLow(
+        uint256 primaryRelayerFee, uint256 secondaryRelayerFee, MinBridgeFees minBridgeFees
+    );
+    error AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNotMultihop(
+        uint256 minSecondaryRelayerFee, bool multihop
+    );
+    error AvalancheICTTRouterFixedFees__MissingMinBridgeFeesParams();
 
     /**
      * @notice Emitted when the value of the fixes relayer fees are updated
@@ -23,6 +38,26 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param secondaryRelayerFee New value of the secondary relayer fee
      */
     event UpdateRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
+
+    /**
+     * @notice Register a destination bridge for a token
+     * @param tokenAddress Address of the ERC20 token contract
+     * @param destinationChainID ID of the destination chain
+     * @param bridgeAddress Address of the destination bridge contract
+     * @param requiredGasLimit Gas limit requirement for sending to a token bridge
+     * @param isMultihop True if this bridge is a multihop one
+     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the Teleporter message fee
+     * @param minSecondaryRelayerFee Minimal amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     */
+    function registerDestinationTokenBridge(
+        address tokenAddress,
+        bytes32 destinationChainID,
+        address bridgeAddress,
+        uint256 requiredGasLimit,
+        bool isMultihop,
+        uint256 minPrimaryRelayerFee,
+        uint256 minSecondaryRelayerFee
+    ) external;
 
     /**
      * @notice Update the fixed relayer fees
@@ -65,6 +100,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param recipient Contract on the destination chain
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
+     * @param recipientGasLimit Gas amount provided to the recipient contract
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      */
     function bridgeAndCallERC20(
@@ -75,7 +111,6 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external;
 
@@ -101,6 +136,7 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param recipientPayload Function signature with parameters hashed of the contract
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
+     * @param recipientGasLimit Gas amount provided to the recipient contract
      */
     function bridgeAndCallNative(
         bytes32 destinationChainID,
@@ -109,7 +145,6 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
         bytes memory recipientPayload,
         address recipientFallback,
         uint256 recipientGasLimit,
-        uint256 requiredGasLimit,
         address multiHopFallback
     ) external payable;
 }

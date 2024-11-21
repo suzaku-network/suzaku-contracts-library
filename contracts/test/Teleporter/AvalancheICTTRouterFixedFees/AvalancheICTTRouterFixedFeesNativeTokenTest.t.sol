@@ -6,6 +6,7 @@ pragma solidity 0.8.18;
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
@@ -17,10 +18,20 @@ import {Vm} from "forge-std/Vm.sol";
 contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
     address private constant TOKEN_SOURCE = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
 
-    event BridgeNative(bytes32 indexed destinationChainID, uint256 amount, address recipient);
+    event BridgeNative(
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
+    );
 
     event BridgeAndCallNative(
-        bytes32 indexed destinationChainID, uint256 amount, address recipient
+        bytes32 indexed destinationChainID,
+        address recipient,
+        uint256 amount,
+        uint256 primaryRelaryFee,
+        uint256 secondaryRelayerFee
     );
 
     HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 1);
@@ -47,6 +58,8 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
     uint256 requiredGasLimit = 10_000_000;
     uint256 recipientGasLimit = 100_000;
     address multihopFallBackAddress = address(0);
+    uint256 minPrimaryRelayerFee = 0.00001 ether;
+    uint256 minSecondaryRelayerFee = 0;
 
     uint256 constant STARTING_GAS_BALANCE = 10 ether;
 
@@ -81,7 +94,13 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
         vm.startPrank(owner);
         tokenBridgeRouter.registerSourceTokenBridge(token, address(nativeTokenSource));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            token, destinationChainID, tokenDestination, requiredGasLimit, false
+            token,
+            destinationChainID,
+            tokenDestination,
+            requiredGasLimit,
+            false,
+            minPrimaryRelayerFee,
+            minSecondaryRelayerFee
         );
         vm.stopPrank();
         _;
@@ -109,7 +128,9 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
     function testEmitsWhenNativeTokensSent() public registerTokenBridge {
         vm.startPrank(bridger);
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeNative(destinationChainID, amount, bridger);
+        emit BridgeNative(
+            destinationChainID, bridger, amount, (amount * primaryRelayerFeeBips) / 10_000, 0
+        );
 
         tokenBridgeRouter.bridgeNative{value: amount}(
             destinationChainID, bridger, address(wrappedNativeToken), multihopFallBackAddress
@@ -131,7 +152,6 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
 
@@ -149,7 +169,9 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallNative(destinationChainID, amount, bridger);
+        emit BridgeAndCallNative(
+            destinationChainID, bridger, amount, (amount * primaryRelayerFeeBips) / 10_000, 0
+        );
 
         tokenBridgeRouter.bridgeAndCallNative{value: amount}(
             destinationChainID,
@@ -158,7 +180,6 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
             payload,
             bridger,
             recipientGasLimit,
-            requiredGasLimit,
             multihopFallBackAddress
         );
         vm.stopPrank();
