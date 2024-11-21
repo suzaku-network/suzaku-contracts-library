@@ -79,33 +79,19 @@ contract AvalancheICTTRouterFixedFees is
         uint256 minPrimaryRelayerFee,
         uint256 minSecondaryRelayerFee
     ) external onlyOwner {
-        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
-            revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
-        }
-        if (bridgeAddress == address(0)) {
-            revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
-        }
-        if (destinationChainID == routerChainID) {
-            revert AvalancheICTTRouter__SourceChainEqualsDestinationChain(
-                routerChainID, destinationChainID
-            );
-        }
         if (!isMultihop && minSecondaryRelayerFee != 0) {
-            revert AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNoMultihop(
+            revert AvalancheICTTRouterFixedFees__MinSecondaryFeeNotAllowedWhenNotMultihop(
                 minSecondaryRelayerFee, isMultihop
             );
         }
-        DestinationBridge memory destinationBridge =
-            DestinationBridge(bridgeAddress, requiredGasLimit, isMultihop);
+        _registerDestinationTokenBridge(
+            tokenAddress, destinationChainID, bridgeAddress, requiredGasLimit, isMultihop
+        );
+
         MinBridgeFees memory minBridgeFees =
             MinBridgeFees(minPrimaryRelayerFee, minSecondaryRelayerFee);
 
         destinationChainTokenToMinBridgeFees[destinationChainID][tokenAddress] = minBridgeFees;
-        tokenDestinationChainToDestinationBridge[destinationChainID][tokenAddress] =
-            destinationBridge;
-        tokenToDestinationChainsIDList[tokenAddress].add(destinationChainID);
-
-        emit RegisterDestinationTokenBridge(tokenAddress, destinationChainID, destinationBridge);
     }
 
     /// @inheritdoc IAvalancheICTTRouterFixedFees
