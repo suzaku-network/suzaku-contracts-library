@@ -3,6 +3,7 @@ src = "src"
 out = "out"
 libs = ["lib"]
 via_ir = true
+gas_reports = ["ACP99Manager", "ACP99PoAModule", "AvalancheICTTRouter"]
 
 [fmt]
 line_length = 100

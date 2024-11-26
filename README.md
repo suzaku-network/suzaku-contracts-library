@@ -10,9 +10,9 @@ This library provides utility contracts for different blockchain ecosystems, not
 
 #### Contracts
 
-- The [AvalancheICTTRouter](contracts/src/Teleporter/AvalancheICTTRouter.sol) contract is a router contract that can be used as backend for bridge UIs built on top of [Avalanche ICTT](https://github.com/ava-labs/avalanche-interchain-token-transfer).  
+- The [AvalancheICTTRouter](contracts/src/contracts/Teleporter/AvalancheICTTRouter.sol) contract is a router contract that can be used as backend for bridge UIs built on top of [Avalanche ICTT](https://github.com/ava-labs/avalanche-interchain-token-transfer).  
   It tracks the Home and Remote `TokenTransferrer` contracts on multiple chains to initiate transfers by only providing the token to transfer, the destination chain ID and the recipient address.  
-  [Read more](contracts/src/Teleporter/README.md)
+  [Read more](contracts/src/contracts/Teleporter/README.md)
 
 #### Scripts
 
@@ -24,6 +24,16 @@ Foundry deployment scripts for [Avalanche ICTT](https://github.com/ava-labs/aval
 - [DeployNativeTokenRemote.s.sol](contracts/script/Teleporter/DeployNativeTokenRemote.s.sol)
 
 Those scripts make use of environment variables to deploy the contracts. See [HelperConfig.s.sol](contracts/script/Teleporter/HelperConfig.s.sol) for more details.
+
+### ACP99 contracts library
+
+#### Contracts, libraries and interfaces
+
+- The [ValidatorMessages](contracts/src/contracts/ACP99/ValidatorMessages.sol) library provides utility functions to encode and decode validator set update Warp messages.
+- The [ACP99Manager](contracts/src/contracts/ACP99/ACP99Manager.sol) contract can be set as the `SubnetManager` address of a Subnet to manage its validator set. It follows the [ACP-99](https://github.com/Nuttymoon/ACPs/blob/validatorsetmanager-solidity-contract/ACPs/99-validatorsetmanager-contract/README.md) standard.
+- The [IACP99Manager](contracts/src/interfaces/ACP99/IACP99Manager.sol) interface defines the functions that a contract must implement to be an `ACP99Manager`.
+- The [IACP99SecurityModule](contracts/src/interfaces/ACP99/IACP99SecurityModule.sol) interface defines the functions that a security module must implement to work with the `ACP99Manager`.
+- The [ACP99PoAModule](contracts/src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol) contract is an example implementation of a Proof-of-Authority security module that works with the `ACP99Manager`.
 
 ## Usage
 

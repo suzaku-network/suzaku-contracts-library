@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
-// SPDX-FileCopyrightText: Copyright 2024 ADDPHO
+// (c) 2024, ADDPHO All rights reserved.
+// See the file LICENSE_MIT for licensing terms.
+
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.18;
 
@@ -28,6 +30,8 @@ contract HelperConfig4Test is Script {
         0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
     address private constant WARP_PRECOMPILE = 0x0200000000000000000000000000000000000005;
     uint256 private constant DEPLOYER_PRIV_KEY = 1;
+    uint256 private constant PRIMARY_RELAYER_FEE_BIPS = 20;
+    uint256 private constant SECONDARY_RELAYER_FEE_BIPS = 0;
 
     struct NetworkConfigTest {
         uint256 deployerKey;
@@ -57,7 +61,6 @@ contract HelperConfig4Test is Script {
     bytes32 private _destinationChainID = DEST_CHAIN_HEX;
     address private _owner = vm.addr(DEPLOYER_PRIV_KEY);
     address private _bridger = makeAddr("bridger");
-    bytes32 private _messageID = MESSAGE_ID;
     address private _warpPrecompileAddress = WARP_PRECOMPILE;
 
     uint256 private _initialReserveImbalance = 0;
@@ -86,7 +89,7 @@ contract HelperConfig4Test is Script {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
             _destinationChainID,
-            _messageID,
+            MESSAGE_ID,
             _initialReserveImbalance,
             _sourceTokenDecimals,
             _destinationTokenDecimals,
@@ -119,7 +122,7 @@ contract HelperConfig4Test is Script {
             deployerKey: _deployerKey,
             owner: _owner,
             bridger: _bridger,
-            messageID: _messageID,
+            messageID: MESSAGE_ID,
             warpPrecompileAddress: _warpPrecompileAddress,
             warpMessengerTestMock: warpMessengerTestMock,
             erc20Token: _erc20Token,
@@ -147,7 +150,7 @@ contract HelperConfig4Test is Script {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(
             _sourceChainID,
             _destinationChainID,
-            _messageID,
+            MESSAGE_ID,
             _initialReserveImbalance,
             _sourceTokenDecimals,
             _destinationTokenDecimals,
@@ -180,7 +183,7 @@ contract HelperConfig4Test is Script {
             deployerKey: _deployerKey,
             owner: _owner,
             bridger: _bridger,
-            messageID: _messageID,
+            messageID: MESSAGE_ID,
             warpPrecompileAddress: _warpPrecompileAddress,
             warpMessengerTestMock: warpMessengerTestMock,
             erc20Token: _erc20Token,
