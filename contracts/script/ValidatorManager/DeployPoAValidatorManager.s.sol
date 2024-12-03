@@ -5,20 +5,23 @@ pragma solidity 0.8.25;
 
 import {ValidatorManagerSettings} from
     "../../lib/teleporter/contracts/validator-manager/interfaces/IValidatorManager.sol";
-import {
-    BalancerValidatorManager,
-    BalancerValidatorManagerSettings
-} from "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
+import {PoAValidatorManager} from "@avalabs/teleporter/validator-manager/PoAValidatorManager.sol";
+import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
+import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 import {Script} from "forge-std/Script.sol";
 
-contract DeployBalancerValidatorManager is Script {
-    function run(
-        address initialSecurityModule,
-        uint64 initialSecurityModuleWeight,
-        bytes[] calldata migratedValidators
-    ) external returns (address) {
+/**
+ * @dev Deploy a test PoA Validator Manager
+ * @dev DO NOT USE THIS IN PRODUCTION
+ */
+contract DeployTestPoAValidatorManager is Script {
+    function run() external returns (address) {
+        // Revert if not on Anvil
+        if (block.chainid != 31_337) {
+            revert("Not on Anvil");
+        }
+
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 proxyAdminOwnerKey,
@@ -37,18 +40,13 @@ contract DeployBalancerValidatorManager is Script {
             churnPeriodSeconds: churnPeriodSeconds,
             maximumChurnPercentage: maximumChurnPercentage
         });
-        BalancerValidatorManagerSettings memory balancerSettings = BalancerValidatorManagerSettings({
-            baseSettings: settings,
-            initialOwner: validatorManagerOwnerAddress,
-            initialSecurityModule: initialSecurityModule,
-            initialSecurityModuleMaxWeight: initialSecurityModuleWeight,
-            migratedValidators: migratedValidators
-        });
 
-        address proxy = Upgrades.deployTransparentProxy(
-            "BalancerValidatorManager.sol:BalancerValidatorManager",
+        PoAValidatorManager validatorSetManager = new PoAValidatorManager(ICMInitializable.Allowed);
+
+        address proxy = UnsafeUpgrades.deployTransparentProxy(
+            address(validatorSetManager),
             proxyAdminOwnerAddress,
-            abi.encodeCall(BalancerValidatorManager.initialize, balancerSettings)
+            abi.encodeCall(PoAValidatorManager.initialize, (settings, validatorManagerOwnerAddress))
         );
 
         vm.stopBroadcast();

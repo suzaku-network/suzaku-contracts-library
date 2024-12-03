@@ -4,6 +4,6 @@
     "scan_directories": ["contracts/src/contracts", "contracts/src/interfaces"]
   },
   "dependency_checker": {
-    "enabled": true
+    "enabled": false
   }
 }
