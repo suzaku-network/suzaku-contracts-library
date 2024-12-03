@@ -1,7 +1,5 @@
-// (c) 2024, Ava Labs, Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
-
-// SPDX-License-Identifier: Ecosystem
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
 pragma solidity 0.8.25;
 
