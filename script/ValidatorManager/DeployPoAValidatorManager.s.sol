@@ -3,10 +3,10 @@
 
 pragma solidity 0.8.25;
 
-import {ValidatorManagerSettings} from
-    "../../lib/teleporter/contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {PoAValidatorManager} from "@avalabs/teleporter/validator-manager/PoAValidatorManager.sol";
+import {ValidatorManagerSettings} from
+    "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 import {Script} from "forge-std/Script.sol";

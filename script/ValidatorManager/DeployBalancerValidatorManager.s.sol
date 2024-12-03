@@ -3,8 +3,6 @@
 
 pragma solidity 0.8.25;
 
-import {ValidatorManagerSettings} from
-    "../../lib/teleporter/contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {
     BalancerValidatorManager,
     BalancerValidatorManagerSettings
@@ -12,6 +10,8 @@ import {
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
+import {ValidatorManagerSettings} from
+    "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
