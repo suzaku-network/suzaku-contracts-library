@@ -14,39 +14,25 @@ import {
 import {TeleporterMessage, TeleporterMessageReceipt} from "@teleporter/ITeleporterMessenger.sol";
 
 contract WarpMessengerTestMock {
-    bytes32 private immutable homeChainID;
-    bytes32 private immutable remoteChainID;
-    bytes32 private immutable messageID;
-    uint256 private immutable initialReserveImbalance;
-    uint8 private immutable homeTokenDecimals;
-    uint8 private immutable remoteTokenDecimals;
-    address private immutable teleporterMessengerAddress;
+    bytes32 private immutable homeChainID =
+        0x7a69000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private immutable remoteChainID =
+        0x1000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private immutable messageID =
+        0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
+    uint256 private immutable initialReserveImbalance = 0;
+    uint8 private immutable homeTokenDecimals = 18;
+    uint8 private immutable remoteTokenDecimals = 18;
+    address private immutable teleporterMessengerAddress =
+        0xF2E246BB76DF876Cef8b38ae84130F4F55De395b;
     address private immutable tokenHomeAddress;
-    address private immutable tokenRemoteAddress;
-    uint256 private immutable requiredGasLimit;
+    address private immutable tokenRemoteAddress = 0x9C5d3EBEA175C8F401feAa23a4a01214DDE525b6;
+    uint256 private immutable requiredGasLimit = 10_000_000;
 
     constructor(
-        bytes32 homeChainID_,
-        bytes32 remoteChainID_,
-        bytes32 messageID_,
-        uint256 initialReserveImbalance_,
-        uint8 homeTokenDecimals_,
-        uint8 remoteTokenDecimals_,
-        address teleporterMessengerAddress_,
-        address tokenHomeAddress_,
-        address tokenRemoteAddress_,
-        uint256 requiredGasLimit_
+        address tokenHomeAddress_
     ) {
-        homeChainID = homeChainID_;
-        remoteChainID = remoteChainID_;
-        messageID = messageID_;
-        initialReserveImbalance = initialReserveImbalance_;
-        homeTokenDecimals = homeTokenDecimals_;
-        remoteTokenDecimals = remoteTokenDecimals_;
-        teleporterMessengerAddress = teleporterMessengerAddress_;
         tokenHomeAddress = tokenHomeAddress_;
-        tokenRemoteAddress = tokenRemoteAddress_;
-        requiredGasLimit = requiredGasLimit_;
     }
 
     function getBlockchainID() external view returns (bytes32) {

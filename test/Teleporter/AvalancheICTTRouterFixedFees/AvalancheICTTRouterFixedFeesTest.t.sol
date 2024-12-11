@@ -14,43 +14,31 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterFixedFeesTest is Test {
-    address private constant TOKEN_SOURCE = 0x6D411e0A54382eD43F02410Ce1c7a7c122afA6E1;
+    address private constant WARP_PRECOMPILE = 0x0200000000000000000000000000000000000005;
+
+    address private constant TOKEN_SRC = 0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7;
+
+    uint256 private constant PRIM_RELAYER_FEE_BIPS = 20;
+    uint256 private constant SEC_RELAYER_FEE_BIPS = 20;
 
     event UpdateRelayerFees(uint256 primaryRelayerFee, uint256 secondaryRelayerFee);
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 1);
+    HelperConfig4Test helperConfig = new HelperConfig4Test();
 
     uint256 deployerKey;
     address owner;
-    bytes32 messageId;
-    address warpPrecompileAddress;
-    WarpMessengerTestMock warpMessengerTestMock;
 
     AvalancheICTTRouterFixedFees tokenBridgeRouter;
 
     function setUp() external {
-        (
-            deployerKey,
-            owner,
-            ,
-            messageId,
-            warpPrecompileAddress,
-            warpMessengerTestMock,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            tokenBridgeRouter,
-            ,
-            ,
-            ,
-            ,
-        ) = helperConfig.activeNetworkConfigTest();
+        (deployerKey, owner,) = helperConfig.activeNetworkConfigTest();
 
-        vm.etch(warpPrecompileAddress, address(warpMessengerTestMock).code);
+        WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(TOKEN_SRC);
+        vm.etch(WARP_PRECOMPILE, address(warpMessengerTestMock).code);
+        vm.startBroadcast(deployerKey);
+        tokenBridgeRouter =
+            new AvalancheICTTRouterFixedFees(PRIM_RELAYER_FEE_BIPS, SEC_RELAYER_FEE_BIPS);
+        vm.stopBroadcast();
     }
 
     function testSetRelayerFees() public {
@@ -58,14 +46,14 @@ contract AvalancheICTTRouterFixedFeesTest is Test {
         (uint256 primaryRelayerFeeBipsStart, uint256 secondaryRelayerFeeBipsStart) =
             tokenBridgeRouter.getRelayerFeesBips();
 
-        tokenBridgeRouter.updateRelayerFeesBips(50, 20);
+        tokenBridgeRouter.updateRelayerFeesBips(50, 30);
 
         (uint256 primaryRelayerFeeBipsEnd, uint256 secondaryRelayerFeeBipsEnd) =
             tokenBridgeRouter.getRelayerFeesBips();
 
         assert(primaryRelayerFeeBipsStart != primaryRelayerFeeBipsEnd);
         assert(secondaryRelayerFeeBipsStart != secondaryRelayerFeeBipsEnd);
-        assert(primaryRelayerFeeBipsEnd == 50 && secondaryRelayerFeeBipsEnd == 20);
+        assert(primaryRelayerFeeBipsEnd == 50 && secondaryRelayerFeeBipsEnd == 30);
         vm.stopPrank();
     }
 

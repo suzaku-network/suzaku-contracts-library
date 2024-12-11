@@ -9,12 +9,36 @@ import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalanch
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
 import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
+
 import {IERC20} from "@openzeppelin/contracts@4.8.1/interfaces/IERC20.sol";
+import {TeleporterMessenger} from "@teleporter/TeleporterMessenger.sol";
+import {
+    ProtocolRegistryEntry, TeleporterRegistry
+} from "@teleporter/upgrades/TeleporterRegistry.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterNativeTokenTest is Test {
-    address private constant TOKEN_SOURCE = 0x5CF7F96627F3C9903763d128A1cc5D97556A6b99;
+    address private constant WARP_PRECOMPILE = 0x0200000000000000000000000000000000000005;
+
+    bytes32 private constant SRC_CHAIN_HEX =
+        0x7a69000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private constant DEST_CHAIN_HEX =
+        0x1000000000000000000000000000000000000000000000000000000000000000;
+
+    address private constant TOKEN_SRC = 0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7;
+    address private constant TOKEN_DEST = 0x9C5d3EBEA175C8F401feAa23a4a01214DDE525b6;
+
+    uint256 private constant PRIM_RELAYER_FEE = 0.01 ether;
+    uint256 private constant SEC_RELAYER_FEE = 0.01 ether;
+
+    uint256 private constant REQ_GAS_LIMIT = 10_000_000;
+    uint256 private constant REC_GAS_LIMIT = 100_000;
+
+    address private constant MULTIHOP_ADDR = address(0);
+
+    uint256 private constant AMOUNT = 1 ether;
+    uint256 private constant STARTING_GAS_BALANCE = 10 ether;
 
     event BridgeNative(
         bytes32 indexed destinationChainID,
@@ -32,66 +56,48 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         uint256 secondaryRelayerFee
     );
 
-    HelperConfig4Test helperConfig = new HelperConfig4Test(TOKEN_SOURCE, 0);
+    HelperConfig4Test helperConfig = new HelperConfig4Test();
 
     uint256 deployerKey;
     address owner;
     address bridger;
-    bytes32 messageId;
-    address warpPrecompileAddress;
-    WarpMessengerTestMock warpMessengerTestMock;
 
     address token = address(0);
     WrappedNativeToken wrappedNativeToken;
 
-    NativeTokenHome nativeTokenSource;
-    address tokenDestination;
+    NativeTokenHome tokenSrc;
     AvalancheICTTRouter tokenBridgeRouter;
-    bytes32 sourceChainID;
-    bytes32 destinationChainID;
 
-    uint256 primaryRelayerFee;
-    uint256 secondaryRelayerFee;
-    uint256 amount;
-
-    uint256 requiredGasLimit = 10_000_000;
-    uint256 recipientGasLimit = 100_000;
-    address multihopFallBackAddress = address(0);
-
-    uint256 constant STARTING_GAS_BALANCE = 10 ether;
+    ProtocolRegistryEntry[] protocolRegistryEntry;
 
     function setUp() external {
-        (
-            deployerKey,
-            owner,
-            bridger,
-            messageId,
-            warpPrecompileAddress,
-            warpMessengerTestMock,
-            ,
-            wrappedNativeToken,
-            ,
-            ,
-            nativeTokenSource,
-            tokenDestination,
-            tokenBridgeRouter,
-            ,
-            sourceChainID,
-            destinationChainID,
-            primaryRelayerFee,
-            secondaryRelayerFee,
-            amount
-        ) = helperConfig.activeNetworkConfigTest();
-        vm.deal(bridger, STARTING_GAS_BALANCE);
+        (deployerKey, owner, bridger) = helperConfig.activeNetworkConfigTest();
 
-        vm.etch(warpPrecompileAddress, address(warpMessengerTestMock).code);
+        WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(TOKEN_SRC);
+        vm.etch(WARP_PRECOMPILE, address(warpMessengerTestMock).code);
+
+        wrappedNativeToken = new WrappedNativeToken("WNTT");
+
+        vm.startBroadcast(deployerKey);
+        TeleporterMessenger teleporterMessenger = new TeleporterMessenger();
+        protocolRegistryEntry.push(ProtocolRegistryEntry(1, address(teleporterMessenger)));
+        TeleporterRegistry teleporterRegistry = new TeleporterRegistry(protocolRegistryEntry);
+
+        tokenSrc =
+            new NativeTokenHome(address(teleporterRegistry), owner, address(wrappedNativeToken));
+        tokenBridgeRouter = new AvalancheICTTRouter();
+        vm.stopBroadcast();
+
+        teleporterMessenger.receiveCrossChainMessage(1, address(0));
+
+        vm.deal(bridger, STARTING_GAS_BALANCE);
     }
 
     modifier registerTokenBridge() {
         vm.startPrank(owner);
-        tokenBridgeRouter.registerSourceTokenBridge(token, address(nativeTokenSource));
+        tokenBridgeRouter.registerSourceTokenBridge(token, address(tokenSrc));
         tokenBridgeRouter.registerDestinationTokenBridge(
-            token, destinationChainID, tokenDestination, requiredGasLimit, false
+            token, DEST_CHAIN_HEX, TOKEN_DEST, REQ_GAS_LIMIT, false
         );
         vm.stopPrank();
         _;
@@ -99,44 +105,42 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
 
     modifier fundRouterFeeToken() {
         vm.startPrank(bridger);
-        wrappedNativeToken.deposit{value: primaryRelayerFee}();
-        IERC20(address(wrappedNativeToken)).approve(address(tokenBridgeRouter), primaryRelayerFee);
+        wrappedNativeToken.deposit{value: PRIM_RELAYER_FEE}();
+        IERC20(address(wrappedNativeToken)).approve(address(tokenBridgeRouter), PRIM_RELAYER_FEE);
         _;
     }
 
     function testBalancesWhenNativeTokensSent() public registerTokenBridge fundRouterFeeToken {
         uint256 balanceBridgerStart = bridger.balance;
-        uint256 balanceBridgeStart = wrappedNativeToken.balanceOf(address(nativeTokenSource));
+        uint256 balanceBridgeStart = wrappedNativeToken.balanceOf(address(tokenSrc));
 
-        tokenBridgeRouter.bridgeNative{value: amount}(
-            destinationChainID,
+        tokenBridgeRouter.bridgeNative{value: AMOUNT}(
+            DEST_CHAIN_HEX,
             bridger,
             address(wrappedNativeToken),
-            multihopFallBackAddress,
-            primaryRelayerFee,
-            secondaryRelayerFee
+            MULTIHOP_ADDR,
+            PRIM_RELAYER_FEE,
+            SEC_RELAYER_FEE
         );
 
         uint256 balanceBridgerEnd = bridger.balance;
-        uint256 balanceBridgeEnd = wrappedNativeToken.balanceOf(address(nativeTokenSource));
-        assert(balanceBridgerStart == balanceBridgerEnd + amount);
-        assert(balanceBridgeStart == balanceBridgeEnd - amount);
+        uint256 balanceBridgeEnd = wrappedNativeToken.balanceOf(address(tokenSrc));
+        assert(balanceBridgerStart == balanceBridgerEnd + AMOUNT);
+        assert(balanceBridgeStart == balanceBridgeEnd - AMOUNT);
         vm.stopPrank();
     }
 
     function testEmitsWhenNativeTokensSent() public registerTokenBridge fundRouterFeeToken {
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeNative(
-            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
-        );
+        emit BridgeNative(DEST_CHAIN_HEX, bridger, AMOUNT, PRIM_RELAYER_FEE, SEC_RELAYER_FEE);
 
-        tokenBridgeRouter.bridgeNative{value: amount}(
-            destinationChainID,
+        tokenBridgeRouter.bridgeNative{value: AMOUNT}(
+            DEST_CHAIN_HEX,
             bridger,
             address(wrappedNativeToken),
-            multihopFallBackAddress,
-            primaryRelayerFee,
-            secondaryRelayerFee
+            MULTIHOP_ADDR,
+            PRIM_RELAYER_FEE,
+            SEC_RELAYER_FEE
         );
         vm.stopPrank();
     }
@@ -147,26 +151,26 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         fundRouterFeeToken
     {
         uint256 balanceBridgerStart = bridger.balance;
-        uint256 balanceBridgeStart = wrappedNativeToken.balanceOf(address(nativeTokenSource));
+        uint256 balanceBridgeStart = wrappedNativeToken.balanceOf(address(tokenSrc));
 
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
-        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
-            destinationChainID,
-            tokenDestination,
+        tokenBridgeRouter.bridgeAndCallNative{value: AMOUNT}(
+            DEST_CHAIN_HEX,
+            TOKEN_DEST,
             address(wrappedNativeToken),
             payload,
             bridger,
-            recipientGasLimit,
-            multihopFallBackAddress,
-            primaryRelayerFee,
-            secondaryRelayerFee
+            REC_GAS_LIMIT,
+            MULTIHOP_ADDR,
+            PRIM_RELAYER_FEE,
+            SEC_RELAYER_FEE
         );
 
         uint256 balanceBridgerEnd = bridger.balance;
-        uint256 balanceBridgeEnd = wrappedNativeToken.balanceOf(address(nativeTokenSource));
-        assert(balanceBridgerStart == balanceBridgerEnd + amount);
-        assert(balanceBridgeStart == balanceBridgeEnd - amount);
+        uint256 balanceBridgeEnd = wrappedNativeToken.balanceOf(address(tokenSrc));
+        assert(balanceBridgerStart == balanceBridgerEnd + AMOUNT);
+        assert(balanceBridgeStart == balanceBridgeEnd - AMOUNT);
         vm.stopPrank();
     }
 
@@ -178,20 +182,18 @@ contract AvalancheICTTRouterNativeTokenTest is Test {
         bytes memory payload = abi.encode("abcdefghijklmnopqrstuvwxyz");
 
         vm.expectEmit(true, false, false, false, address(tokenBridgeRouter));
-        emit BridgeAndCallNative(
-            destinationChainID, bridger, amount, primaryRelayerFee, secondaryRelayerFee
-        );
+        emit BridgeAndCallNative(DEST_CHAIN_HEX, bridger, AMOUNT, PRIM_RELAYER_FEE, SEC_RELAYER_FEE);
 
-        tokenBridgeRouter.bridgeAndCallNative{value: amount}(
-            destinationChainID,
-            tokenDestination,
+        tokenBridgeRouter.bridgeAndCallNative{value: AMOUNT}(
+            DEST_CHAIN_HEX,
+            TOKEN_DEST,
             address(wrappedNativeToken),
             payload,
             bridger,
-            recipientGasLimit,
-            multihopFallBackAddress,
-            primaryRelayerFee,
-            secondaryRelayerFee
+            REC_GAS_LIMIT,
+            MULTIHOP_ADDR,
+            PRIM_RELAYER_FEE,
+            SEC_RELAYER_FEE
         );
         vm.stopPrank();
     }
