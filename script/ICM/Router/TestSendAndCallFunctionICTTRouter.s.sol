@@ -3,9 +3,9 @@
 
 pragma solidity 0.8.25;
 
-import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {AvalancheICTTRouter} from "../../../src/contracts/ICM/AvalancheICTTRouter.sol";
 import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/ICM/IAvalancheICTTRouter.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 
 import {IERC20} from "@openzeppelin/contracts@5.0.2/interfaces/IERC20.sol";

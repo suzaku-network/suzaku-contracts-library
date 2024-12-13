@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-// Compatible with OpenZeppelin Contracts ^4.8.0
+// Compatible with OpenZeppelin Contracts 5.0.2
 
 import {DestinationBridge, IAvalancheICTTRouter} from "./IAvalancheICTTRouter.sol";
 
@@ -46,8 +46,8 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param bridgeAddress Address of the destination bridge contract
      * @param requiredGasLimit Gas limit requirement for sending to a token bridge
      * @param isMultihop True if this bridge is a multihop one
-     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the Teleporter message fee
-     * @param minSecondaryRelayerFee Minimal amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the ICM fee
+     * @param minSecondaryRelayerFee Minimal amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     function registerDestinationTokenBridge(
         address tokenAddress,

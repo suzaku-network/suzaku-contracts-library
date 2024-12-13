@@ -4,11 +4,11 @@
 pragma solidity 0.8.25;
 
 import {AvalancheICTTRouterFixedFees} from
-    "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
+    "../../../src/contracts/ICM/AvalancheICTTRouterFixedFees.sol";
 
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {IAvalancheICTTRouterFixedFees} from
-    "../../../src/interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
+    "../../../src/interfaces/ICM/IAvalancheICTTRouterFixedFees.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";

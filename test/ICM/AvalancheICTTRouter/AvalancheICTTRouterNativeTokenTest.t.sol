@@ -3,9 +3,9 @@
 
 pragma solidity 0.8.25;
 
-import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {AvalancheICTTRouter} from "../../../src/contracts/ICM/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/ICM/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 
 import {NativeTokenHome} from "@avalabs/icm-contracts/ictt/TokenHome/NativeTokenHome.sol";

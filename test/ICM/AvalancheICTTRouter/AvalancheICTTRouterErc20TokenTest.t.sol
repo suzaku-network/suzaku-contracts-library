@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.25;
 
-import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
+import {AvalancheICTTRouter} from "../../../src/contracts/ICM/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 

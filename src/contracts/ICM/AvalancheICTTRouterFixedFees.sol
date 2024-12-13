@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-// Compatible with OpenZeppelin Contracts ^4.8.0
+// Compatible with OpenZeppelin Contracts 5.0.2
 
 pragma solidity 0.8.25;
 
 import {
-    DestinationBridge,
-    IAvalancheICTTRouter
-} from "../../interfaces/Teleporter/IAvalancheICTTRouter.sol";
+    DestinationBridge, IAvalancheICTTRouter
+} from "../../interfaces/ICM/IAvalancheICTTRouter.sol";
 import {
     IAvalancheICTTRouterFixedFees,
     MinBridgeFees
-} from "../../interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
+} from "../../interfaces/ICM/IAvalancheICTTRouterFixedFees.sol";
 import {AvalancheICTTRouter} from "./AvalancheICTTRouter.sol";
 
 import {WrappedNativeToken} from "@avalabs/icm-contracts/ictt/WrappedNativeToken.sol";

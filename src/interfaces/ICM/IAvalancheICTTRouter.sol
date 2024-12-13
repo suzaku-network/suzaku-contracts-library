@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-// Compatible with OpenZeppelin Contracts ^4.8.0
+// Compatible with OpenZeppelin Contracts 5.0.2
 
 pragma solidity 0.8.25;
 
@@ -64,8 +64,8 @@ interface IAvalancheICTTRouter {
      * @param destinationBlockchainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     event BridgeERC20(
         address indexed tokenAddress,
@@ -82,8 +82,8 @@ interface IAvalancheICTTRouter {
      * @param destinationBlockchainID ID of the destination chain
      * @param recipient Address of the contract receiving the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     event BridgeAndCallERC20(
         address indexed tokenAddress,
@@ -99,8 +99,8 @@ interface IAvalancheICTTRouter {
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     event BridgeNative(
         bytes32 indexed destinationChainID,
@@ -115,8 +115,8 @@ interface IAvalancheICTTRouter {
      * @param destinationChainID ID of the destination chain
      * @param recipient Address of the receiver of the tokens
      * @param amount Amount of token bridged
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     event BridgeAndCallNative(
         bytes32 indexed destinationChainID,
@@ -175,8 +175,8 @@ interface IAvalancheICTTRouter {
      * @param recipient Address of the receiver of the tokens
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     function bridgeERC20(
         address tokenAddress,
@@ -200,8 +200,8 @@ interface IAvalancheICTTRouter {
      * @param recipientGasLimit Gas amount provided to the recipient contract
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
      * @param primaryFeeTokenAddress Address of the token used to pay the primary relayer fee
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     function bridgeAndCallERC20(
         address tokenAddress,
@@ -223,8 +223,8 @@ interface IAvalancheICTTRouter {
      * @param recipient Address of the receiver of the tokens
      * @param primaryFeeTokenAddress Address of the fee token
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     function bridgeNative(
         bytes32 destinationChainID,
@@ -244,8 +244,8 @@ interface IAvalancheICTTRouter {
      * @param recipientFallback Address that will receive the amount bridged in the case of a contract call fail
      * @param recipientGasLimit Gas amount provided to the recipient contract
      * @param multiHopFallback Address that will receive the amount bridged in the case of a multihop disfunction
-     * @param primaryRelayerFee Amount of tokens to pay as the optional Teleporter message fee
-     * @param secondaryRelayerFee Amount of tokens to pay for Teleporter fee if a multi-hop is needed
+     * @param primaryRelayerFee Amount of tokens to pay as the optional ICM fee
+     * @param secondaryRelayerFee Amount of tokens to pay for ICM fee if a multi-hop is needed
      */
     function bridgeAndCallNative(
         bytes32 destinationChainID,

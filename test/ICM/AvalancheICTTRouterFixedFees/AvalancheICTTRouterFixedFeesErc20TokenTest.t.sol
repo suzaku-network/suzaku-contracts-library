@@ -4,13 +4,13 @@
 pragma solidity 0.8.25;
 
 import {AvalancheICTTRouterFixedFees} from
-    "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
+    "../../../src/contracts/ICM/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
-import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
+import {IAvalancheICTTRouter} from "../../../src/interfaces/ICM/IAvalancheICTTRouter.sol";
 import {
     IAvalancheICTTRouterFixedFees,
     MinBridgeFees
-} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouterFixedFees.sol";
+} from "../../../src/interfaces/ICM/IAvalancheICTTRouterFixedFees.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
 
 import {ERC20TokenHome} from "@avalabs/icm-contracts/ictt/TokenHome/ERC20TokenHome.sol";

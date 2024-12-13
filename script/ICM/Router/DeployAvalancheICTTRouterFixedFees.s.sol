@@ -4,7 +4,7 @@
 pragma solidity 0.8.25;
 
 import {AvalancheICTTRouterFixedFees} from
-    "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
+    "../../../src/contracts/ICM/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 
