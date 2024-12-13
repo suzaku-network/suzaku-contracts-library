@@ -128,7 +128,7 @@ contract AvalancheICTTRouterFixedFees is
 
         uint256 primaryFeeAmount = (adjustedAmount * primaryRelayerFeeBips) / BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
-            ? (amount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
+            ? (adjustedAmount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
 
         if (
@@ -191,7 +191,7 @@ contract AvalancheICTTRouterFixedFees is
 
         uint256 primaryFeeAmount = (adjustedAmount * primaryRelayerFeeBips) / BASIS_POINTS_DIVIDER;
         uint256 secondaryFeeAmount = destinationBridge.isMultihop
-            ? (amount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
+            ? (adjustedAmount * secondaryRelayerFeeBips) / BASIS_POINTS_DIVIDER
             : 0;
 
         if (
@@ -264,8 +264,14 @@ contract AvalancheICTTRouterFixedFees is
             );
         }
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, primaryFeeAmount);
-        WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
+        WrappedNativeToken wrappedFeeToken = WrappedNativeToken(payable(feeToken));
+        uint256 wrappedNativeBalance = wrappedFeeToken.balanceOf(address(this));
+        wrappedFeeToken.deposit{value: primaryFeeAmount}();
+        wrappedNativeBalance = wrappedFeeToken.balanceOf(address(this)) - wrappedNativeBalance;
+
+        if (wrappedNativeBalance > 0) {
+            SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, wrappedNativeBalance);
+        }
 
         uint256 bridgeAmount = msg.value - primaryFeeAmount;
 
@@ -319,8 +325,14 @@ contract AvalancheICTTRouterFixedFees is
             );
         }
 
-        SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, primaryFeeAmount);
-        WrappedNativeToken(payable(feeToken)).deposit{value: primaryFeeAmount}();
+        WrappedNativeToken wrappedFeeToken = WrappedNativeToken(payable(feeToken));
+        uint256 wrappedNativeBalance = wrappedFeeToken.balanceOf(address(this));
+        wrappedFeeToken.deposit{value: primaryFeeAmount}();
+        wrappedNativeBalance = wrappedFeeToken.balanceOf(address(this)) - wrappedNativeBalance;
+
+        if (wrappedNativeBalance > 0) {
+            SafeERC20.safeIncreaseAllowance(IERC20(feeToken), bridgeSource, wrappedNativeBalance);
+        }
 
         uint256 bridgeAmount = msg.value - primaryFeeAmount;
 
@@ -347,6 +359,14 @@ contract AvalancheICTTRouterFixedFees is
     /// @inheritdoc IAvalancheICTTRouterFixedFees
     function getRelayerFeesBips() external view returns (uint256, uint256) {
         return (primaryRelayerFeeBips, secondaryRelayerFeeBips);
+    }
+
+    /// @inheritdoc IAvalancheICTTRouterFixedFees
+    function getMinBridgeFeesForTokenOnDestinationChain(
+        bytes32 chainID,
+        address token
+    ) external view returns (MinBridgeFees memory) {
+        return destinationChainTokenToMinBridgeFees[chainID][token];
     }
 
     /// @notice Always revert as you need to input minimal bridge fees for a token on a destination chain

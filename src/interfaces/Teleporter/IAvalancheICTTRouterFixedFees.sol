@@ -77,6 +77,17 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
     function getRelayerFeesBips() external view returns (uint256, uint256);
 
     /**
+     * @notice Get the minimum required fees to bridge a specific token to a given destination chain
+     * @param chainID The ID of the destination chain
+     * @param token The address of the token to be bridged
+     * @return A struct containing the minimum primary and secondary relayer fees for the token on the destination chain
+     */
+    function getMinBridgeFeesForTokenOnDestinationChain(
+        bytes32 chainID,
+        address token
+    ) external view returns (MinBridgeFees memory);
+
+    /**
      * @notice Bridge ERC20 token to a destination chain. The relayer fees are set by the contract.
      * @param tokenAddress Address of the ERC20 token contract
      * @param destinationChainID ID of the destination chain
