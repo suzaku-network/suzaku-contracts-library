@@ -11,8 +11,7 @@ import {BalancerValidatorManager} from
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {IWarpMessenger} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+
 import {
     ConversionData,
     InitialValidator,
@@ -20,7 +19,9 @@ import {
     Validator,
     ValidatorRegistrationInput,
     ValidatorStatus
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+import {IWarpMessenger} from
+    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract BalancerValidatorManagerTest is Test {
@@ -28,7 +29,7 @@ contract BalancerValidatorManagerTest is Test {
     BalancerValidatorManager validatorManager;
     uint256 validatorManagerOwnerKey;
     address validatorManagerOwnerAddress;
-    bytes32 subnetID;
+    bytes32 l1ID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
     address[] testSecurityModules;
@@ -63,7 +64,7 @@ contract BalancerValidatorManagerTest is Test {
         deployer = new DeployBalancerValidatorManager();
 
         HelperConfig helperConfig = new HelperConfig();
-        (, validatorManagerOwnerKey, subnetID, churnPeriodSeconds, maximumChurnPercentage) =
+        (, validatorManagerOwnerKey, l1ID, churnPeriodSeconds, maximumChurnPercentage) =
             helperConfig.activeNetworkConfig();
         validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
@@ -148,7 +149,7 @@ contract BalancerValidatorManagerTest is Test {
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            subnetID: subnetID,
+            l1ID: l1ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: address(validatorManager),
             initialValidators: initialValidators

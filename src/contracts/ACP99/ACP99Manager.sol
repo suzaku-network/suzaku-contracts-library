@@ -17,18 +17,19 @@ import {
     ValidatorRegistrationInfo,
     ValidatorWeightChangeInfo
 } from "../../interfaces/ACP99/IACP99SecurityModule.sol";
+
+import {
+    ConversionData,
+    ValidatorMessages
+} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
+import {
+    InitialValidator,
+    PChainOwner
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {
     IWarpMessenger,
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {
-    ConversionData,
-    ValidatorMessages
-} from "@avalabs/teleporter/validator-manager/ValidatorMessages.sol";
-import {
-    InitialValidator,
-    PChainOwner
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts@5.0.2/access/Ownable2Step.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
@@ -49,8 +50,8 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     /// @notice The WarpMessenger contract
     IWarpMessenger private immutable warpMessenger;
 
-    /// @notice The ID of the Subnet tied to this manager
-    bytes32 public immutable subnetID;
+    /// @notice The ID of the L1 tied to this manager
+    bytes32 public immutable l1ID;
 
     /// @notice The address of the security module attached to this manager
     IACP99SecurityModule private securityModule;
@@ -84,13 +85,13 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         _;
     }
 
-    constructor(bytes32 subnetID_, address securityModule_) Ownable(msg.sender) {
+    constructor(bytes32 l1ID_, address securityModule_) Ownable(msg.sender) {
         if (securityModule_ == address(0)) {
             revert ACP99Manager__ZeroAddressSecurityModule();
         }
 
         warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDR);
-        subnetID = subnetID_;
+        l1ID = l1ID_;
         securityModule = IACP99SecurityModule(securityModule_);
     }
 
@@ -139,7 +140,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
             // Validation ID of the initial validators is the sha256 hash of the
             // Subnet ID and the index of the initial validator.
-            bytes32 validationID = sha256(abi.encodePacked(conversionData.subnetID, i));
+            bytes32 validationID = sha256(abi.encodePacked(conversionData.l1ID, i));
 
             // Save the initial validator as an active validator.
 
@@ -211,7 +212,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         (bytes32 validationID, bytes memory registrationMessage) = ValidatorMessages
             .packRegisterL1ValidatorMessage(
             ValidatorMessages.ValidationPeriod({
-                subnetID: subnetID,
+                l1ID: l1ID,
                 nodeID: nodeID,
                 blsPublicKey: blsPublicKey,
                 registrationExpiry: registrationExpiry,
@@ -575,5 +576,13 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         bytes memory nodeID
     ) external view returns (bytes32[] memory) {
         return l1ValidatorValidations[bytes32(nodeID)];
+    }
+
+    /// @inheritdoc IACP99Manager
+    function getL1ID() external view override returns (bytes32) {}
+
+    /// @inheritdoc IACP99Manager
+    function getL1TotalWeight() external view override returns (uint64) {
+        return l1TotalWeight;
     }
 }

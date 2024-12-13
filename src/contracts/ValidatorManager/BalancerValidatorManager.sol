@@ -7,15 +7,15 @@ import {
     BalancerValidatorManagerSettings,
     IBalancerValidatorManager
 } from "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {ValidatorManager} from "@avalabs/teleporter/validator-manager/ValidatorManager.sol";
-import {ValidatorMessages} from "@avalabs/teleporter/validator-manager/ValidatorMessages.sol";
+import {ValidatorManager} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {
     IValidatorManager,
     Validator,
     ValidatorManagerSettings,
     ValidatorRegistrationInput,
     ValidatorStatus
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";

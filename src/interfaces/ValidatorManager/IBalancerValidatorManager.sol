@@ -7,7 +7,7 @@ import {
     IValidatorManager,
     ValidatorManagerSettings,
     ValidatorRegistrationInput
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 
 /**
  * @dev Balancer Validator Manager settings, used to initialize the Balancer Validator Manager

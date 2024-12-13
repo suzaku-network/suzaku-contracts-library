@@ -6,12 +6,12 @@ pragma solidity 0.8.25;
 import {IBalancerValidatorManager} from
     "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {IPoAValidatorManager} from
-    "@avalabs/teleporter/validator-manager/interfaces/IPoAValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/interfaces/IPoAValidatorManager.sol";
 import {
     ConversionData,
     IValidatorManager,
     ValidatorRegistrationInput
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 
 /**

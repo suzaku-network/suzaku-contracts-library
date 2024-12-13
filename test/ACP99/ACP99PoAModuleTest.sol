@@ -19,7 +19,8 @@ import {
     ValidatorWeightChangeInfo
 } from "../../src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol";
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
-import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+import {PChainOwner} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract ACP99PoAModuleTest is Test {
@@ -45,12 +46,12 @@ contract ACP99PoAModuleTest is Test {
     ACP99PoAModule poaModule;
     uint256 deployerKey;
     address deployerAddress;
-    bytes32 subnetID;
+    bytes32 l1ID;
     ACP99Manager manager;
 
     function setUp() external {
         HelperConfig helperConfig = new HelperConfig();
-        (deployerKey, subnetID) = helperConfig.activeNetworkConfig();
+        (deployerKey, l1ID) = helperConfig.activeNetworkConfig();
         deployerAddress = vm.addr(deployerKey);
 
         DeployACP99PoAModule poaModuleDeployer = new DeployACP99PoAModule();

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {WarpMessengerMock} from "../../src/contracts/mocks/WarpMessengerMock.sol";
+
 import {Script, console} from "forge-std/Script.sol";
 
 contract HelperConfig is Script {

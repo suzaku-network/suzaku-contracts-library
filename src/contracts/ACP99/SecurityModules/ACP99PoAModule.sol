@@ -9,7 +9,8 @@ import {
     ValidatorRegistrationInfo,
     ValidatorWeightChangeInfo
 } from "../../../interfaces/ACP99/IACP99SecurityModule.sol";
-import {PChainOwner} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+import {PChainOwner} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts@5.0.2/access/Ownable2Step.sol";
 

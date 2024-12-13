@@ -3,7 +3,7 @@
 
 // Compatible with OpenZeppelin Contracts ^4.8.0
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 struct DestinationBridge {
     address bridgeAddress;

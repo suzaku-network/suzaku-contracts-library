@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
-
-import {WarpMessage} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+pragma solidity 0.8.25;
 
 import {
     RegisterRemoteMessage,
     TransferrerMessage,
     TransferrerMessageType
-} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
-import {TeleporterMessage, TeleporterMessageReceipt} from "@teleporter/ITeleporterMessenger.sol";
+} from "@avalabs/icm-contracts/ictt/interfaces/ITokenTransferrer.sol";
+import {
+    TeleporterMessage,
+    TeleporterMessageReceipt
+} from "@avalabs/icm-contracts/teleporter/ITeleporterMessenger.sol";
+import {WarpMessage} from
+    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 
 contract WarpMessengerTestMock {
     bytes32 private immutable homeChainID =
@@ -35,13 +37,13 @@ contract WarpMessengerTestMock {
         tokenHomeAddress = tokenHomeAddress_;
     }
 
-    function getBlockchainID() external view returns (bytes32) {
+    function getBlockchainID() external pure returns (bytes32) {
         return homeChainID;
     }
 
     function sendWarpMessage(
         bytes calldata
-    ) external view returns (bytes32) {
+    ) external pure returns (bytes32) {
         return messageID;
     }
 

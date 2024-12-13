@@ -3,29 +3,33 @@
 
 // Compatible with OpenZeppelin Contracts ^4.8.0
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {
     DestinationBridge,
     IAvalancheICTTRouter
 } from "../../interfaces/Teleporter/IAvalancheICTTRouter.sol";
-import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
-import {IERC20TokenTransferrer} from "@avalabs/avalanche-ictt/interfaces/IERC20TokenTransferrer.sol";
+
+import {WrappedNativeToken} from "@avalabs/icm-contracts/ictt/WrappedNativeToken.sol";
+import {IERC20TokenTransferrer} from
+    "@avalabs/icm-contracts/ictt/interfaces/IERC20TokenTransferrer.sol";
 import {INativeTokenTransferrer} from
-    "@avalabs/avalanche-ictt/interfaces/INativeTokenTransferrer.sol";
+    "@avalabs/icm-contracts/ictt/interfaces/INativeTokenTransferrer.sol";
 import {
     SendAndCallInput,
     SendTokensInput
-} from "@avalabs/avalanche-ictt/interfaces/ITokenTransferrer.sol";
+} from "@avalabs/icm-contracts/ictt/interfaces/ITokenTransferrer.sol";
+
+import {SafeERC20TransferFrom} from "@avalabs/icm-contracts/utilities/SafeERC20TransferFrom.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {Ownable} from "@openzeppelin/contracts@4.8.1/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts@4.8.1/security/ReentrancyGuard.sol";
-import {IERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts@4.8.1/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts@4.8.1/utils/Address.sol";
-import {EnumerableSet} from "@openzeppelin/contracts@4.8.1/utils/structs/EnumerableSet.sol";
-import {SafeERC20TransferFrom} from "@teleporter/SafeERC20TransferFrom.sol";
+import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
+
+import {IERC20} from "@openzeppelin/contracts@5.0.2/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts@5.0.2/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts@5.0.2/utils/Address.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts@5.0.2/utils/ReentrancyGuard.sol";
+import {EnumerableSet} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableSet.sol";
 
 /**
  * @title AvalancheICTTRouter
@@ -65,7 +69,9 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
     /// @notice Router chain ID
     bytes32 internal immutable routerChainID;
 
-    constructor() {
+    constructor(
+        address initialOwner
+    ) Ownable(initialOwner) {
         routerChainID = IWarpMessenger(0x0200000000000000000000000000000000000005).getBlockchainID();
     }
 
@@ -74,10 +80,10 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         address tokenAddress,
         address bridgeAddress
     ) external onlyOwner {
-        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
+        if (tokenAddress != address(0) && tokenAddress.code.length == 0) {
             revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
         }
-        if (!bridgeAddress.isContract()) {
+        if (bridgeAddress.code.length == 0) {
             revert AvalancheICTTRouter__BridgeAddrNotAContract(bridgeAddress);
         }
         tokenToSourceBridge[tokenAddress] = bridgeAddress;
@@ -357,7 +363,7 @@ contract AvalancheICTTRouter is Ownable, ReentrancyGuard, IAvalancheICTTRouter {
         uint256 requiredGasLimit,
         bool isMultihop
     ) internal {
-        if (tokenAddress != address(0) && !tokenAddress.isContract()) {
+        if (tokenAddress != address(0) && tokenAddress.code.length == 0) {
             revert AvalancheICTTRouter__TokenAddrNotAContract(tokenAddress);
         }
         if (bridgeAddress == address(0)) {

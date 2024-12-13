@@ -10,8 +10,9 @@ import {
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
+
 import {ValidatorManagerSettings} from
-    "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -25,7 +26,7 @@ contract DeployBalancerValidatorManager is Script {
         (
             uint256 proxyAdminOwnerKey,
             uint256 validatorManagerOwnerKey,
-            bytes32 subnetID,
+            bytes32 l1ID,
             uint64 churnPeriodSeconds,
             uint8 maximumChurnPercentage
         ) = helperConfig.activeNetworkConfig();
@@ -44,7 +45,7 @@ contract DeployBalancerValidatorManager is Script {
         vm.startBroadcast(proxyAdminOwnerKey);
 
         ValidatorManagerSettings memory settings = ValidatorManagerSettings({
-            subnetID: subnetID,
+            l1ID: l1ID,
             churnPeriodSeconds: churnPeriodSeconds,
             maximumChurnPercentage: maximumChurnPercentage
         });

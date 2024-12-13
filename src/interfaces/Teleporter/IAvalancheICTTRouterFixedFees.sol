@@ -5,7 +5,7 @@
 
 import {DestinationBridge, IAvalancheICTTRouter} from "./IAvalancheICTTRouter.sol";
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 struct MinBridgeFees {
     uint256 minPrimaryRelayerFee;

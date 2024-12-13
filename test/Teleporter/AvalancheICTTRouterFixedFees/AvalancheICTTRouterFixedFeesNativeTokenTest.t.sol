@@ -1,26 +1,27 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
-import {NativeTokenHome} from "@avalabs/avalanche-ictt/TokenHome/NativeTokenHome.sol";
-import {WrappedNativeToken} from "@avalabs/avalanche-ictt/WrappedNativeToken.sol";
-import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
-import {SafeMath} from "@openzeppelin/contracts@4.8.1/utils/math/SafeMath.sol";
-import {TeleporterMessenger} from "@teleporter/TeleporterMessenger.sol";
+
+import {NativeTokenHome} from "@avalabs/icm-contracts/ictt/TokenHome/NativeTokenHome.sol";
+import {WrappedNativeToken} from "@avalabs/icm-contracts/ictt/WrappedNativeToken.sol";
+import {TeleporterMessenger} from "@avalabs/icm-contracts/teleporter/TeleporterMessenger.sol";
 import {
-    ProtocolRegistryEntry, TeleporterRegistry
-} from "@teleporter/upgrades/TeleporterRegistry.sol";
+    ProtocolRegistryEntry,
+    TeleporterRegistry
+} from "@avalabs/icm-contracts/teleporter/registry/TeleporterRegistry.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
     address private constant WARP_PRECOMPILE = 0x0200000000000000000000000000000000000005;
+    uint256 private constant MIN_TELEPORTER_VERSION = 1;
 
     bytes32 private constant SRC_CHAIN_HEX =
         0x7a69000000000000000000000000000000000000000000000000000000000000;
@@ -86,10 +87,11 @@ contract AvalancheICTTRouterFixedFeesNativeTokenTest is Test {
         protocolRegistryEntry.push(ProtocolRegistryEntry(1, address(teleporterMessenger)));
         TeleporterRegistry teleporterRegistry = new TeleporterRegistry(protocolRegistryEntry);
 
-        tokenSrc =
-            new NativeTokenHome(address(teleporterRegistry), owner, address(wrappedNativeToken));
+        tokenSrc = new NativeTokenHome(
+            address(teleporterRegistry), owner, MIN_TELEPORTER_VERSION, address(wrappedNativeToken)
+        );
         tokenBridgeRouter =
-            new AvalancheICTTRouterFixedFees(PRIM_RELAYER_FEE_BIPS, SEC_RELAYER_FEE_BIPS);
+            new AvalancheICTTRouterFixedFees(PRIM_RELAYER_FEE_BIPS, SEC_RELAYER_FEE_BIPS, owner);
         vm.stopBroadcast();
 
         teleporterMessenger.receiveCrossChainMessage(1, address(0));

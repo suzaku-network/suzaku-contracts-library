@@ -7,11 +7,11 @@ import {IACP99SecurityModule} from "./IACP99SecurityModule.sol";
 import {
     ConversionData,
     ValidatorMessages
-} from "@avalabs/teleporter/validator-manager/ValidatorMessages.sol";
+} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {
     InitialValidator,
     PChainOwner
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 
 /// @notice L1 validation status
 enum ValidationStatus {
@@ -128,7 +128,7 @@ interface IACP99Manager {
     error ACP99Manager__InvalidSetL1ValidatorWeightNonce(uint64 nonce, uint64 currentNonce);
 
     /// @notice Get the ID of the Subnet tied to this manager
-    function subnetID() external view returns (bytes32);
+    function getL1ID() external view returns (bytes32);
 
     /// @notice Get the address of the security module attached to this manager
     function getSecurityModule() external view returns (address);
@@ -152,7 +152,7 @@ interface IACP99Manager {
     function getActiveValidatorSet() external view returns (bytes32[] memory);
 
     /// @notice Get the total weight of the current L1 validator set
-    function l1TotalWeight() external view returns (uint64);
+    function getL1TotalWeight() external view returns (uint64);
 
     /// @notice Get the list of message IDs associated with an L1 validator
     function getValidatorValidations(

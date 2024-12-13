@@ -13,9 +13,8 @@ import {
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {IWarpMessenger} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {PoAValidatorManager} from "@avalabs/teleporter/validator-manager/PoAValidatorManager.sol";
+
+import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
 import {
     ConversionData,
     InitialValidator,
@@ -24,7 +23,9 @@ import {
     ValidatorManagerSettings,
     ValidatorRegistrationInput,
     ValidatorStatus
-} from "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+import {IWarpMessenger} from
+    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Test, console} from "forge-std/Test.sol";
 
@@ -35,7 +36,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     uint256 proxyAdminOwnerKey;
     uint256 validatorManagerOwnerKey;
     address validatorManagerOwnerAddress;
-    bytes32 subnetID;
+    bytes32 l1ID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
     address[] testSecurityModules;
@@ -73,7 +74,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
         (
             proxyAdminOwnerKey,
             validatorManagerOwnerKey,
-            subnetID,
+            l1ID,
             churnPeriodSeconds,
             maximumChurnPercentage
         ) = helperConfig.activeNetworkConfig();
@@ -151,7 +152,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            subnetID: subnetID,
+            l1ID: l1ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: validatorManagerProxyAddress,
             initialValidators: initialValidators
@@ -164,7 +165,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     ) private view returns (BalancerValidatorManagerSettings memory) {
         return BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
-                subnetID: subnetID,
+                l1ID: l1ID,
                 churnPeriodSeconds: churnPeriodSeconds,
                 maximumChurnPercentage: maximumChurnPercentage
             }),

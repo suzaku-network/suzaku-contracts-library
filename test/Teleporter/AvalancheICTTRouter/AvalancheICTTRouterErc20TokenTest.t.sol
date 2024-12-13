@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
 import {WarpMessengerTestMock} from "../../../src/contracts/mocks/WarpMessengerTestMock.sol";
 import {HelperConfig4Test} from "../HelperConfig4Test.t.sol";
-import {ERC20TokenHome} from "@avalabs/avalanche-ictt/TokenHome/ERC20TokenHome.sol";
-import {ERC20Mock} from "@openzeppelin/contracts@4.8.1/mocks/ERC20Mock.sol";
-import {TeleporterMessenger} from "@teleporter/TeleporterMessenger.sol";
+
+import {ERC20TokenHome} from "@avalabs/icm-contracts/ictt/TokenHome/ERC20TokenHome.sol";
+import {TeleporterMessenger} from "@avalabs/icm-contracts/teleporter/TeleporterMessenger.sol";
 import {
-    ProtocolRegistryEntry, TeleporterRegistry
-} from "@teleporter/upgrades/TeleporterRegistry.sol";
+    ProtocolRegistryEntry,
+    TeleporterRegistry
+} from "@avalabs/icm-contracts/teleporter/registry/TeleporterRegistry.sol";
+import {ERC20Mock} from "@openzeppelin/contracts@5.0.2/mocks/token/ERC20Mock.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AvalancheICTTRouterErc20TokenTest is Test {
     address private constant WARP_PRECOMPILE = 0x0200000000000000000000000000000000000005;
+    uint256 private constant MIN_TELEPORTER_VERSION = 1;
 
     bytes32 private constant SRC_CHAIN_HEX =
         0x7a69000000000000000000000000000000000000000000000000000000000000;
@@ -75,16 +78,18 @@ contract AvalancheICTTRouterErc20TokenTest is Test {
         WarpMessengerTestMock warpMessengerTestMock = new WarpMessengerTestMock(TOKEN_SRC);
         vm.etch(WARP_PRECOMPILE, address(warpMessengerTestMock).code);
 
-        erc20Token = new ERC20Mock("ERC20Mock", "ERC20M", makeAddr("mockRecipient"), 0);
-        feeToken = new ERC20Mock("FeeTokenMock", "FTKMock", makeAddr("feeTokenHolder"), 0);
+        erc20Token = new ERC20Mock();
+        feeToken = new ERC20Mock();
 
         vm.startBroadcast(deployerKey);
         TeleporterMessenger teleporterMessenger = new TeleporterMessenger();
         protocolRegistryEntry.push(ProtocolRegistryEntry(1, address(teleporterMessenger)));
         TeleporterRegistry teleporterRegistry = new TeleporterRegistry(protocolRegistryEntry);
 
-        tokenSrc = new ERC20TokenHome(address(teleporterRegistry), owner, address(erc20Token), 18);
-        tokenBridgeRouter = new AvalancheICTTRouter();
+        tokenSrc = new ERC20TokenHome(
+            address(teleporterRegistry), owner, MIN_TELEPORTER_VERSION, address(erc20Token), 18
+        );
+        tokenBridgeRouter = new AvalancheICTTRouter(owner);
         vm.stopBroadcast();
 
         teleporterMessenger.receiveCrossChainMessage(1, address(0));

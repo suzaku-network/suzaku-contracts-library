@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {AvalancheICTTRouterFixedFees} from
     "../../../src/contracts/Teleporter/AvalancheICTTRouterFixedFees.sol";
@@ -37,7 +37,7 @@ contract AvalancheICTTRouterFixedFeesTest is Test {
         vm.etch(WARP_PRECOMPILE, address(warpMessengerTestMock).code);
         vm.startBroadcast(deployerKey);
         tokenBridgeRouter =
-            new AvalancheICTTRouterFixedFees(PRIM_RELAYER_FEE_BIPS, SEC_RELAYER_FEE_BIPS);
+            new AvalancheICTTRouterFixedFees(PRIM_RELAYER_FEE_BIPS, SEC_RELAYER_FEE_BIPS, owner);
         vm.stopBroadcast();
     }
 

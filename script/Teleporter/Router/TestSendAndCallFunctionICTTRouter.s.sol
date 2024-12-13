@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {AvalancheICTTRouter} from "../../../src/contracts/Teleporter/AvalancheICTTRouter.sol";
-
 import {WarpMessengerMock} from "../../../src/contracts/mocks/WarpMessengerMock.sol";
 import {IAvalancheICTTRouter} from "../../../src/interfaces/Teleporter/IAvalancheICTTRouter.sol";
 import {HelperConfig} from "../HelperConfig.s.sol";
 
-import {IERC20} from "@openzeppelin/contracts@4.8.1/interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts@5.0.2/interfaces/IERC20.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 contract TestSendAndCallFunctionICTTRouter is Script {

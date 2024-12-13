@@ -3,18 +3,18 @@
 
 pragma solidity 0.8.25;
 
-import {WarpMessage} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {
     TeleporterMessage,
     TeleporterMessageReceipt
-} from "@avalabs/teleporter/teleporter/ITeleporterMessenger.sol";
+} from "@avalabs/icm-contracts/teleporter/ITeleporterMessenger.sol";
 import {
     ConversionData,
     ValidatorMessages
-} from "@avalabs/teleporter/validator-manager/ValidatorMessages.sol";
+} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {InitialValidator} from
-    "@avalabs/teleporter/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+import {WarpMessage} from
+    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 
 contract ACP77WarpMessengerTestMock {
     address private constant TELEPORTER_MESSENGER_ADDRESS =
@@ -24,7 +24,7 @@ contract ACP77WarpMessengerTestMock {
         0x7a69000000000000000000000000000000000000000000000000000000000000;
     bytes32 private constant DEFAULT_DEST_CHAIN_ID_HEX =
         0x1000000000000000000000000000000000000000000000000000000000000000;
-    bytes32 public constant DEFAULT_SUBNET_ID =
+    bytes32 public constant DEFAULT_L1_ID =
         0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9;
     bytes public constant DEFAULT_NODE_ID_02 =
         bytes(hex"2345678123456781234567812345678123456781234567812345678123456781");
@@ -86,7 +86,7 @@ contract ACP77WarpMessengerTestMock {
         initialValidators[1] =
             InitialValidator({nodeID: DEFAULT_NODE_ID_03, weight: 20, blsPublicKey: new bytes(48)});
         ConversionData memory conversionData = ConversionData({
-            subnetID: DEFAULT_SUBNET_ID,
+            l1ID: DEFAULT_L1_ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: validatorManagerAddress,
             initialValidators: initialValidators

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright 2024 ADDPHO
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.25;
 
 import {IERC20SendAndCallReceiver} from
-    "@avalabs/avalanche-ictt/interfaces/IERC20SendAndCallReceiver.sol";
+    "@avalabs/icm-contracts/ictt/interfaces/IERC20SendAndCallReceiver.sol";
 import {INativeSendAndCallReceiver} from
-    "@avalabs/avalanche-ictt/interfaces/INativeSendAndCallReceiver.sol";
+    "@avalabs/icm-contracts/ictt/interfaces/INativeSendAndCallReceiver.sol";
 
 // Mock contract to be deployed on the destination chain
 contract ERC20UsersMock is IERC20SendAndCallReceiver {
