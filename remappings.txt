@@ -1,0 +1,5 @@
+@openzeppelin/contracts@5.0.2/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable@5.0.2/=lib/openzeppelin-contracts-upgradeable/contracts/
+@openzeppelin/foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src/
+@avalabs/subnet-evm-contracts@1.2.0/=lib/icm-contracts/lib/subnet-evm/contracts/
+@avalabs/icm-contracts/=lib/icm-contracts/contracts/
