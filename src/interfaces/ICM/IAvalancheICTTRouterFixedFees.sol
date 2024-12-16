@@ -46,8 +46,8 @@ interface IAvalancheICTTRouterFixedFees is IAvalancheICTTRouter {
      * @param bridgeAddress Address of the destination bridge contract
      * @param requiredGasLimit Gas limit requirement for sending to a token bridge
      * @param isMultihop True if this bridge is a multihop one
-     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the ICM fee
-     * @param minSecondaryRelayerFee Minimal amount of tokens to pay for ICM fee if a multi-hop is needed
+     * @param minPrimaryRelayerFee Minimal amount of tokens to pay as the relayer fee
+     * @param minSecondaryRelayerFee Minimal amount of tokens to pay for relayer fee if a multi-hop is needed
      */
     function registerDestinationTokenBridge(
         address tokenAddress,

@@ -14,7 +14,7 @@ Check more informations [here](src/contracts/ICM/).
 
 - The [IAvalancheICTTRouter](src/interfaces/ICM/IAvalancheICTTRouter.sol) interface specifies the functions a contract must implement to act as a `Router` on an Avalanche EVM chain.
 - The [IAvalancheICTTRouterFixedFees](src/interfaces/ICM/IAvalancheICTTRouterFixedFees.sol) interface extends `IAvalancheICTTRouter` by defining additional functions for an "enforced fixed fees" `Router` on an Avalanche EVM chain.
-- The [AvalancheICTTRouter](src/contracts/ICM/AvalancheICTTRouter.sol) contract serves as a routing contract that maps tokens to their bridges, simplifying interactions with the Avalanche ICM contracts.
+- The [AvalancheICTTRouter](src/contracts/ICM/AvalancheICTTRouter.sol) contract serves as a routing contract that maps tokens to their canonical bridges, simplifying interactions with the Avalanche ICM contracts.
 - The [AvalancheICTTRouterFixedFees](src/contracts/ICM/AvalancheICTTRouterFixedFees.sol) contract builds on `AvalancheICTTRouter` by adding fee enforcement for bridging.
 
 ### ACP99 contracts library

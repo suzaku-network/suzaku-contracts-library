@@ -12,10 +12,3 @@ docs/
 
 # Dotenv file
 .env
-
-# Node modules
-node_modules
-
-# Packages
-package-lock.json
-package.json
