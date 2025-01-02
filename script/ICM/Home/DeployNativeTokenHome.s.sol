@@ -10,13 +10,12 @@ import {NativeTokenHome} from "@avalabs/icm-contracts/ictt/TokenHome/NativeToken
 import {Script, console} from "forge-std/Script.sol";
 
 contract DeployNativeTokenHome is Script {
-    uint256 private constant MIN_TELEPORTER_VERSION = 1;
+    uint256 private minTeleporterVersion = vm.envUint("MIN_TELEPORTER_VERSION");
 
     function run() external returns (NativeTokenHome) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
-            address warpPrecompileAddress,
             address teleporterManager,
             ,
             address wrappedTokenAddress,
@@ -32,18 +31,11 @@ contract DeployNativeTokenHome is Script {
             ,
             ,
             ,
-            ,
-            WarpMessengerMock mock
         ) = helperConfig.activeNetworkConfig();
-
-        vm.etch(warpPrecompileAddress, address(mock).code);
 
         vm.startBroadcast(deployerKey);
         NativeTokenHome nativeTokenHome = new NativeTokenHome(
-            teleporterRegistryAddress,
-            teleporterManager,
-            MIN_TELEPORTER_VERSION,
-            wrappedTokenAddress
+            teleporterRegistryAddress, teleporterManager, minTeleporterVersion, wrappedTokenAddress
         );
         vm.stopBroadcast();
 

@@ -15,7 +15,6 @@ contract DeployAvalancheICTTRouterFixedFees is Script {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
-            address warpPrecompileAddress,
             ,
             ,
             ,
@@ -31,11 +30,8 @@ contract DeployAvalancheICTTRouterFixedFees is Script {
             ,
             ,
             ,
-            ,
-            WarpMessengerMock mock
         ) = helperConfig.activeNetworkConfig();
         address owner = vm.addr(deployerKey);
-        vm.etch(warpPrecompileAddress, address(mock).code);
         vm.startBroadcast(deployerKey);
         AvalancheICTTRouterFixedFees tokenBridgeRouter =
             new AvalancheICTTRouterFixedFees(primaryRelayerFeeBips, secondaryRelayerFeeBips, owner);

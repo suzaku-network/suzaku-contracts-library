@@ -10,13 +10,12 @@ import {ERC20TokenHome} from "@avalabs/icm-contracts/ictt/TokenHome/ERC20TokenHo
 import {Script, console} from "forge-std/Script.sol";
 
 contract DeployERC20TokenHome is Script {
-    uint256 private constant MIN_TELEPORTER_VERSION = 1;
+    uint256 private minTeleporterVersion = 1;
 
     function run() external returns (ERC20TokenHome) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
-            address warpPrecompileAddress,
             address teleporterManager,
             address tokenAddress,
             ,
@@ -32,17 +31,13 @@ contract DeployERC20TokenHome is Script {
             uint8 tokenDecimals,
             ,
             ,
-            ,
-            WarpMessengerMock mock
         ) = helperConfig.activeNetworkConfig();
-
-        vm.etch(warpPrecompileAddress, address(mock).code);
 
         vm.startBroadcast(deployerKey);
         ERC20TokenHome erc20TokenHome = new ERC20TokenHome(
             teleporterRegistryAddress,
             teleporterManager,
-            MIN_TELEPORTER_VERSION,
+            minTeleporterVersion,
             tokenAddress,
             tokenDecimals
         );

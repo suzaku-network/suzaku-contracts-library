@@ -10,7 +10,6 @@ import {Script, console} from "forge-std/Script.sol";
 contract HelperConfig is Script {
     struct NetworkConfig {
         uint256 deployerKey;
-        address warpPrecompileAddress;
         address teleporterManager;
         address tokenAddress;
         address wrappedTokenAddress;
@@ -27,12 +26,9 @@ contract HelperConfig is Script {
         address tokenHomeAddress;
         address tokenRemoteTeleporterRegistryAddress;
         uint8 tokenRemoteTokenDecimals;
-        WarpMessengerMock warpMessengerMock;
     }
 
     uint256 public _deployerKey = vm.envUint("BRIDGE_DEPLOYER_PRIV_KEY");
-    address public _warpPrecompileAddress = vm.envAddress("WARP_PRECOMPILE_ADDR");
-    bytes32 public _messageID = vm.envBytes32("MESSAGE_ID");
     address public _teleporterManager = vm.envAddress("TELEPORTER_MANAGER_ADDR");
     uint256 public _primaryRelayerFeeBips = vm.envUint("PRIMARY_RELAYER_FEE_BIPS");
     uint256 public _secondaryRelayerFeeBips = vm.envUint("SECONDARY_RELAYER_FEE_BIPS");
@@ -54,16 +50,13 @@ contract HelperConfig is Script {
     function getHomeChainConfig() public returns (NetworkConfig memory) {
         address _tokenHomeTeleporterRegistryAddress = vm.envAddress("HOME_REGISTRY_CONTRACT_ADDR");
         address _tokenAddress = vm.envAddress("ERC20_TOKEN_CONTRACT_ADDR");
-        address _wrappedTokenAddress = vm.envAddress("WRAPPED_TOKEN_ADDRESS");
+        // address _wrappedTokenAddress = vm.envAddress("WRAPPED_TOKEN_ADDRESS");
         uint8 _tokenDecimals = uint8(vm.envUint("ERC20_TOKEN_DEC"));
-        WarpMessengerMock warpMessengerMock =
-            new WarpMessengerMock(_tokenHomeBlockchainID, _messageID);
         return NetworkConfig({
             deployerKey: _deployerKey,
-            warpPrecompileAddress: _warpPrecompileAddress,
             teleporterManager: _teleporterManager,
             tokenAddress: _tokenAddress,
-            wrappedTokenAddress: _wrappedTokenAddress,
+            wrappedTokenAddress: address(0),
             tokenName: "",
             tokenSymbol: "",
             nativeAssetSymbol: "",
@@ -76,27 +69,23 @@ contract HelperConfig is Script {
             tokenHomeTokenDecimals: _tokenDecimals,
             tokenHomeAddress: address(0),
             tokenRemoteTeleporterRegistryAddress: address(0),
-            tokenRemoteTokenDecimals: 0,
-            warpMessengerMock: warpMessengerMock
+            tokenRemoteTokenDecimals: 0
         });
     }
 
     function getRemoteChainConfig() public returns (NetworkConfig memory) {
-        bytes32 _currentBlockchainID = vm.envBytes32("REMOTE_CHAIN_HEX");
         address _tokenRemoteTeleporterRegistryAddress =
-            vm.envAddress("REMOTE_REGISTRY_CONTRACT_ADDR");
-        address _tokenHomeAddress = vm.envAddress("BRIDGE_HOME_ADDR");
+            vm.envAddress("REMOTE_CHAIN_TELEPORTER_REGISTRY");
+        address _tokenHomeAddress = vm.envAddress("HOME_CHAIN_BRIDGE_ADDRESS");
         string memory _tokenName = vm.envString("ERC20_TOKEN_NAME");
         string memory _tokenSymbol = vm.envString("ERC20_TOKEN_SYMBOL");
-        uint8 _tokenDecimals = uint8(vm.envUint("ERC20_TOKEN_DEC"));
+        uint8 _tokenDecimals = uint8(vm.envUint("ERC20_TOKEN_DECIMALS"));
         string memory _nativeAssetSymbol = vm.envString("NATIVE_ASSET_SYMBOL");
-        uint256 _initialReserveImbalance = uint256(vm.envUint("INIT_RESERVE_IMBALANCE"));
-        uint256 _burnedFeesReportingRewardPercentage = 0;
-        WarpMessengerMock _warpMessengerMock =
-            new WarpMessengerMock(_currentBlockchainID, _messageID);
+        uint256 _initialReserveImbalance = uint256(vm.envUint("INITIAL_RESERVE_IMBALANCE"));
+        uint256 _burnedFeesReportingRewardPercentage =
+            uint256(vm.envUint("BURNED_FEES_REPORTING_REWARD_PERCENTAGE"));
         return NetworkConfig({
             deployerKey: _deployerKey,
-            warpPrecompileAddress: _warpPrecompileAddress,
             teleporterManager: _teleporterManager,
             tokenAddress: address(0),
             wrappedTokenAddress: address(0),
@@ -112,8 +101,7 @@ contract HelperConfig is Script {
             tokenHomeTokenDecimals: _tokenDecimals,
             tokenHomeAddress: _tokenHomeAddress,
             tokenRemoteTeleporterRegistryAddress: _tokenRemoteTeleporterRegistryAddress,
-            tokenRemoteTokenDecimals: _tokenDecimals,
-            warpMessengerMock: _warpMessengerMock
+            tokenRemoteTokenDecimals: _tokenDecimals
         });
     }
 }

@@ -13,13 +13,12 @@ import {TeleporterFeeInfo} from "@avalabs/icm-contracts/teleporter/ITeleporterMe
 import {Script, console} from "forge-std/Script.sol";
 
 contract DeployNativeTokenRemote is Script {
-    uint256 private constant MIN_TELEPORTER_VERSION = 1;
+    uint256 private minTeleporterVersion = vm.envUint("MIN_TELEPORTER_VERSION");
 
     function run() external returns (NativeTokenRemote) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
-            address warpPrecompileAddress,
             address teleporterManager,
             ,
             ,
@@ -35,16 +34,12 @@ contract DeployNativeTokenRemote is Script {
             uint8 tokenHomeTokenDecimals,
             address tokenHomeAddress,
             address teleporterRegistryAddress,
-            ,
-            WarpMessengerMock mock
         ) = helperConfig.activeNetworkConfig();
-
-        vm.etch(warpPrecompileAddress, address(mock).code);
 
         TokenRemoteSettings memory settings = TokenRemoteSettings({
             teleporterRegistryAddress: teleporterRegistryAddress,
             teleporterManager: teleporterManager,
-            minTeleporterVersion: MIN_TELEPORTER_VERSION,
+            minTeleporterVersion: minTeleporterVersion,
             tokenHomeBlockchainID: tokenHomeBlockchainID,
             tokenHomeAddress: tokenHomeAddress,
             tokenHomeDecimals: tokenHomeTokenDecimals

@@ -12,10 +12,8 @@ import {Script, console} from "forge-std/Script.sol";
 contract DeployAvalancheICTTRouter is Script {
     function run() external returns (AvalancheICTTRouter) {
         HelperConfig helperConfig = new HelperConfig();
-        (uint256 deployerKey, address warpPrecompileAddress,,,,,,,,,,,,,,,,, WarpMessengerMock mock)
-        = helperConfig.activeNetworkConfig();
+        (uint256 deployerKey,,,,,,,,,,,,,,,,) = helperConfig.activeNetworkConfig();
         address owner = vm.addr(deployerKey);
-        vm.etch(warpPrecompileAddress, address(mock).code);
         vm.startBroadcast(deployerKey);
         AvalancheICTTRouter tokenBridgeRouter = new AvalancheICTTRouter(owner);
         vm.stopBroadcast();

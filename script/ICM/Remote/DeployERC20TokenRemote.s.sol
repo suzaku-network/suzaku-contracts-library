@@ -10,16 +10,17 @@ import {ERC20TokenRemote} from "@avalabs/icm-contracts/ictt/TokenRemote/ERC20Tok
 import {TokenRemoteSettings} from
     "@avalabs/icm-contracts/ictt/TokenRemote/interfaces/ITokenRemote.sol";
 import {TeleporterFeeInfo} from "@avalabs/icm-contracts/teleporter/ITeleporterMessenger.sol";
+import {IWarpMessenger} from
+    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 contract DeployERC20TokenRemote is Script {
-    uint256 private constant MIN_TELEPORTER_VERSION = 1;
+    uint256 private minTeleporterVersion = vm.envUint("MIN_TELEPORTER_VERSION");
 
     function run() external returns (ERC20TokenRemote) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 deployerKey,
-            address warpPrecompileAddress,
             address teleporterManager,
             ,
             ,
@@ -35,16 +36,13 @@ contract DeployERC20TokenRemote is Script {
             uint8 tokenHomeTokenDecimals,
             address tokenHomeAddress,
             address teleporterRegistryAddress,
-            uint8 tokenDecimals,
-            WarpMessengerMock mock
+            uint8 tokenDecimals
         ) = helperConfig.activeNetworkConfig();
-
-        vm.etch(warpPrecompileAddress, address(mock).code);
 
         TokenRemoteSettings memory settings = TokenRemoteSettings({
             teleporterRegistryAddress: teleporterRegistryAddress,
             teleporterManager: teleporterManager,
-            minTeleporterVersion: MIN_TELEPORTER_VERSION,
+            minTeleporterVersion: minTeleporterVersion,
             tokenHomeBlockchainID: tokenHomeBlockchainID,
             tokenHomeAddress: tokenHomeAddress,
             tokenHomeDecimals: tokenHomeTokenDecimals
