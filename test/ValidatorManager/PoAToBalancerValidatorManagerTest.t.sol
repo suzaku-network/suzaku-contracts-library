@@ -218,6 +218,34 @@ contract PoAToBalancerValidatorManagerTest is Test {
         assertEq(validator.weight, 180);
     }
 
+    function testUpgradeToBalancerValidatorManagerRevertsIfMissingMigratedValidators() public {
+        bytes[] memory migratedValidators = new bytes[](1);
+        migratedValidators[0] = VALIDATOR_NODE_ID_02;
+
+        vm.startBroadcast(proxyAdminOwnerKey);
+        Upgrades.upgradeProxy(
+            validatorManagerProxyAddress,
+            "BalancerValidatorManager.sol:BalancerValidatorManager",
+            ""
+        );
+        BalancerValidatorManager balancerValidatorManager =
+            BalancerValidatorManager(validatorManagerProxyAddress);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager
+                    .BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch
+                    .selector,
+                180,
+                200
+            )
+        );
+        balancerValidatorManager.initialize(
+            _generateTestBalancerValidatorManagerSettings(migratedValidators)
+        );
+        vm.stopBroadcast();
+    }
+
     function testUpgradeToBalancerValidatorManagerWithPoAValidator() public {
         // Add another validator before upgrading
         vm.startPrank(validatorManagerOwnerAddress);

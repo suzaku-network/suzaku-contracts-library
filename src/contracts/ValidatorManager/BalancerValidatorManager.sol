@@ -12,6 +12,7 @@ import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/Valida
 import {
     IValidatorManager,
     Validator,
+    ValidatorChurnPeriod,
     ValidatorManagerSettings,
     ValidatorRegistrationInput,
     ValidatorStatus
@@ -36,9 +37,6 @@ contract BalancerValidatorManager is
 
     /// @custom:storage-location erc7201:suzaku.storage.BalancerValidatorManager
     struct BalancerValidatorManagerStorage {
-        /// @notice The total weight of the validators on the L1
-        // TODO: Reenable this once this issue is fixed: https://github.com/ava-labs/teleporter/issues/645
-        // uint256 l1TotalWeight;
         /// @notice The registered security modules along with their maximum weight
         EnumerableMap.AddressToUintMap securityModules;
         /// @notice The total weight of all validators for a given security module
@@ -250,6 +248,24 @@ contract BalancerValidatorManager is
     }
 
     /// @inheritdoc IBalancerValidatorManager
+    function getMaximumChurnPercentage() external view returns (uint64 maximumChurnPercentage) {
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
+
+        return vms._maximumChurnPercentage;
+    }
+
+    /// @inheritdoc IBalancerValidatorManager
+    function getCurrentChurnPeriod()
+        external
+        view
+        returns (ValidatorChurnPeriod memory churnPeriod)
+    {
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
+
+        return vms._churnTracker;
+    }
+
+    /// @inheritdoc IBalancerValidatorManager
     function getSecurityModules() external view returns (address[] memory securityModules) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
@@ -332,6 +348,7 @@ contract BalancerValidatorManager is
         bytes[] calldata migratedValidators
     ) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
 
         // Add the migrated validators to the initial security module
         uint64 migratedValidatorsTotalWeight = 0;
@@ -342,10 +359,14 @@ contract BalancerValidatorManager is
             migratedValidatorsTotalWeight += validator.weight;
         }
 
+        // Check that the migrated validators total weight equals the current L1 total weight
+        if (migratedValidatorsTotalWeight != vms._churnTracker.totalWeight) {
+            revert BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
+                migratedValidatorsTotalWeight, vms._churnTracker.totalWeight
+            );
+        }
+
         // Update the initial security module weight
         _updateSecurityModuleWeight($.securityModules.keys()[0], migratedValidatorsTotalWeight);
-
-        // TODO: Check that the migrated validators total weight equals the current L1 total weight
-        // Can only be done once this issue is fixed: https://github.com/ava-labs/teleporter/issues/645
     }
 }
