@@ -5,6 +5,7 @@ pragma solidity 0.8.25;
 
 import {
     IValidatorManager,
+    ValidatorChurnPeriod,
     ValidatorManagerSettings,
     ValidatorRegistrationInput
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
@@ -34,6 +35,9 @@ interface IBalancerValidatorManager is IValidatorManager {
      */
     event SetupSecurityModule(address indexed securityModule, uint64 maxWeight);
 
+    error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
+        uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
+    );
     error BalancerValidatorManager__SecurityModuleAlreadyRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleNotRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleMaxWeightExceeded(
@@ -55,6 +59,21 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @return churnPeriodSeconds The churn period in seconds
      */
     function getChurnPeriodSeconds() external view returns (uint64 churnPeriodSeconds);
+
+    /**
+     * @notice Returns the maximum churn rate per churn period (in percentage)
+     * @return maximumChurnPercentage The maximum churn percentage
+     */
+    function getMaximumChurnPercentage() external view returns (uint64 maximumChurnPercentage);
+
+    /**
+     * @notice Returns the current churn period
+     * @return churnPeriod The current churn period
+     */
+    function getCurrentChurnPeriod()
+        external
+        view
+        returns (ValidatorChurnPeriod memory churnPeriod);
 
     /**
      * @notice Returns the list of registered security modules

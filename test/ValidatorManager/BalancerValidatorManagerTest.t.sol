@@ -17,6 +17,7 @@ import {
     InitialValidator,
     PChainOwner,
     Validator,
+    ValidatorChurnPeriod,
     ValidatorRegistrationInput,
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
@@ -433,5 +434,45 @@ contract BalancerValidatorManagerTest is Test {
         assert(validator.status == ValidatorStatus.Invalidated);
         assertEq(validator.startedAt, 0);
         assertEq(validator.endedAt, 0);
+    }
+
+    function testGetChurnPeriodSeconds() public view {
+        assertEq(validatorManager.getChurnPeriodSeconds(), churnPeriodSeconds);
+    }
+
+    function testGetMaximumChurnPercentage() public view {
+        assertEq(validatorManager.getMaximumChurnPercentage(), maximumChurnPercentage);
+    }
+
+    function testGetCurrentChurnPeriod() public validatorSetInitialized {
+        ValidatorChurnPeriod memory churnPeriod = validatorManager.getCurrentChurnPeriod();
+
+        assertEq(churnPeriod.startedAt, 0);
+        assertEq(churnPeriod.initialWeight, 0);
+        assertEq(churnPeriod.totalWeight, 200);
+        assertEq(churnPeriod.churnAmount, 0);
+    }
+
+    function testGetSecurityModules() public securityModulesSetUp {
+        address[] memory modules = validatorManager.getSecurityModules();
+        assertEq(modules.length, 2);
+        assertEq(modules[0], testSecurityModules[0]);
+        assertEq(modules[1], testSecurityModules[1]);
+    }
+
+    function testGetSecurityModuleWeights()
+        public
+        validatorSetInitialized
+        securityModulesSetUp
+        validatorRegistrationCompleted
+    {
+        (uint64 weight, uint64 maxWeight) =
+            validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+        assertEq(weight, 20);
+        assertEq(maxWeight, 100);
+
+        (weight, maxWeight) = validatorManager.getSecurityModuleWeights(testSecurityModules[1]);
+        assertEq(weight, 0);
+        assertEq(maxWeight, 100);
     }
 }
