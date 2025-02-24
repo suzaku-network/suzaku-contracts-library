@@ -10,9 +10,9 @@ import {
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-
 import {ValidatorManagerSettings} from
     "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+import {Options} from "@openzeppelin/foundry-upgrades/Options.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -57,10 +57,13 @@ contract DeployBalancerValidatorManager is Script {
             migratedValidators: migratedValidators
         });
 
+        Options memory opts;
+        opts.unsafeAllow = "missing-initializer-call";
         address proxy = Upgrades.deployTransparentProxy(
             "BalancerValidatorManager.sol:BalancerValidatorManager",
             proxyAdminOwnerAddress,
-            abi.encodeCall(BalancerValidatorManager.initialize, balancerSettings)
+            abi.encodeCall(BalancerValidatorManager.initialize, balancerSettings),
+            opts
         );
 
         address securityModuleDeploymentAddress;

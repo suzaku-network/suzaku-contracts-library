@@ -28,11 +28,12 @@ jobs:
         run: |
           forge install
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-        id: build
+      # Commented out as we'd rebuild the contracts in the next step (--force flag)
+      #   - name: Run Forge build
+      #     run: |
+      #       forge --version
+      #       forge build --sizes
+      #     id: build
 
       - name: Run Forge tests
         run: |

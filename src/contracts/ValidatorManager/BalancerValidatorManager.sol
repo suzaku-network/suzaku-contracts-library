@@ -145,12 +145,9 @@ contract BalancerValidatorManager is
         _checkValidatorSecurityModule(validationID, msg.sender);
         validator = _initializeEndValidation(validationID);
 
-        // If the validator is not an initial validator, update the security module weight
-        if ($.validatorSecurityModule[validationID] != address(0)) {
-            // Update the security module weight
-            uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] - validator.weight;
-            _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
-        }
+        // Update the security module weight
+        uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] - validator.weight;
+        _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
 
         return validator;
     }

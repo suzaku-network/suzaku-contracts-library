@@ -390,16 +390,6 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(weight, 0);
     }
 
-    function testInitializeEndValidationInitialValidator() public validatorSetInitialized {
-        vm.prank(testSecurityModules[0]);
-        validatorManager.initializeEndValidation(VALIDATION_ID_03);
-
-        Validator memory validator = validatorManager.getValidator(VALIDATION_ID_03);
-        assert(validator.status == ValidatorStatus.PendingRemoved);
-        assertEq(validator.endedAt, block.timestamp);
-        assertEq(validator.weight, 0);
-    }
-
     function testInitializeEndValidationRevertsIfWrongSecurityModule()
         public
         validatorSetInitialized
@@ -417,6 +407,22 @@ contract BalancerValidatorManagerTest is Test {
             )
         );
         validatorManager.initializeEndValidation(VALIDATION_ID_01);
+    }
+
+    function testCompleteEndValidation()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        vm.prank(testSecurityModules[0]);
+
+        validatorManager.initializeEndValidation(VALIDATION_ID_01);
+        validatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+
+        Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
+        bytes32 validationID = validatorManager.registeredValidators(VALIDATOR_NODE_ID_01);
+        assert(validator.status == ValidatorStatus.Completed);
+        assertEq(validationID, bytes32(0));
     }
 
     function testCompleteEndValidationExpired()
