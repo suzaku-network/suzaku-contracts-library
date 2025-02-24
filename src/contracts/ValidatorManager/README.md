@@ -37,7 +37,7 @@ Functions inherited from `ValidatorManager`:
 
 ### Getters
 
-Functions implemented in `BalancerValidatorManager`:
+New functions in `BalancerValidatorManager`:
 
 - `getSecurityModules`: get the list of registered security modules
 - `getSecurityModuleWeights`: get the current weight and maximum weight allocation for a module
@@ -56,3 +56,22 @@ Functions inherited from `ValidatorManager`:
 Security modules must implement the required interfaces to interact with this contract. The contract owner can register security modules and set their maximum weight allocations.
 
 Each security module can then independently manage their validator set within their weight limits, while the base `ValidatorManager` functionality ensures overall system stability.
+
+For PoA-based validator management, deploy a `PoASecurityModule` instance and register it with the `BalancerValidatorManager`. The owner of the PoA module can then manage validators within their allocated weight limit.
+
+## Security Modules
+
+### PoA Security Module
+
+The `PoASecurityModule` is an implementation of a security module that provides Proof of Authority (PoA) style validator management. Key characteristics:
+
+- Owner-controlled validator management
+- Delegates all operations to the `BalancerValidatorManager`
+- Implements the `IPoAValidatorManager` interface
+- Suitable for scenarios requiring centralized control over validator set
+
+Key functions:
+
+- `initializeValidatorRegistration`: Owner can register new validators
+- `initializeEndValidation`: Owner can remove validators
+- All validator management functions are owner-restricted except `completeEndValidation`
