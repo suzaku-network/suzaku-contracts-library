@@ -101,15 +101,15 @@ contract BalancerValidatorManager is
         uint64 initialSecurityModuleMaxWeight,
         bytes[] calldata migratedValidators
     ) internal onlyInitializing {
-        _setupSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
+        _setUpSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
         _migrateValidators(migratedValidators);
     }
 
     // solhint-enable func-name-mixedcase
 
     /// @inheritdoc IBalancerValidatorManager
-    function setupSecurityModule(address securityModule, uint64 maxWeight) external onlyOwner {
-        _setupSecurityModule(securityModule, maxWeight);
+    function setUpSecurityModule(address securityModule, uint64 maxWeight) external onlyOwner {
+        _setUpSecurityModule(securityModule, maxWeight);
     }
 
     /// @inheritdoc IBalancerValidatorManager
@@ -126,12 +126,14 @@ contract BalancerValidatorManager is
         _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
 
         $.validatorSecurityModule[validationID] = msg.sender;
+
+        return validationID;
     }
 
     /// @inheritdoc IBalancerValidatorManager
     function initializeEndValidation(
         bytes32 validationID
-    ) external onlySecurityModule {
+    ) external onlySecurityModule returns (Validator memory) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         Validator memory validator = getValidator(validationID);
 
@@ -141,14 +143,13 @@ contract BalancerValidatorManager is
         }
 
         _checkValidatorSecurityModule(validationID, msg.sender);
-        _initializeEndValidation(validationID);
+        validator = _initializeEndValidation(validationID);
 
-        // If the validator is not an initial validator, update the security module weight
-        if ($.validatorSecurityModule[validationID] != address(0)) {
-            // Update the security module weight
-            uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] - validator.weight;
-            _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
-        }
+        // Update the security module weight
+        uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] - validator.weight;
+        _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
+
+        return validator;
     }
 
     /// @inheritdoc IValidatorManager
@@ -162,7 +163,7 @@ contract BalancerValidatorManager is
     function initializeValidatorWeightUpdate(
         bytes32 validationID,
         uint64 newWeight
-    ) external onlySecurityModule {
+    ) external onlySecurityModule returns (Validator memory validator) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
         // Check that the newWeight is greater than zero
@@ -172,7 +173,7 @@ contract BalancerValidatorManager is
 
         // Ensure the validation period is active and that the validator is not already being updated
         // The initial validator set must have been set already to have active validators.
-        Validator memory validator = getValidator(validationID);
+        validator = getValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -189,6 +190,8 @@ contract BalancerValidatorManager is
         _updateSecurityModuleWeight(msg.sender, newSecurityModuleWeight);
 
         $.validatorPendingWeightUpdate[validationID] = messageID;
+
+        return validator;
     }
 
     /// @inheritdoc IBalancerValidatorManager
@@ -310,7 +313,7 @@ contract BalancerValidatorManager is
         }
     }
 
-    function _setupSecurityModule(address securityModule, uint64 maxWeight) internal {
+    function _setUpSecurityModule(address securityModule, uint64 maxWeight) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         uint64 currentWeight = $.securityModuleWeight[securityModule];
 
@@ -328,7 +331,7 @@ contract BalancerValidatorManager is
             $.securityModules.set(securityModule, uint256(maxWeight));
         }
 
-        emit SetupSecurityModule(securityModule, maxWeight);
+        emit SetUpSecurityModule(securityModule, maxWeight);
     }
 
     function _updateSecurityModuleWeight(address securityModule, uint64 weight) internal {

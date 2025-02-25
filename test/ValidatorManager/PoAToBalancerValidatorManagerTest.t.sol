@@ -13,7 +13,6 @@ import {
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-
 import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
 import {
     ConversionData,
@@ -26,6 +25,8 @@ import {
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+
+import {Options} from "@openzeppelin/foundry-upgrades/Options.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Test, console} from "forge-std/Test.sol";
 
@@ -179,11 +180,14 @@ contract PoAToBalancerValidatorManagerTest is Test {
     function _upgradePoAValidatorManagerToBalancerValidatorManager(
         bytes[] memory migratedValidators
     ) private returns (BalancerValidatorManager) {
+        Options memory opts;
+        opts.unsafeAllow = "missing-initializer-call";
         vm.startBroadcast(proxyAdminOwnerKey);
         Upgrades.upgradeProxy(
             validatorManagerProxyAddress,
             "BalancerValidatorManager.sol:BalancerValidatorManager",
-            ""
+            "",
+            opts
         );
         BalancerValidatorManager balancerValidatorManager =
             BalancerValidatorManager(validatorManagerProxyAddress);
@@ -222,11 +226,14 @@ contract PoAToBalancerValidatorManagerTest is Test {
         bytes[] memory migratedValidators = new bytes[](1);
         migratedValidators[0] = VALIDATOR_NODE_ID_02;
 
+        Options memory opts;
+        opts.unsafeAllow = "missing-initializer-call";
         vm.startBroadcast(proxyAdminOwnerKey);
         Upgrades.upgradeProxy(
             validatorManagerProxyAddress,
             "BalancerValidatorManager.sol:BalancerValidatorManager",
-            ""
+            "",
+            opts
         );
         BalancerValidatorManager balancerValidatorManager =
             BalancerValidatorManager(validatorManagerProxyAddress);

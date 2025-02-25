@@ -23,16 +23,19 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
 
-      - name: Run Forge build
+      - name: Run Forge install
         run: |
-          forge --version
-          forge build --sizes
-        id: build
+          forge install
+
+      # Commented out as we'd rebuild the contracts in the next step (--force flag)
+      #   - name: Run Forge build
+      #     run: |
+      #       forge --version
+      #       forge build --sizes
+      #     id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test --force
         id: test

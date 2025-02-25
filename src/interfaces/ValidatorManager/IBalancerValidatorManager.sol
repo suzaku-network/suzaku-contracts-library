@@ -5,6 +5,7 @@ pragma solidity 0.8.25;
 
 import {
     IValidatorManager,
+    Validator,
     ValidatorChurnPeriod,
     ValidatorManagerSettings,
     ValidatorRegistrationInput
@@ -33,7 +34,7 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @param securityModule The address of the security module
      * @param maxWeight The maximum total weight allowed for validators managed by this module
      */
-    event SetupSecurityModule(address indexed securityModule, uint64 maxWeight);
+    event SetUpSecurityModule(address indexed securityModule, uint64 maxWeight);
 
     error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
         uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
@@ -104,10 +105,17 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @param securityModule The address of the security module to register
      * @param maxWeight The maximum total weight allowed for validators managed by this module
      */
-    function setupSecurityModule(address securityModule, uint64 maxWeight) external;
+    function setUpSecurityModule(address securityModule, uint64 maxWeight) external;
 
     /**
      * @notice Begins the validator registration process, and sets the {weight} of the validator.
+     * @param registrationInput The inputs for a validator registration.
+     * @param weight The weight of the validator being registered.
+     * @return validationID The ID of the validator registration.
+     */
+    /**
+     * @notice Begins the validator registration process, and sets the {weight} of the validator.
+     * @dev Can only be called by registered security modules
      * @param registrationInput The inputs for a validator registration.
      * @param weight The weight of the validator being registered.
      * @return validationID The ID of the validator registration.
@@ -120,23 +128,38 @@ interface IBalancerValidatorManager is IValidatorManager {
     /**
      * @notice Begins the process of ending an active validation period. The validation period must have been previously
      * started by a successful call to {completeValidatorRegistration} with the given validationID.
+     * @dev Can only be called by the security module that registered the validator
      * @param validationID The ID of the validation period being ended.
+     * @return validator The validator that is being ended
      */
     function initializeEndValidation(
         bytes32 validationID
-    ) external;
+    ) external returns (Validator memory validator);
 
     /**
      * @notice Initiates a weight update for a validator
+     * @dev Can only be called by the security module that registered the validator
      * @param validationID The ID of the validation period being updated
      * @param newWeight The new weight to set for the validator
      */
-    function initializeValidatorWeightUpdate(bytes32 validationID, uint64 newWeight) external;
+    function initializeValidatorWeightUpdate(
+        bytes32 validationID,
+        uint64 newWeight
+    ) external returns (Validator memory validator);
 
     /**
      * @notice Completes a pending validator weight update after P-Chain confirmation
+     * @dev Can only be called by the security module that registered the validator
      * @param validationID The ID of the validation period being updated
      * @param messageIndex The index of the Warp message containing the weight update confirmation
      */
     function completeValidatorWeightUpdate(bytes32 validationID, uint32 messageIndex) external;
+
+    /**
+     * @notice Resends a pending validator weight update message to the P-Chain
+     * @param validationID The ID of the validation period being updated
+     */
+    function resendValidatorWeightUpdate(
+        bytes32 validationID
+    ) external;
 }

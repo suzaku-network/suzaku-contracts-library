@@ -99,7 +99,7 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier securityModulesSetUp() {
         vm.prank(validatorManagerOwnerAddress);
-        validatorManager.setupSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
         _;
     }
 
@@ -166,10 +166,10 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(securityModules[0], testSecurityModules[0]);
     }
 
-    function testSetupSecurityModule() public {
-        // Call setupSecurityModule as owner
+    function testSetUpSecurityModule() public {
+        // Call setUpSecurityModule as owner
         vm.prank(validatorManagerOwnerAddress);
-        validatorManager.setupSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
 
         // Check that the security module was registered
         address[] memory securityModules = validatorManager.getSecurityModules();
@@ -181,7 +181,7 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(maxWeight, DEFAULT_MAX_WEIGHT);
     }
 
-    function testSetupSecurityModuleWithZeroMaxWeightReverts() public {
+    function testSetUpSecurityModuleWithZeroMaxWeightReverts() public {
         vm.prank(validatorManagerOwnerAddress);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -191,10 +191,10 @@ contract BalancerValidatorManagerTest is Test {
                 testSecurityModules[1]
             )
         );
-        validatorManager.setupSecurityModule(testSecurityModules[1], 0);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], 0);
     }
 
-    function testSetupSecurityModuleRevertsIfMaxWeightLowerThanCurrentWeight()
+    function testSetUpSecurityModuleRevertsIfMaxWeightLowerThanCurrentWeight()
         public
         validatorSetInitialized
         validatorRegistrationCompleted
@@ -210,16 +210,16 @@ contract BalancerValidatorManagerTest is Test {
                 20
             )
         );
-        validatorManager.setupSecurityModule(testSecurityModules[0], 10);
+        validatorManager.setUpSecurityModule(testSecurityModules[0], 10);
     }
 
-    function testSetupSecurityModuleEmitsEvent() public {
+    function testSetUpSecurityModuleEmitsEvent() public {
         vm.prank(validatorManagerOwnerAddress);
         vm.expectEmit(true, false, false, true);
-        emit IBalancerValidatorManager.SetupSecurityModule(
+        emit IBalancerValidatorManager.SetUpSecurityModule(
             testSecurityModules[1], DEFAULT_MAX_WEIGHT
         );
-        validatorManager.setupSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
     }
 
     function testInitializeValidatorRegistration() public validatorSetInitialized {
@@ -317,7 +317,7 @@ contract BalancerValidatorManagerTest is Test {
     {
         // Lower the max weight of the security module
         vm.prank(validatorManagerOwnerAddress);
-        validatorManager.setupSecurityModule(testSecurityModules[0], 30);
+        validatorManager.setUpSecurityModule(testSecurityModules[0], 30);
 
         // Warp to 2024-01-01 02:00:00 to exit the churn period (1 hour)
         vm.warp(1_704_067_200 + 2 hours);
@@ -390,16 +390,6 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(weight, 0);
     }
 
-    function testInitializeEndValidationInitialValidator() public validatorSetInitialized {
-        vm.prank(testSecurityModules[0]);
-        validatorManager.initializeEndValidation(VALIDATION_ID_03);
-
-        Validator memory validator = validatorManager.getValidator(VALIDATION_ID_03);
-        assert(validator.status == ValidatorStatus.PendingRemoved);
-        assertEq(validator.endedAt, block.timestamp);
-        assertEq(validator.weight, 0);
-    }
-
     function testInitializeEndValidationRevertsIfWrongSecurityModule()
         public
         validatorSetInitialized
@@ -417,6 +407,22 @@ contract BalancerValidatorManagerTest is Test {
             )
         );
         validatorManager.initializeEndValidation(VALIDATION_ID_01);
+    }
+
+    function testCompleteEndValidation()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        vm.prank(testSecurityModules[0]);
+
+        validatorManager.initializeEndValidation(VALIDATION_ID_01);
+        validatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+
+        Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
+        bytes32 validationID = validatorManager.registeredValidators(VALIDATOR_NODE_ID_01);
+        assert(validator.status == ValidatorStatus.Completed);
+        assertEq(validationID, bytes32(0));
     }
 
     function testCompleteEndValidationExpired()
