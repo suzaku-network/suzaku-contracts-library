@@ -208,11 +208,14 @@ contract BalancerValidatorManager is
         }
 
         // Unpack the Warp message
-        (bytes32 messageValidationID, uint64 nonce,) = ValidatorMessages
+        (bytes32 messageValidationID, uint64 nonce, uint64 weight) = ValidatorMessages
             .unpackL1ValidatorWeightMessage(_getPChainWarpMessage(messageIndex).payload);
 
         if (validationID != messageValidationID) {
             revert InvalidValidationID(validationID);
+        }
+        if (weight != validator.weight) {
+            revert BalancerValidatorManager__WeightUpdateMismatch(weight, validator.weight);
         }
         if (validator.messageNonce < nonce) {
             revert BalancerValidatorManager__InvalidNonce(nonce);
