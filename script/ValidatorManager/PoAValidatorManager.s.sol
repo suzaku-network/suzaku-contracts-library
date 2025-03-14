@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.25;
 
-import {HelperConfig} from "./HelperConfig.s.sol";
+import {PoAUpgradeConfig} from "./PoAUpgradeConfigTypes.s.sol";
 
 import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
 import {ValidatorManagerSettings} from
@@ -16,25 +16,16 @@ import {Script} from "forge-std/Script.sol";
 /**
  * @dev Deploy a PoA Validator Manager
  */
-contract DeployPoAValidatorManager is Script {
-    function run() external returns (address) {
-        HelperConfig helperConfig = new HelperConfig();
-        (
-            uint256 proxyAdminOwnerKey,
-            uint256 validatorManagerOwnerKey,
-            bytes32 l1ID,
-            uint64 churnPeriodSeconds,
-            uint8 maximumChurnPercentage
-        ) = helperConfig.activeNetworkConfig();
-        address proxyAdminOwnerAddress = vm.addr(proxyAdminOwnerKey);
-        address validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
-
+contract ExecutePoAValidatorManager is Script {
+    function executeDeployPoA(
+        PoAUpgradeConfig memory poaConfig,
+        uint256 proxyAdminOwnerKey
+    ) external returns (address) {
         vm.startBroadcast(proxyAdminOwnerKey);
-
         ValidatorManagerSettings memory settings = ValidatorManagerSettings({
-            l1ID: l1ID,
-            churnPeriodSeconds: churnPeriodSeconds,
-            maximumChurnPercentage: maximumChurnPercentage
+            l1ID: poaConfig.l1ID,
+            churnPeriodSeconds: poaConfig.churnPeriodSeconds,
+            maximumChurnPercentage: poaConfig.maximumChurnPercentage
         });
 
         // Keeping this for reference. Cannot use the regular Upgrades because libraries are not supported.
@@ -54,10 +45,11 @@ contract DeployPoAValidatorManager is Script {
 
         address proxy = UnsafeUpgrades.deployTransparentProxy(
             address(validatorSetManager),
-            proxyAdminOwnerAddress,
-            abi.encodeCall(PoAValidatorManager.initialize, (settings, validatorManagerOwnerAddress))
+            poaConfig.proxyAdminOwnerAddress,
+            abi.encodeCall(
+                PoAValidatorManager.initialize, (settings, poaConfig.validatorManagerOwnerAddress)
+            )
         );
-
         vm.stopBroadcast();
 
         return proxy;
