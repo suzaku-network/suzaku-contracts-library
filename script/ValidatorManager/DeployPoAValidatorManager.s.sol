@@ -8,21 +8,16 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
 import {ValidatorManagerSettings} from
     "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+// import {Options, Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 import {Script} from "forge-std/Script.sol";
 
 /**
- * @dev Deploy a test PoA Validator Manager
- * @dev DO NOT USE THIS IN PRODUCTION
+ * @dev Deploy a PoA Validator Manager
  */
-contract DeployTestPoAValidatorManager is Script {
+contract DeployPoAValidatorManager is Script {
     function run() external returns (address) {
-        // Revert if not on Anvil
-        if (block.chainid != 31_337) {
-            revert("Not on Anvil");
-        }
-
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 proxyAdminOwnerKey,
@@ -41,6 +36,19 @@ contract DeployTestPoAValidatorManager is Script {
             churnPeriodSeconds: churnPeriodSeconds,
             maximumChurnPercentage: maximumChurnPercentage
         });
+
+        // Keeping this for reference. Cannot use the regular Upgrades because libraries are not supported.
+        // See https://github.com/foundry-rs/book/issues/1361
+
+        // Options memory opts;
+        // opts.constructorData = abi.encode(ICMInitializable.Allowed);
+        // opts.unsafeAllow = "constructor,missing-initializer-call,external-library-linking";
+        // address proxy = Upgrades.deployTransparentProxy(
+        //     "PoAValidatorManager.sol:PoAValidatorManager",
+        //     proxyAdminOwnerAddress,
+        //     abi.encodeCall(PoAValidatorManager.initialize, (settings, validatorManagerOwnerAddress)),
+        //     opts
+        // );
 
         PoAValidatorManager validatorSetManager = new PoAValidatorManager(ICMInitializable.Allowed);
 

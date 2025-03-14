@@ -58,6 +58,7 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__NoPendingWeightUpdate(bytes32 validationID);
     error BalancerValidatorManager__InvalidNonce(uint64 nonce);
     error BalancerValidatorManager__ValidatorAlreadyMigrated(bytes32 validationID);
+    error BalancerValidatorManager__WeightUpdateMismatch(uint64 newWeight, uint64 expectedWeight);
 
     /**
      * @notice Returns the ValidatorManager churn period in seconds
