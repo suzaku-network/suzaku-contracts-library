@@ -15,12 +15,12 @@ import {ValidatorManagerSettings} from
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
-contract UpgradePoAToBalancerValidatorManager is Script {
+contract UpgradePoAToBalancer is Script {
     function executeUpgradePoAToBalancer(
-        PoAUpgradeConfig memory balancerConfig
+        PoAUpgradeConfig memory balancerConfig,
+        uint256 proxyAdminOwnerKey
     ) external returns (address, address) {
-        address validatorManagerOwnerAddress = vm.addr(balancerConfig.validatorManagerOwnerKey);
-
+        vm.startBroadcast(proxyAdminOwnerKey);
         // Deploy new implementation
         BalancerValidatorManager newImplementation = new BalancerValidatorManager();
 
@@ -28,8 +28,9 @@ contract UpgradePoAToBalancerValidatorManager is Script {
         UnsafeUpgrades.upgradeProxy(balancerConfig.proxyAddress, address(newImplementation), "");
 
         // Deploy PoASecurityModule
-        PoASecurityModule securityModule =
-            new PoASecurityModule(balancerConfig.proxyAddress, validatorManagerOwnerAddress);
+        PoASecurityModule securityModule = new PoASecurityModule(
+            balancerConfig.proxyAddress, balancerConfig.validatorManagerOwnerAddress
+        );
 
         // Initialize new implementation
         BalancerValidatorManager balancerValidatorManager =
@@ -40,13 +41,14 @@ contract UpgradePoAToBalancerValidatorManager is Script {
                 churnPeriodSeconds: balancerConfig.churnPeriodSeconds,
                 maximumChurnPercentage: balancerConfig.maximumChurnPercentage
             }),
-            initialOwner: validatorManagerOwnerAddress,
+            initialOwner: balancerConfig.validatorManagerOwnerAddress,
             initialSecurityModule: address(securityModule),
             initialSecurityModuleMaxWeight: balancerConfig.initialSecurityModuleMaxWeight,
             migratedValidators: balancerConfig.migratedValidators
         });
 
         balancerValidatorManager.initialize(settings);
+        vm.stopBroadcast();
 
         return (balancerConfig.proxyAddress, address(securityModule));
     }

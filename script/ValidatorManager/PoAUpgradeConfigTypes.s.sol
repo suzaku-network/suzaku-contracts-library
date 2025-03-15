@@ -7,8 +7,8 @@ struct PoAUpgradeConfig {
     address proxyAddress;
     uint64 initialSecurityModuleMaxWeight;
     bytes[] migratedValidators;
-    uint256 proxyAdminOwnerKey;
-    uint256 validatorManagerOwnerKey;
+    address proxyAdminOwnerAddress;
+    address validatorManagerOwnerAddress;
     bytes32 l1ID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
