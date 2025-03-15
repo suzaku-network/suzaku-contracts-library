@@ -1,9 +1,7 @@
 {
-  "ProxyAddress": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "ProxyAddress": "0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e",
   "initialSecurityModuleMaxWeight": 10000,
-  "migratedValidators": [""],
-  "proxyAdminOwnerKey": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  "validatorManagerOwnerKey": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+  "migratedValidators": [],
   "l1ID": "0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9",
   "churnPeriodSeconds": 3600,
   "maximumChurnPercentage": 20
