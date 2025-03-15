@@ -18,8 +18,10 @@ import {Script} from "forge-std/Script.sol";
  */
 contract ExecutePoAValidatorManager is Script {
     function executeDeployPoA(
-        PoAUpgradeConfig memory poaConfig
+        PoAUpgradeConfig memory poaConfig,
+        uint256 proxyAdminOwnerKey
     ) external returns (address) {
+        vm.startBroadcast(proxyAdminOwnerKey);
         ValidatorManagerSettings memory settings = ValidatorManagerSettings({
             l1ID: poaConfig.l1ID,
             churnPeriodSeconds: poaConfig.churnPeriodSeconds,
@@ -48,6 +50,7 @@ contract ExecutePoAValidatorManager is Script {
                 PoAValidatorManager.initialize, (settings, poaConfig.validatorManagerOwnerAddress)
             )
         );
+        vm.stopBroadcast();
 
         return proxy;
     }
