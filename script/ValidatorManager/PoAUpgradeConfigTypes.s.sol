@@ -6,7 +6,7 @@ pragma solidity 0.8.25;
 struct PoAUpgradeConfig {
     address proxyAddress;
     uint64 initialSecurityModuleMaxWeight;
-    bytes[] migratedValidators;
+    bytes32[] migratedValidations;
     address proxyAdminOwnerAddress;
     address validatorManagerOwnerAddress;
     bytes32 l1ID;

@@ -75,7 +75,7 @@ contract BalancerValidatorManagerTest is Test {
         testSecurityModules[2] = makeAddr("securityModule3");
 
         (address validatorManagerAddress,) =
-            deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT, new bytes[](0));
+            deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT, new bytes32[](0));
         validatorManager = BalancerValidatorManager(validatorManagerAddress);
 
         ACP77WarpMessengerTestMock warpMessengerTestMock =
