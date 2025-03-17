@@ -91,7 +91,7 @@ contract BalancerValidatorManager is
         __BalancerValidatorManager_init_unchained(
             settings.initialSecurityModule,
             settings.initialSecurityModuleMaxWeight,
-            settings.migratedValidators
+            settings.migratedValidations
         );
     }
 
@@ -99,10 +99,10 @@ contract BalancerValidatorManager is
     function __BalancerValidatorManager_init_unchained(
         address initialSecurityModule,
         uint64 initialSecurityModuleMaxWeight,
-        bytes[] calldata migratedValidators
+        bytes32[] calldata migratedValidations
     ) internal onlyInitializing {
         _setUpSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
-        _migrateValidators(migratedValidators);
+        _migrateValidators(migratedValidations);
     }
 
     // solhint-enable func-name-mixedcase
@@ -351,28 +351,27 @@ contract BalancerValidatorManager is
     }
 
     function _migrateValidators(
-        bytes[] calldata migratedValidators
+        bytes32[] calldata migratedValidations
     ) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
 
         // Add the migrated validators to the initial security module
-        uint64 migratedValidatorsTotalWeight = 0;
-        for (uint256 i = 0; i < migratedValidators.length; i++) {
-            bytes32 validationID = registeredValidators(migratedValidators[i]);
-            Validator memory validator = getValidator(validationID);
-            $.validatorSecurityModule[validationID] = $.securityModules.keys()[0];
-            migratedValidatorsTotalWeight += validator.weight;
+        uint64 migratedValidationsTotalWeight = 0;
+        for (uint256 i = 0; i < migratedValidations.length; i++) {
+            Validator memory validator = getValidator(migratedValidations[i]);
+            $.validatorSecurityModule[migratedValidations[i]] = $.securityModules.keys()[0];
+            migratedValidationsTotalWeight += validator.weight;
         }
 
         // Check that the migrated validators total weight equals the current L1 total weight
-        if (migratedValidatorsTotalWeight != vms._churnTracker.totalWeight) {
-            revert BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
-                migratedValidatorsTotalWeight, vms._churnTracker.totalWeight
+        if (migratedValidationsTotalWeight != vms._churnTracker.totalWeight) {
+            revert BalancerValidatorManager__MigratedValidationsTotalWeightMismatch(
+                migratedValidationsTotalWeight, vms._churnTracker.totalWeight
             );
         }
 
         // Update the initial security module weight
-        _updateSecurityModuleWeight($.securityModules.keys()[0], migratedValidatorsTotalWeight);
+        _updateSecurityModuleWeight($.securityModules.keys()[0], migratedValidationsTotalWeight);
     }
 }
