@@ -74,7 +74,7 @@ contract BalancerValidatorManagerTest is Test {
         testSecurityModules = new address[](2);
 
         (address validatorManagerAddress, address securityModuleAddress) =
-            deployer.run(address(0), DEFAULT_MAX_WEIGHT, new bytes[](0));
+            deployer.run(address(0), DEFAULT_MAX_WEIGHT, new bytes32[](0));
         validatorManager = BalancerValidatorManager(validatorManagerAddress);
         testSecurityModules[0] = securityModuleAddress;
         testSecurityModules[1] =

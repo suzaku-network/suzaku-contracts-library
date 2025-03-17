@@ -19,7 +19,7 @@ struct BalancerValidatorManagerSettings {
     address initialOwner;
     address initialSecurityModule;
     uint64 initialSecurityModuleMaxWeight;
-    bytes[] migratedValidators;
+    bytes32[] migratedValidations;
 }
 
 /**
@@ -36,8 +36,8 @@ interface IBalancerValidatorManager is IValidatorManager {
      */
     event SetUpSecurityModule(address indexed securityModule, uint64 maxWeight);
 
-    error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
-        uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
+    error BalancerValidatorManager__MigratedValidationsTotalWeightMismatch(
+        uint64 migratedValidationsTotalWeight, uint64 currentL1TotalWeight
     );
     error BalancerValidatorManager__SecurityModuleAlreadyRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleNotRegistered(address securityModule);

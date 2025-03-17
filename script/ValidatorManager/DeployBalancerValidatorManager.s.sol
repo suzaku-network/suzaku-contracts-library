@@ -20,7 +20,7 @@ contract DeployBalancerValidatorManager is Script {
     function run(
         address initialSecurityModule,
         uint64 initialSecurityModuleWeight,
-        bytes[] calldata migratedValidators
+        bytes32[] calldata migratedValidations
     ) external returns (address, address) {
         HelperConfig helperConfig = new HelperConfig();
         (
@@ -54,7 +54,7 @@ contract DeployBalancerValidatorManager is Script {
             initialOwner: validatorManagerOwnerAddress,
             initialSecurityModule: initialSecurityModule,
             initialSecurityModuleMaxWeight: initialSecurityModuleWeight,
-            migratedValidators: migratedValidators
+            migratedValidations: migratedValidations
         });
 
         Options memory opts;

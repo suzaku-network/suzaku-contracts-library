@@ -163,7 +163,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     }
 
     function _generateTestBalancerValidatorManagerSettings(
-        bytes[] memory migratedValidators
+        bytes32[] memory migratedValidations
     ) private view returns (BalancerValidatorManagerSettings memory) {
         return BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
@@ -174,12 +174,12 @@ contract PoAToBalancerValidatorManagerTest is Test {
             initialOwner: validatorManagerOwnerAddress,
             initialSecurityModule: testSecurityModules[0],
             initialSecurityModuleMaxWeight: 500,
-            migratedValidators: migratedValidators
+            migratedValidations: migratedValidations
         });
     }
 
     function _upgradePoAValidatorManagerToBalancerValidatorManager(
-        bytes[] memory migratedValidators
+        bytes32[] memory migratedValidations
     ) private returns (BalancerValidatorManager) {
         Options memory opts;
         opts.unsafeAllow = "missing-initializer-call";
@@ -193,7 +193,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
         BalancerValidatorManager balancerValidatorManager =
             BalancerValidatorManager(validatorManagerProxyAddress);
         balancerValidatorManager.initialize(
-            _generateTestBalancerValidatorManagerSettings(migratedValidators)
+            _generateTestBalancerValidatorManagerSettings(migratedValidations)
         );
         vm.stopBroadcast();
 
@@ -201,12 +201,12 @@ contract PoAToBalancerValidatorManagerTest is Test {
     }
 
     function testUpgradeToBalancerValidatorManagerInitializesCorrectly() public {
-        bytes[] memory migratedValidators = new bytes[](2);
-        migratedValidators[0] = VALIDATOR_NODE_ID_02;
-        migratedValidators[1] = VALIDATOR_NODE_ID_03;
+        bytes32[] memory migratedValidations = new bytes32[](2);
+        migratedValidations[0] = VALIDATION_ID_02;
+        migratedValidations[1] = VALIDATION_ID_03;
 
         BalancerValidatorManager balancerValidatorManager =
-            _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidators);
+            _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidations);
 
         assertEq(balancerValidatorManager.owner(), validatorManagerOwnerAddress);
         assertEq(balancerValidatorManager.getChurnPeriodSeconds(), churnPeriodSeconds);
@@ -224,8 +224,8 @@ contract PoAToBalancerValidatorManagerTest is Test {
     }
 
     function testUpgradeToBalancerValidatorManagerRevertsIfMissingMigratedValidators() public {
-        bytes[] memory migratedValidators = new bytes[](1);
-        migratedValidators[0] = VALIDATOR_NODE_ID_02;
+        bytes32[] memory migratedValidations = new bytes32[](1);
+        migratedValidations[0] = VALIDATION_ID_02;
 
         Options memory opts;
         opts.unsafeAllow = "missing-initializer-call";
@@ -242,14 +242,14 @@ contract PoAToBalancerValidatorManagerTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IBalancerValidatorManager
-                    .BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch
+                    .BalancerValidatorManager__MigratedValidationsTotalWeightMismatch
                     .selector,
                 180,
                 200
             )
         );
         balancerValidatorManager.initialize(
-            _generateTestBalancerValidatorManagerSettings(migratedValidators)
+            _generateTestBalancerValidatorManagerSettings(migratedValidations)
         );
         vm.stopBroadcast();
     }
@@ -272,13 +272,13 @@ contract PoAToBalancerValidatorManagerTest is Test {
         );
         vm.stopPrank();
 
-        bytes[] memory migratedValidators = new bytes[](3);
-        migratedValidators[0] = VALIDATOR_NODE_ID_01;
-        migratedValidators[1] = VALIDATOR_NODE_ID_02;
-        migratedValidators[2] = VALIDATOR_NODE_ID_03;
+        bytes32[] memory migratedValidations = new bytes32[](3);
+        migratedValidations[0] = VALIDATION_ID_01;
+        migratedValidations[1] = VALIDATION_ID_02;
+        migratedValidations[2] = VALIDATION_ID_03;
 
         BalancerValidatorManager balancerValidatorManager =
-            _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidators);
+            _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidations);
 
         Validator memory validator = balancerValidatorManager.getValidator(VALIDATION_ID_01);
         (uint64 weight,) = balancerValidatorManager.getSecurityModuleWeights(testSecurityModules[0]);
