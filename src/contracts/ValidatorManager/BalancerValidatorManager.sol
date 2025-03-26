@@ -117,11 +117,7 @@ contract BalancerValidatorManager is
         }
 
         _setUpSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
-<<<<<<< HEAD
-        _migrateValidators(initialSecurityModule, migratedValidators);
-=======
-        _migrateValidators(migratedValidations);
->>>>>>> a563a12 (feat(ValidatorManager): migrate validators based on validationIDs instead of nodeIDs)
+        _migrateValidators(migratedValidations, initialSecurityModule);
     }
 
     // solhint-enable func-name-mixedcase
@@ -383,7 +379,8 @@ contract BalancerValidatorManager is
     }
 
     function _migrateValidators(
-        bytes32[] calldata migratedValidations
+        bytes32[] calldata migratedValidations,
+        address initialSecurityModule
     ) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
@@ -392,7 +389,7 @@ contract BalancerValidatorManager is
         uint64 migratedValidationsTotalWeight = 0;
         for (uint256 i = 0; i < migratedValidations.length; i++) {
             Validator memory validator = getValidator(migratedValidations[i]);
-            $.validatorSecurityModule[migratedValidations[i]] = $.securityModules.keys()[0];
+            $.validatorSecurityModule[migratedValidations[i]] = initialSecurityModule;
             migratedValidationsTotalWeight += validator.weight;
         }
 
@@ -404,6 +401,6 @@ contract BalancerValidatorManager is
         }
 
         // Update the initial security module weight
-        _updateSecurityModuleWeight($.securityModules.keys()[0], migratedValidationsTotalWeight);
+        _updateSecurityModuleWeight(initialSecurityModule, migratedValidationsTotalWeight);
     }
 }
