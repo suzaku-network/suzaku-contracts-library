@@ -77,6 +77,12 @@ contract BalancerValidatorManager is
         _disableInitializers();
     }
 
+    /**
+     * @notice Initialize the Balancer Validator Manager
+     * @dev This function is reinitializer(2) because it is upgrated from PoAValidatorManager
+     * https://github.com/ava-labs/icm-contracts/blob/validator-manager-v1.0.0/contracts/validator-manager/PoAValidatorManager.sol
+     * @param settings The settings for the Balancer Validator Manager
+     */
     function initialize(
         BalancerValidatorManagerSettings calldata settings
     ) external reinitializer(2) {
