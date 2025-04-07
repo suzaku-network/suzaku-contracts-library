@@ -101,12 +101,20 @@ contract BalancerValidatorManager is
         );
     }
 
-    // solhint-disable-next-line no-empty-blocks
     function __BalancerValidatorManager_init_unchained(
         address initialSecurityModule,
         uint64 initialSecurityModuleMaxWeight,
         bytes[] calldata migratedValidators
     ) internal onlyInitializing {
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
+
+        // Ensure initial security module max weight is sufficient
+        if (initialSecurityModuleMaxWeight < vms._churnTracker.totalWeight) {
+            revert BalancerValidatorManager__InitialSecurityModuleMaxWeightLowerThanTotalWeight(
+                initialSecurityModule, initialSecurityModuleMaxWeight, vms._churnTracker.totalWeight
+            );
+        }
+
         _setUpSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
         _migrateValidators(migratedValidators);
     }
@@ -375,7 +383,7 @@ contract BalancerValidatorManager is
             );
         }
 
-        // Update the initial security module weight
-        _updateSecurityModuleWeight($.securityModules.keys()[0], migratedValidatorsTotalWeight);
+        // Update the initial security module weight directly since we've already validated the max weight
+        $.securityModuleWeight[$.securityModules.keys()[0]] = migratedValidatorsTotalWeight;
     }
 }
