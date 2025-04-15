@@ -371,6 +371,12 @@ contract BalancerValidatorManager is
         uint64 migratedValidatorsTotalWeight = 0;
         for (uint256 i = 0; i < migratedValidators.length; i++) {
             bytes32 validationID = registeredValidators(migratedValidators[i]);
+
+            // Ensure validator hasn't already been migrated
+            if ($.validatorSecurityModule[validationID] != address(0)) {
+                revert BalancerValidatorManager__ValidatorAlreadyMigrated(validationID);
+            }
+
             Validator memory validator = getValidator(validationID);
             $.validatorSecurityModule[validationID] = $.securityModules.keys()[0];
             migratedValidatorsTotalWeight += validator.weight;
