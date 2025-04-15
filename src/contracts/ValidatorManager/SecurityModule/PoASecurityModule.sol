@@ -17,7 +17,7 @@ import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 /**
  * @dev Implementation of the {IPoAValidatorManager} interface.
  *
- * @custom:security-contact https://github.com/ava-labs/teleporter/blob/main/SECURITY.md
+ * @custom:security-contact security@suzaku.network
  */
 contract PoASecurityModule is IPoAValidatorManager, Ownable {
     error ZeroAddress();

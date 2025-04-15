@@ -25,6 +25,7 @@ import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/Enumera
  * @title BalancerValidatorManager
  * @author ADDPHO
  * @notice The Balancer Validator Manager contract allows to balance the weight of an L1 between multiple security modules.
+ * @custom:security-contact security@suzaku.network
  * @custom:oz-upgrades-unsafe-allow external-library-linking
  * @custom:oz-upgrades-from PoAValidatorManager
  */
