@@ -170,7 +170,17 @@ contract BalancerValidatorManager is
     function completeEndValidation(
         uint32 messageIndex
     ) external {
-        _completeEndValidation(messageIndex);
+        (bytes32 validationID, Validator memory validator) = _completeEndValidation(messageIndex);
+
+        // Update the security module weight only if the validation was invalidated
+        if (validator.status == ValidatorStatus.Invalidated) {
+            BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
+
+            address securityModule = $.validatorSecurityModule[validationID];
+            uint64 newSecurityModuleWeight =
+                $.securityModuleWeight[securityModule] - validator.weight;
+            _updateSecurityModuleWeight(securityModule, newSecurityModuleWeight);
+        }
     }
 
     /// @inheritdoc IBalancerValidatorManager

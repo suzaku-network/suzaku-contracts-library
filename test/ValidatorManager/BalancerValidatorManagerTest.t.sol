@@ -440,6 +440,9 @@ contract BalancerValidatorManagerTest is Test {
         assert(validator.status == ValidatorStatus.Invalidated);
         assertEq(validator.startedAt, 0);
         assertEq(validator.endedAt, 0);
+
+        (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+        assertEq(weight, 0);
     }
 
     function testGetChurnPeriodSeconds() public view {
