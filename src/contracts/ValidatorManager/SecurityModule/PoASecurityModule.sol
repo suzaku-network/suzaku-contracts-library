@@ -36,14 +36,14 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
     function initializeValidatorSet(
         ConversionData calldata conversionData,
         uint32 messageIndex
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.initializeValidatorSet(conversionData, messageIndex);
     }
 
     /// @inheritdoc IValidatorManager
     function resendRegisterValidatorMessage(
         bytes32 validationID
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.resendRegisterValidatorMessage(validationID);
     }
 
@@ -58,7 +58,7 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
     /// @inheritdoc IValidatorManager
     function completeValidatorRegistration(
         uint32 messageIndex
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.completeValidatorRegistration(messageIndex);
     }
 
@@ -72,7 +72,7 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
     /// @inheritdoc IValidatorManager
     function resendEndValidatorMessage(
         bytes32 validationID
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.resendEndValidatorMessage(validationID);
     }
 
