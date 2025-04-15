@@ -147,9 +147,8 @@ contract BalancerValidatorManager is
     /// @inheritdoc IBalancerValidatorManager
     function initializeEndValidation(
         bytes32 validationID
-    ) external onlySecurityModule returns (Validator memory) {
+    ) external onlySecurityModule returns (Validator memory validator) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        Validator memory validator = getValidator(validationID);
 
         // Ensure the validator weight is not being updated
         if ($.validatorPendingWeightUpdate[validationID] != 0) {
@@ -187,8 +186,9 @@ contract BalancerValidatorManager is
     function initializeValidatorWeightUpdate(
         bytes32 validationID,
         uint64 newWeight
-    ) external onlySecurityModule returns (Validator memory validator) {
+    ) external onlySecurityModule returns (Validator memory) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
 
         // Check that the newWeight is greater than zero
         if (newWeight == 0) {
@@ -197,7 +197,7 @@ contract BalancerValidatorManager is
 
         // Ensure the validation period is active and that the validator is not already being updated
         // The initial validator set must have been set already to have active validators.
-        validator = getValidator(validationID);
+        Validator storage validator = vms._validationPeriods[validationID];
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -206,7 +206,7 @@ contract BalancerValidatorManager is
         }
 
         _checkValidatorSecurityModule(validationID, msg.sender);
-        uint64 oldWeight = getValidator(validationID).weight;
+        uint64 oldWeight = validator.weight;
         (, bytes32 messageID) = _setValidatorWeight(validationID, newWeight);
 
         // Update the security module weight
@@ -221,7 +221,8 @@ contract BalancerValidatorManager is
     /// @inheritdoc IBalancerValidatorManager
     function completeValidatorWeightUpdate(bytes32 validationID, uint32 messageIndex) external {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        Validator memory validator = getValidator(validationID);
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
+        Validator storage validator = vms._validationPeriods[validationID];
 
         // Check that the validator is active and being updated
         if (validator.status != ValidatorStatus.Active) {
@@ -249,7 +250,9 @@ contract BalancerValidatorManager is
         bytes32 validationID
     ) external {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        Validator memory validator = getValidator(validationID);
+        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
+        Validator storage validator = vms._validationPeriods[validationID];
+
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -387,7 +390,7 @@ contract BalancerValidatorManager is
                 revert BalancerValidatorManager__ValidatorAlreadyMigrated(validationID);
             }
 
-            Validator memory validator = getValidator(validationID);
+            Validator storage validator = vms._validationPeriods[validationID];
             $.validatorSecurityModule[validationID] = $.securityModules.keys()[0];
             migratedValidatorsTotalWeight += validator.weight;
         }
