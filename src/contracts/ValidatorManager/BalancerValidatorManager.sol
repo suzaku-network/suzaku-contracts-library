@@ -116,7 +116,7 @@ contract BalancerValidatorManager is
         }
 
         _setUpSecurityModule(initialSecurityModule, initialSecurityModuleMaxWeight);
-        _migrateValidators(migratedValidators);
+        _migrateValidators(initialSecurityModule, migratedValidators);
     }
 
     // solhint-enable func-name-mixedcase
@@ -375,6 +375,7 @@ contract BalancerValidatorManager is
     }
 
     function _migrateValidators(
+        address initialSecurityModule,
         bytes[] calldata migratedValidators
     ) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
@@ -391,7 +392,7 @@ contract BalancerValidatorManager is
             }
 
             Validator storage validator = vms._validationPeriods[validationID];
-            $.validatorSecurityModule[validationID] = $.securityModules.keys()[0];
+            $.validatorSecurityModule[validationID] = initialSecurityModule;
             migratedValidatorsTotalWeight += validator.weight;
         }
 
@@ -403,6 +404,6 @@ contract BalancerValidatorManager is
         }
 
         // Update the initial security module weight directly since we've already validated the max weight
-        $.securityModuleWeight[$.securityModules.keys()[0]] = migratedValidatorsTotalWeight;
+        $.securityModuleWeight[initialSecurityModule] = migratedValidatorsTotalWeight;
     }
 }
