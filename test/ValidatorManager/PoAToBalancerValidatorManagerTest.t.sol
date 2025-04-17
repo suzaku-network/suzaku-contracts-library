@@ -50,6 +50,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     uint32 constant COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX = 3;
     uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
     uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
+    uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_ZERO_MESSAGE_INDEX = 6;
     uint32 constant VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX = 7;
     bytes constant VALIDATOR_NODE_ID_01 =
         bytes(hex"1234567812345678123456781234567812345678123456781234567812345678");
@@ -287,12 +288,13 @@ contract PoAToBalancerValidatorManagerTest is Test {
         assertEq(weight, 220);
 
         // Remove the validator
-        vm.prank(testSecurityModules[0]);
+        vm.startPrank(testSecurityModules[0]);
         balancerValidatorManager.initializeEndValidation(VALIDATION_ID_01);
+        balancerValidatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
 
         validator = balancerValidatorManager.getValidator(VALIDATION_ID_01);
         (weight,) = balancerValidatorManager.getSecurityModuleWeights(testSecurityModules[0]);
-        assert(validator.status == ValidatorStatus.PendingRemoved);
+        assert(validator.status == ValidatorStatus.Completed);
         assertEq(validator.endedAt, block.timestamp);
         assertEq(validator.weight, 0);
         assertEq(weight, 200);

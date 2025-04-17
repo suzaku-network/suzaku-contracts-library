@@ -17,12 +17,18 @@ import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 /**
  * @dev Implementation of the {IPoAValidatorManager} interface.
  *
- * @custom:security-contact https://github.com/ava-labs/teleporter/blob/main/SECURITY.md
+ * @custom:security-contact security@suzaku.network
  */
 contract PoASecurityModule is IPoAValidatorManager, Ownable {
+    error ZeroAddress();
+
     IBalancerValidatorManager public immutable balancerValidatorManager;
 
     constructor(address balancerValidatorManager_, address initialOwner) Ownable(initialOwner) {
+        if (balancerValidatorManager_ == address(0)) {
+            revert ZeroAddress();
+        }
+
         balancerValidatorManager = IBalancerValidatorManager(balancerValidatorManager_);
     }
 
@@ -30,14 +36,14 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
     function initializeValidatorSet(
         ConversionData calldata conversionData,
         uint32 messageIndex
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.initializeValidatorSet(conversionData, messageIndex);
     }
 
     /// @inheritdoc IValidatorManager
     function resendRegisterValidatorMessage(
         bytes32 validationID
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.resendRegisterValidatorMessage(validationID);
     }
 
@@ -52,7 +58,7 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
     /// @inheritdoc IValidatorManager
     function completeValidatorRegistration(
         uint32 messageIndex
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.completeValidatorRegistration(messageIndex);
     }
 
@@ -66,7 +72,7 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
     /// @inheritdoc IValidatorManager
     function resendEndValidatorMessage(
         bytes32 validationID
-    ) external onlyOwner {
+    ) external {
         balancerValidatorManager.resendEndValidatorMessage(validationID);
     }
 
