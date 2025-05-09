@@ -6,11 +6,29 @@ This library provides utility contracts for different blockchain ecosystems, not
 
 ## Avalanche ecosystem
 
+### Validator Manager Contracts
+
+The Validator Manager contracts provide a flexible system for managing validator sets with multiple security modules.
+
+#### Contracts, libraries and interfaces
+
+- The [BalancerValidatorManager](src/contracts/ValidatorManager/BalancerValidatorManager.sol) contract allows multiple security modules to control portions of the validator set with weight limits
+- The [PoASecurityModule](src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol) implements a Proof of Authority security module
+- The [IBalancerValidatorManager](src/interfaces/ValidatorManager/IBalancerValidatorManager.sol) interface defines the functions for balancing validator weights across security modules
+
+Key features:
+
+- Multiple security modules can operate independently
+- Each security module has a maximum weight allocation
+- Support for validator registration, removal and weight updates
+- Built-in weight tracking and enforcement
+- Upgradeable from PoA Validator Manager
+
 ### ICM contracts library
 
-Check more informations [here](src/contracts/ICM/).
+Check more information [here](src/contracts/ICM/).
 
-#### Contracts, librairies and interface
+#### Contracts, libraries and interfaces
 
 - The [IAvalancheICTTRouter](src/interfaces/ICM/IAvalancheICTTRouter.sol) interface specifies the functions a contract must implement to act as a `Router` on an Avalanche EVM chain.
 - The [IAvalancheICTTRouterFixedFees](src/interfaces/ICM/IAvalancheICTTRouterFixedFees.sol) interface extends `IAvalancheICTTRouter` by defining additional functions for an "enforced fixed fees" `Router` on an Avalanche EVM chain.
@@ -19,13 +37,7 @@ Check more informations [here](src/contracts/ICM/).
 
 ### ACP99 contracts library
 
-#### Contracts, libraries and interfaces
-
-- The [ValidatorMessages](contracts/src/contracts/ACP99/ValidatorMessages.sol) library provides utility functions to encode and decode validator set update Warp messages.
-- The [ACP99Manager](contracts/src/contracts/ACP99/ACP99Manager.sol) contract can be set as the `SubnetManager` address of a L1 to manage its validator set. It follows the [ACP-99](https://github.com/Nuttymoon/ACPs/blob/validatorsetmanager-solidity-contract/ACPs/99-validatorsetmanager-contract/README.md) standard.
-- The [IACP99Manager](contracts/src/interfaces/ACP99/IACP99Manager.sol) interface defines the functions that a contract must implement to be an `ACP99Manager`.
-- The [IACP99SecurityModule](contracts/src/interfaces/ACP99/IACP99SecurityModule.sol) interface defines the functions that a security module must implement to work with the `ACP99Manager`.
-- The [ACP99PoAModule](contracts/src/contracts/ACP99/SecurityModules/ACP99PoAModule.sol) contract is an example implementation of a Proof-of-Authority security module that works with the `ACP99Manager`.
+Contracts and interfaces in the `ACP99/` directories were PoC for the ACP-99 standard. They are not maintained and should not be used in production.
 
 ## Usage
 
