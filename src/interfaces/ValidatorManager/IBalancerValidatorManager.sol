@@ -19,7 +19,7 @@ struct BalancerValidatorManagerSettings {
     address initialOwner;
     address initialSecurityModule;
     uint64 initialSecurityModuleMaxWeight;
-    bytes32[] migratedValidations;
+    bytes[] migratedValidators;
 }
 
 /**
@@ -36,8 +36,8 @@ interface IBalancerValidatorManager is IValidatorManager {
      */
     event SetUpSecurityModule(address indexed securityModule, uint64 maxWeight);
 
-    error BalancerValidatorManager__MigratedValidationsTotalWeightMismatch(
-        uint64 migratedValidationsTotalWeight, uint64 currentL1TotalWeight
+    error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
+        uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
     );
     error BalancerValidatorManager__SecurityModuleAlreadyRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleNotRegistered(address securityModule);
@@ -58,7 +58,6 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__NoPendingWeightUpdate(bytes32 validationID);
     error BalancerValidatorManager__InvalidNonce(uint64 nonce);
     error BalancerValidatorManager__ValidatorAlreadyMigrated(bytes32 validationID);
-    error BalancerValidatorManager__WeightUpdateMismatch(uint64 newWeight, uint64 expectedWeight);
 
     /**
      * @notice Returns the ValidatorManager churn period in seconds
