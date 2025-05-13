@@ -105,6 +105,12 @@ interface IBalancerValidatorManager is IValidatorManager {
     ) external view returns (bool);
 
     /**
+     * @notice Returns the L1ID associated with this validator manager
+     * @return L1ID The L1ID
+     */
+    function getL1ID() external view returns (bytes32);
+
+    /**
      * @notice Registers a new security module with a maximum weight limit
      * @param securityModule The address of the security module to register
      * @param maxWeight The maximum total weight allowed for validators managed by this module
