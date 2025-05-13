@@ -316,7 +316,7 @@ contract BalancerValidatorManager is
     }
 
     /// @inheritdoc IBalancerValidatorManager
-    function getL1ID() external view returns (bytes32) {
+    function getL1ID() external view returns (bytes32 l1ID) {
         ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
         return vms._l1ID;
     }
