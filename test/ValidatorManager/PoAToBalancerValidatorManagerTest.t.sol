@@ -3,9 +3,11 @@
 
 pragma solidity 0.8.25;
 
-import {DeployPoAValidatorManager} from
-    "../../script/ValidatorManager/DeployPoAValidatorManager.s.sol";
 import {HelperConfig} from "../../script/ValidatorManager/HelperConfig.s.sol";
+import {PoAUpgradeConfig} from "../../script/ValidatorManager/PoAUpgradeConfigTypes.s.sol";
+import {ExecutePoAValidatorManager} from "../../script/ValidatorManager/PoAValidatorManager.s.sol";
+import {UpgradePoAToBalancer} from "../../script/ValidatorManager/UpgradePoAToBalancer.s.sol";
+
 import {
     BalancerValidatorManager,
     BalancerValidatorManagerSettings
@@ -25,18 +27,16 @@ import {
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-
-import {Options} from "@openzeppelin/foundry-upgrades/Options.sol";
-import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract PoAToBalancerValidatorManagerTest is Test {
-    DeployPoAValidatorManager poADeployer;
+    ExecutePoAValidatorManager poADeployer;
     address validatorManagerProxyAddress;
     PoAValidatorManager poAValidatorManager;
     uint256 proxyAdminOwnerKey;
     uint256 validatorManagerOwnerKey;
     address validatorManagerOwnerAddress;
+    address proxyAdminOwnerAddress;
     bytes32 l1ID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
@@ -70,7 +70,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     uint64 constant DEFAULT_MAX_WEIGHT = 100;
 
     function setUp() public {
-        poADeployer = new DeployPoAValidatorManager();
+        poADeployer = new ExecutePoAValidatorManager();
 
         HelperConfig helperConfig = new HelperConfig();
         (
@@ -81,13 +81,26 @@ contract PoAToBalancerValidatorManagerTest is Test {
             maximumChurnPercentage
         ) = helperConfig.activeNetworkConfig();
         validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
+        proxyAdminOwnerAddress = vm.addr(proxyAdminOwnerKey);
 
         testSecurityModules = new address[](3);
         testSecurityModules[0] = makeAddr("securityModule1");
         testSecurityModules[1] = makeAddr("securityModule2");
         testSecurityModules[2] = makeAddr("securityModule3");
 
-        validatorManagerProxyAddress = poADeployer.run();
+        // Create PoAUpgradeConfig and deploy the PoA validator manager
+        PoAUpgradeConfig memory poaConfig = PoAUpgradeConfig({
+            l1ID: l1ID,
+            churnPeriodSeconds: churnPeriodSeconds,
+            maximumChurnPercentage: maximumChurnPercentage,
+            proxyAdminOwnerAddress: proxyAdminOwnerAddress,
+            validatorManagerOwnerAddress: validatorManagerOwnerAddress,
+            proxyAddress: address(0), // Not used for deployment
+            initialSecurityModuleMaxWeight: DEFAULT_MAX_WEIGHT,
+            migratedValidators: new bytes[](0) // Not used for deployment
+        });
+
+        validatorManagerProxyAddress = poADeployer.executeDeployPoA(poaConfig, proxyAdminOwnerKey);
         poAValidatorManager = PoAValidatorManager(validatorManagerProxyAddress);
 
         ACP77WarpMessengerTestMock warpMessengerTestMock =
@@ -162,42 +175,28 @@ contract PoAToBalancerValidatorManagerTest is Test {
         return conversionData;
     }
 
-    function _generateTestBalancerValidatorManagerSettings(
+    function _upgradePoAValidatorManagerToBalancerValidatorManager(
         bytes[] memory migratedValidators
-    ) private view returns (BalancerValidatorManagerSettings memory) {
-        return BalancerValidatorManagerSettings({
-            baseSettings: ValidatorManagerSettings({
-                l1ID: l1ID,
-                churnPeriodSeconds: churnPeriodSeconds,
-                maximumChurnPercentage: maximumChurnPercentage
-            }),
-            initialOwner: validatorManagerOwnerAddress,
-            initialSecurityModule: testSecurityModules[0],
+    ) private returns (BalancerValidatorManager, address) {
+        UpgradePoAToBalancer upgrader = new UpgradePoAToBalancer();
+
+        // Create the upgrade config
+        PoAUpgradeConfig memory upgradeConfig = PoAUpgradeConfig({
+            l1ID: l1ID,
+            churnPeriodSeconds: churnPeriodSeconds,
+            maximumChurnPercentage: maximumChurnPercentage,
+            proxyAdminOwnerAddress: proxyAdminOwnerAddress,
+            validatorManagerOwnerAddress: validatorManagerOwnerAddress,
+            proxyAddress: validatorManagerProxyAddress,
             initialSecurityModuleMaxWeight: 500,
             migratedValidators: migratedValidators
         });
-    }
 
-    function _upgradePoAValidatorManagerToBalancerValidatorManager(
-        bytes[] memory migratedValidators
-    ) private returns (BalancerValidatorManager) {
-        Options memory opts;
-        opts.unsafeAllow = "missing-initializer-call";
-        vm.startBroadcast(proxyAdminOwnerKey);
-        Upgrades.upgradeProxy(
-            validatorManagerProxyAddress,
-            "BalancerValidatorManager.sol:BalancerValidatorManager",
-            "",
-            opts
-        );
-        BalancerValidatorManager balancerValidatorManager =
-            BalancerValidatorManager(validatorManagerProxyAddress);
-        balancerValidatorManager.initialize(
-            _generateTestBalancerValidatorManagerSettings(migratedValidators)
-        );
-        vm.stopBroadcast();
+        // Execute the upgrade
+        (address proxyAddr, address securityModuleAddr) =
+            upgrader.executeUpgradePoAToBalancer(upgradeConfig, proxyAdminOwnerKey);
 
-        return balancerValidatorManager;
+        return (BalancerValidatorManager(proxyAddr), securityModuleAddr);
     }
 
     function testUpgradeToBalancerValidatorManagerInitializesCorrectly() public {
@@ -205,16 +204,16 @@ contract PoAToBalancerValidatorManagerTest is Test {
         migratedValidators[0] = VALIDATOR_NODE_ID_02;
         migratedValidators[1] = VALIDATOR_NODE_ID_03;
 
-        BalancerValidatorManager balancerValidatorManager =
+        (BalancerValidatorManager balancerValidatorManager, address securityModuleAddr) =
             _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidators);
 
         assertEq(balancerValidatorManager.owner(), validatorManagerOwnerAddress);
         assertEq(balancerValidatorManager.getChurnPeriodSeconds(), churnPeriodSeconds);
         address[] memory securityModules = balancerValidatorManager.getSecurityModules();
         assertEq(securityModules.length, 1);
-        assertEq(securityModules[0], testSecurityModules[0]);
+        assertEq(securityModules[0], securityModuleAddr);
         (uint64 weight, uint64 maxWeight) =
-            balancerValidatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+            balancerValidatorManager.getSecurityModuleWeights(securityModuleAddr);
         assertEq(weight, 200);
         assertEq(maxWeight, 500);
         Validator memory validator = balancerValidatorManager.getValidator(VALIDATION_ID_02);
@@ -227,18 +226,21 @@ contract PoAToBalancerValidatorManagerTest is Test {
         bytes[] memory migratedValidators = new bytes[](1);
         migratedValidators[0] = VALIDATOR_NODE_ID_02;
 
-        Options memory opts;
-        opts.unsafeAllow = "missing-initializer-call";
-        vm.startBroadcast(proxyAdminOwnerKey);
-        Upgrades.upgradeProxy(
-            validatorManagerProxyAddress,
-            "BalancerValidatorManager.sol:BalancerValidatorManager",
-            "",
-            opts
-        );
-        BalancerValidatorManager balancerValidatorManager =
-            BalancerValidatorManager(validatorManagerProxyAddress);
+        UpgradePoAToBalancer upgrader = new UpgradePoAToBalancer();
 
+        // Create the upgrade config with missing validators
+        PoAUpgradeConfig memory upgradeConfig = PoAUpgradeConfig({
+            l1ID: l1ID,
+            churnPeriodSeconds: churnPeriodSeconds,
+            maximumChurnPercentage: maximumChurnPercentage,
+            proxyAdminOwnerAddress: proxyAdminOwnerAddress,
+            validatorManagerOwnerAddress: validatorManagerOwnerAddress,
+            proxyAddress: validatorManagerProxyAddress,
+            initialSecurityModuleMaxWeight: 500,
+            migratedValidators: migratedValidators
+        });
+
+        // The upgrade should fail because one validator is missing
         vm.expectRevert(
             abi.encodeWithSelector(
                 IBalancerValidatorManager
@@ -248,10 +250,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
                 200
             )
         );
-        balancerValidatorManager.initialize(
-            _generateTestBalancerValidatorManagerSettings(migratedValidators)
-        );
-        vm.stopBroadcast();
+        upgrader.executeUpgradePoAToBalancer(upgradeConfig, proxyAdminOwnerKey);
     }
 
     function testUpgradeToBalancerValidatorManagerWithPoAValidator() public {
@@ -277,23 +276,23 @@ contract PoAToBalancerValidatorManagerTest is Test {
         migratedValidators[1] = VALIDATOR_NODE_ID_02;
         migratedValidators[2] = VALIDATOR_NODE_ID_03;
 
-        BalancerValidatorManager balancerValidatorManager =
+        (BalancerValidatorManager balancerValidatorManager, address securityModuleAddr) =
             _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidators);
 
         Validator memory validator = balancerValidatorManager.getValidator(VALIDATION_ID_01);
-        (uint64 weight,) = balancerValidatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+        (uint64 weight,) = balancerValidatorManager.getSecurityModuleWeights(securityModuleAddr);
         assertEq(validator.nodeID, VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.Active);
         assertEq(validator.weight, 20);
         assertEq(weight, 220);
 
         // Remove the validator
-        vm.startPrank(testSecurityModules[0]);
+        vm.startPrank(securityModuleAddr);
         balancerValidatorManager.initializeEndValidation(VALIDATION_ID_01);
         balancerValidatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
 
         validator = balancerValidatorManager.getValidator(VALIDATION_ID_01);
-        (weight,) = balancerValidatorManager.getSecurityModuleWeights(testSecurityModules[0]);
+        (weight,) = balancerValidatorManager.getSecurityModuleWeights(securityModuleAddr);
         assert(validator.status == ValidatorStatus.Completed);
         assertEq(validator.endedAt, block.timestamp);
         assertEq(validator.weight, 0);
