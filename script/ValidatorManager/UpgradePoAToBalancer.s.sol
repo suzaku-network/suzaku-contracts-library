@@ -44,7 +44,7 @@ contract UpgradePoAToBalancer is Script {
             initialOwner: balancerConfig.validatorManagerOwnerAddress,
             initialSecurityModule: address(securityModule),
             initialSecurityModuleMaxWeight: balancerConfig.initialSecurityModuleMaxWeight,
-            migratedValidations: balancerConfig.migratedValidations
+            migratedValidators: balancerConfig.migratedValidators
         });
 
         balancerValidatorManager.initialize(settings);

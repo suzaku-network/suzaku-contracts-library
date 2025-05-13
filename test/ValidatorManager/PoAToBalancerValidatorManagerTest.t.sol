@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.25;
 
-import {DeployTestPoAValidatorManager} from
+import {DeployPoAValidatorManager} from
     "../../script/ValidatorManager/DeployPoAValidatorManager.s.sol";
 import {HelperConfig} from "../../script/ValidatorManager/HelperConfig.s.sol";
 import {
@@ -31,7 +31,7 @@ import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract PoAToBalancerValidatorManagerTest is Test {
-    DeployTestPoAValidatorManager poADeployer;
+    DeployPoAValidatorManager poADeployer;
     address validatorManagerProxyAddress;
     PoAValidatorManager poAValidatorManager;
     uint256 proxyAdminOwnerKey;
@@ -70,7 +70,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     uint64 constant DEFAULT_MAX_WEIGHT = 100;
 
     function setUp() public {
-        poADeployer = new DeployTestPoAValidatorManager();
+        poADeployer = new DeployPoAValidatorManager();
 
         HelperConfig helperConfig = new HelperConfig();
         (

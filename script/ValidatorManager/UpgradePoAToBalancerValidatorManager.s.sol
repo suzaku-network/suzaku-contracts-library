@@ -19,7 +19,7 @@ contract UpgradePoAToBalancerValidatorManager is Script {
     function run(
         address proxyAddress,
         uint64 initialSecurityModuleMaxWeight,
-        bytes32[] calldata migratedValidations
+        bytes[] calldata migratedValidators
     ) external returns (address, address) {
         HelperConfig helperConfig = new HelperConfig();
         (
@@ -54,7 +54,7 @@ contract UpgradePoAToBalancerValidatorManager is Script {
             initialOwner: validatorManagerOwnerAddress,
             initialSecurityModule: address(securityModule),
             initialSecurityModuleMaxWeight: initialSecurityModuleMaxWeight,
-            migratedValidations: migratedValidations
+            migratedValidators: migratedValidators
         });
 
         balancerValidatorManager.initialize(settings);
