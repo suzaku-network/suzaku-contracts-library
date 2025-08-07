@@ -7,18 +7,23 @@ import {
     BalancerValidatorManagerSettings,
     IBalancerValidatorManager
 } from "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {ValidatorManager} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+
+import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
+import {
+    ValidatorChurnPeriod,
+    ValidatorManager,
+    ValidatorManagerSettings
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {
-    IValidatorManager,
+    IACP99Manager,
+    PChainOwner,
     Validator,
-    ValidatorChurnPeriod,
-    ValidatorManagerSettings,
-    ValidatorRegistrationInput,
     ValidatorStatus
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
-import {OwnableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+import {IValidatorManager} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
 
 /**
@@ -29,11 +34,7 @@ import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/Enumera
  * @custom:oz-upgrades-unsafe-allow external-library-linking
  * @custom:oz-upgrades-from PoAValidatorManager
  */
-contract BalancerValidatorManager is
-    IBalancerValidatorManager,
-    ValidatorManager,
-    OwnableUpgradeable
-{
+contract BalancerValidatorManager is IBalancerValidatorManager, ValidatorManager {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
 
     /// @custom:storage-location erc7201:suzaku.storage.BalancerValidatorManager
@@ -74,7 +75,7 @@ contract BalancerValidatorManager is
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() ValidatorManager(ICMInitializable.Allowed) {
         _disableInitializers();
     }
 
@@ -94,7 +95,7 @@ contract BalancerValidatorManager is
         BalancerValidatorManagerSettings calldata settings
     ) internal onlyInitializing {
         __ValidatorManager_init(settings.baseSettings);
-        __Ownable_init(settings.initialOwner);
+        // __Ownable_init already called by __ValidatorManager_init with settings.baseSettings.admin
         __BalancerValidatorManager_init_unchained(
             settings.initialSecurityModule,
             settings.initialSecurityModuleMaxWeight,
@@ -128,13 +129,18 @@ contract BalancerValidatorManager is
     }
 
     /// @inheritdoc IBalancerValidatorManager
-    function initializeValidatorRegistration(
-        ValidatorRegistrationInput calldata registrationInput,
+    function initiateValidatorRegistrationWithSecurityModule(
+        bytes memory nodeID,
+        bytes memory blsPublicKey,
+        PChainOwner memory remainingBalanceOwner,
+        PChainOwner memory disableOwner,
         uint64 weight
-    ) external onlySecurityModule returns (bytes32 validationID) {
+    ) external override onlySecurityModule returns (bytes32 validationID) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
-        validationID = _initializeValidatorRegistration(registrationInput, weight);
+        validationID = _initiateValidatorRegistration(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, weight
+        );
 
         // Update the security module weight
         uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] + weight;
@@ -146,9 +152,9 @@ contract BalancerValidatorManager is
     }
 
     /// @inheritdoc IBalancerValidatorManager
-    function initializeEndValidation(
+    function initiateValidatorRemovalWithSecurityModule(
         bytes32 validationID
-    ) external onlySecurityModule returns (Validator memory validator) {
+    ) external override onlySecurityModule returns (Validator memory validator) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
         // Ensure the validator weight is not being updated
@@ -157,7 +163,11 @@ contract BalancerValidatorManager is
         }
 
         _checkValidatorSecurityModule(validationID, msg.sender);
-        validator = _initializeEndValidation(validationID);
+
+        // Get validator before state mutation
+        validator = getValidator(validationID);
+
+        _initiateValidatorRemoval(validationID);
 
         // Update the security module weight
         uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] - validator.weight;
@@ -166,39 +176,129 @@ contract BalancerValidatorManager is
         return validator;
     }
 
-    /// @inheritdoc IValidatorManager
-    function completeEndValidation(
-        uint32 messageIndex
-    ) external {
-        (bytes32 validationID, Validator memory validator) = _completeEndValidation(messageIndex);
+    /* -------------------------------------------------------------------------- */
+    /*  INTERNAL helpers – clone the base logic without `onlyOwner`               */
+    /* -------------------------------------------------------------------------- */
 
-        // Update the security module weight only if the validation was invalidated
+    // copy body of ValidatorManager.completeValidatorRegistration
+    function _completeRegistrationInternal(
+        uint32 messageIndex
+    ) internal returns (bytes32) {
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        (bytes32 validationID, bool validRegistration) = ValidatorMessages
+            .unpackL1ValidatorRegistrationMessage(_getPChainWarpMessage(messageIndex).payload);
+
+        if (!validRegistration) {
+            revert UnexpectedRegistrationStatus(validRegistration);
+        }
+        // The initial validator set must have been set already to have pending register validation messages.
+        if ($._pendingRegisterValidationMessages[validationID].length == 0) {
+            revert InvalidValidationID(validationID);
+        }
+        if ($._validationPeriods[validationID].status != ValidatorStatus.PendingAdded) {
+            revert InvalidValidatorStatus($._validationPeriods[validationID].status);
+        }
+
+        delete $._pendingRegisterValidationMessages[validationID];
+        $._validationPeriods[validationID].status = ValidatorStatus.Active;
+        $._validationPeriods[validationID].startTime = uint64(block.timestamp);
+        emit CompletedValidatorRegistration(validationID, $._validationPeriods[validationID].weight);
+
+        return validationID;
+    }
+
+    // copy body of ValidatorManager.completeValidatorRemoval
+    function _completeRemovalInternal(
+        uint32 messageIndex
+    ) internal returns (bytes32 validationID, Validator memory validator) {
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+
+        // Get the Warp message.
+        (bytes32 _validationID, bool registered) = ValidatorMessages
+            .unpackL1ValidatorRegistrationMessage(_getPChainWarpMessage(messageIndex).payload);
+        if (registered) {
+            revert UnexpectedRegistrationStatus(registered);
+        }
+
+        validationID = _validationID;
+        validator = $._validationPeriods[validationID];
+
+        // The validation status is PendingRemoved if validator removal was initiated with a call to {initiateValidatorRemoval}.
+        // The validation status is PendingAdded if the validator was never registered on the P-Chain.
+        // The initial validator set must have been set already to have pending validation messages.
+        if (
+            validator.status != ValidatorStatus.PendingRemoved
+                && validator.status != ValidatorStatus.PendingAdded
+        ) {
+            revert InvalidValidatorStatus(validator.status);
+        }
+
+        if (validator.status == ValidatorStatus.PendingRemoved) {
+            validator.status = ValidatorStatus.Completed;
+        } else {
+            // Remove the validator's weight from the total tracked weight, but don't track it as churn.
+            $._churnTracker.totalWeight -= validator.weight;
+            validator.status = ValidatorStatus.Invalidated;
+        }
+        // Remove the validator from the registered validators mapping.
+        delete $._registeredValidators[validator.nodeID];
+
+        // Update the validator.
+        $._validationPeriods[validationID] = validator;
+
+        // Emit event.
+        emit CompletedValidatorRemoval(validationID);
+
+        return (validationID, validator);
+    }
+
+    function completeValidatorRemovalWithSecurityModule(
+        uint32 messageIndex
+    ) external override onlySecurityModule returns (bytes32) {
+        // auth: caller must match validator's module (reuse existing check)
+        (bytes32 vid,) = ValidatorMessages.unpackL1ValidatorRegistrationMessage(
+            _getPChainWarpMessage(messageIndex).payload
+        );
+        _checkValidatorSecurityModule(vid, msg.sender);
+
+        (bytes32 validationID, Validator memory validator) = _completeRemovalInternal(messageIndex);
+
+        // weight bookkeeping (existing code)
         if (validator.status == ValidatorStatus.Invalidated) {
             BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-
-            address securityModule = $.validatorSecurityModule[validationID];
-            uint64 newSecurityModuleWeight =
-                $.securityModuleWeight[securityModule] - validator.weight;
-            _updateSecurityModuleWeight(securityModule, newSecurityModuleWeight);
+            _updateSecurityModuleWeight(
+                $.validatorSecurityModule[validationID],
+                $.securityModuleWeight[msg.sender] - validator.weight
+            );
         }
+        return validationID;
+    }
+
+    function completeValidatorRegistrationWithSecurityModule(
+        uint32 messageIndex
+    ) external override onlySecurityModule returns (bytes32) {
+        // auth: caller must match validator's module (reuse existing check)
+        (bytes32 vid,) = ValidatorMessages.unpackL1ValidatorRegistrationMessage(
+            _getPChainWarpMessage(messageIndex).payload
+        );
+        _checkValidatorSecurityModule(vid, msg.sender);
+        return _completeRegistrationInternal(messageIndex);
     }
 
     /// @inheritdoc IBalancerValidatorManager
-    function initializeValidatorWeightUpdate(
+    function initiateValidatorWeightUpdateWithSecurityModule(
         bytes32 validationID,
         uint64 newWeight
-    ) external onlySecurityModule returns (Validator memory) {
+    ) external override onlySecurityModule returns (uint64, bytes32) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
 
         // Check that the newWeight is greater than zero
         if (newWeight == 0) {
             revert BalancerValidatorManager__NewWeightIsZero();
         }
 
-        // Ensure the validation period is active and that the validator is not already being updated
-        // The initial validator set must have been set already to have active validators.
-        Validator storage validator = vms._validationPeriods[validationID];
+        // Get validator and ensure it's active
+        Validator memory validator = getValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -208,7 +308,7 @@ contract BalancerValidatorManager is
 
         _checkValidatorSecurityModule(validationID, msg.sender);
         uint64 oldWeight = validator.weight;
-        (, bytes32 messageID) = _setValidatorWeight(validationID, newWeight);
+        (uint64 nonce, bytes32 messageID) = _initiateValidatorWeightUpdate(validationID, newWeight);
 
         // Update the security module weight
         uint64 newSecurityModuleWeight = $.securityModuleWeight[msg.sender] + newWeight - oldWeight;
@@ -216,34 +316,31 @@ contract BalancerValidatorManager is
 
         $.validatorPendingWeightUpdate[validationID] = messageID;
 
-        return validator;
+        return (nonce, messageID);
     }
 
     /// @inheritdoc IBalancerValidatorManager
-    function completeValidatorWeightUpdate(bytes32 validationID, uint32 messageIndex) external {
+    function completeValidatorWeightUpdateWithSecurityModule(
+        bytes32 validationID,
+        uint32 messageIndex
+    ) external override {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
-        Validator storage validator = vms._validationPeriods[validationID];
 
-        // Check that the validator is active and being updated
-        if (validator.status != ValidatorStatus.Active) {
-            revert InvalidValidatorStatus(validator.status);
-        }
+        // Verify the caller is the security module that registered this validator
+        _checkValidatorSecurityModule(validationID, msg.sender);
+
+        // Check that validator has a pending weight update
         if ($.validatorPendingWeightUpdate[validationID] == 0) {
             revert BalancerValidatorManager__NoPendingWeightUpdate(validationID);
         }
 
-        // Unpack the Warp message
-        (bytes32 messageValidationID, uint64 nonce,) = ValidatorMessages
-            .unpackL1ValidatorWeightMessage(_getPChainWarpMessage(messageIndex).payload);
-
-        if (validationID != messageValidationID) {
-            revert InvalidValidationID(validationID);
-        }
-        if (validator.messageNonce < nonce) {
-            revert BalancerValidatorManager__InvalidNonce(nonce);
+        // Call parent implementation to handle the weight update
+        (bytes32 returnedValidationID,) = completeValidatorWeightUpdate(messageIndex);
+        if (returnedValidationID != validationID) {
+            revert InvalidValidationID(returnedValidationID);
         }
 
+        // Clear the pending weight update
         delete $.validatorPendingWeightUpdate[validationID];
     }
 
@@ -251,8 +348,7 @@ contract BalancerValidatorManager is
         bytes32 validationID
     ) external {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
-        Validator storage validator = vms._validationPeriods[validationID];
+        Validator memory validator = getValidator(validationID);
 
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
@@ -261,28 +357,52 @@ contract BalancerValidatorManager is
             revert BalancerValidatorManager__NoPendingWeightUpdate(validationID);
         }
 
-        if (validator.messageNonce == 0) {
+        if (validator.sentNonce == 0) {
             revert InvalidValidationID(validationID);
         }
 
         // Submit the message to the Warp precompile.
         WARP_MESSENGER.sendWarpMessage(
             ValidatorMessages.packL1ValidatorWeightMessage(
-                validationID, validator.messageNonce, validator.weight
+                validationID, validator.sentNonce, validator.weight
             )
         );
     }
 
-    /// @inheritdoc IBalancerValidatorManager
-    function getChurnPeriodSeconds() external view returns (uint64 churnPeriodSeconds) {
-        return _getChurnPeriodSeconds();
+    function resendRegisterValidatorMessageWithSecurityModule(
+        bytes32 validationID
+    ) external override onlySecurityModule {
+        _checkValidatorSecurityModule(validationID, msg.sender);
+
+        // Check that the validator is pending registration
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        if ($._pendingRegisterValidationMessages[validationID].length == 0) {
+            revert InvalidValidationID(validationID);
+        }
+
+        WARP_MESSENGER.sendWarpMessage($._pendingRegisterValidationMessages[validationID]);
+    }
+
+    function resendValidatorRemovalMessageWithSecurityModule(
+        bytes32 validationID
+    ) external override onlySecurityModule {
+        _checkValidatorSecurityModule(validationID, msg.sender);
+        Validator memory validator = getValidator(validationID);
+
+        // Check that the validator is pending removal
+        if (validator.status != ValidatorStatus.PendingRemoved) {
+            revert InvalidValidatorStatus(validator.status);
+        }
+
+        WARP_MESSENGER.sendWarpMessage(
+            ValidatorMessages.packL1ValidatorWeightMessage(validationID, validator.sentNonce, 0)
+        );
     }
 
     /// @inheritdoc IBalancerValidatorManager
     function getMaximumChurnPercentage() external view returns (uint64 maximumChurnPercentage) {
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
-
-        return vms._maximumChurnPercentage;
+        (, maximumChurnPercentage,) = getChurnTracker();
+        return maximumChurnPercentage;
     }
 
     /// @inheritdoc IBalancerValidatorManager
@@ -291,9 +411,8 @@ contract BalancerValidatorManager is
         view
         returns (ValidatorChurnPeriod memory churnPeriod)
     {
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
-
-        return vms._churnTracker;
+        (,, churnPeriod) = getChurnTracker();
+        return churnPeriod;
     }
 
     /// @inheritdoc IBalancerValidatorManager
@@ -313,12 +432,6 @@ contract BalancerValidatorManager is
         maxWeight = uint64($.securityModules.get(securityModule));
 
         return (weight, maxWeight);
-    }
-
-    /// @inheritdoc IBalancerValidatorManager
-    function getL1ID() external view returns (bytes32 l1ID) {
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
-        return vms._l1ID;
     }
 
     /// @inheritdoc IBalancerValidatorManager
@@ -386,27 +499,27 @@ contract BalancerValidatorManager is
         bytes[] calldata migratedValidators
     ) internal {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        ValidatorManager.ValidatorManagerStorage storage vms = _getValidatorManagerStorage();
 
         // Add the migrated validators to the initial security module
         uint64 migratedValidatorsTotalWeight = 0;
         for (uint256 i = 0; i < migratedValidators.length; i++) {
-            bytes32 validationID = registeredValidators(migratedValidators[i]);
+            bytes32 validationID = getNodeValidationID(migratedValidators[i]);
 
             // Ensure validator hasn't already been migrated
             if ($.validatorSecurityModule[validationID] != address(0)) {
                 revert BalancerValidatorManager__ValidatorAlreadyMigrated(validationID);
             }
 
-            Validator storage validator = vms._validationPeriods[validationID];
+            Validator memory validator = getValidator(validationID);
             $.validatorSecurityModule[validationID] = initialSecurityModule;
             migratedValidatorsTotalWeight += validator.weight;
         }
 
         // Check that the migrated validators total weight equals the current L1 total weight
-        if (migratedValidatorsTotalWeight != vms._churnTracker.totalWeight) {
+        uint64 totalWeight = l1TotalWeight();
+        if (migratedValidatorsTotalWeight != totalWeight) {
             revert BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
-                migratedValidatorsTotalWeight, vms._churnTracker.totalWeight
+                migratedValidatorsTotalWeight, totalWeight
             );
         }
 

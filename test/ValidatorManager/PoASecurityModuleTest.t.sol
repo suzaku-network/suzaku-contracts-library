@@ -19,10 +19,10 @@ import {
     ConversionData,
     InitialValidator,
     PChainOwner,
-    Validator,
-    ValidatorRegistrationInput,
-    ValidatorStatus
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    Validator
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+import {ValidatorStatus} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Test, console} from "forge-std/Test.sol";
@@ -107,16 +107,28 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationInitialized() {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        ) = _getTestValidatorRegistrationParams();
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, VALIDATOR_WEIGHT
         );
         _;
     }
 
     modifier validatorRegistrationCompleted() {
         vm.startPrank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        ) = _getTestValidatorRegistrationParams();
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, VALIDATOR_WEIGHT
         );
         PoASecurityModule(testSecurityModules[0]).completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
@@ -125,18 +137,18 @@ contract BalancerValidatorManagerTest is Test {
         _;
     }
 
-    function _generateTestValidatorRegistrationInput()
+    // Helper function to return validator registration parameters
+    function _getTestValidatorRegistrationParams()
         private
         view
-        returns (ValidatorRegistrationInput memory)
+        returns (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        )
     {
-        return ValidatorRegistrationInput({
-            nodeID: VALIDATOR_NODE_ID_01,
-            blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
-            registrationExpiry: DEFAULT_EXPIRY,
-            remainingBalanceOwner: pChainOwner,
-            disableOwner: pChainOwner
-        });
+        return (VALIDATOR_NODE_ID_01, VALIDATOR_01_BLS_PUBLIC_KEY, pChainOwner, pChainOwner);
     }
 
     function _generateTestConversionData() private view returns (ConversionData memory) {
@@ -152,7 +164,7 @@ contract BalancerValidatorManagerTest is Test {
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            l1ID: l1ID,
+            subnetID: l1ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: address(validatorManager),
             initialValidators: initialValidators
@@ -226,17 +238,24 @@ contract BalancerValidatorManagerTest is Test {
 
     function testInitializeValidatorRegistration() public validatorSetInitialized {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        ) = _getTestValidatorRegistrationParams();
+        bytes32 validationID = PoASecurityModule(testSecurityModules[0])
+            .initiateValidatorRegistration(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, VALIDATOR_WEIGHT
         );
 
-        Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
+        Validator memory validator = validatorManager.getValidator(validationID);
         assertEq(validator.nodeID, VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.PendingAdded);
-        assertEq(validator.messageNonce, 0);
+        assertEq(validator.sentNonce, 0);
         assertEq(validator.weight, VALIDATOR_WEIGHT);
-        assertEq(validator.startedAt, 0);
-        assertEq(validator.endedAt, 0);
+        assertEq(validator.startTime, 0);
+        assertEq(validator.endTime, 0);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
         assertEq(weight, VALIDATOR_WEIGHT);
     }
@@ -253,7 +272,7 @@ contract BalancerValidatorManagerTest is Test {
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assert(validator.status == ValidatorStatus.Active);
-        assertEq(validator.startedAt, block.timestamp);
+        assertEq(validator.startTime, block.timestamp);
     }
 
     function testInitializeEndValidation()
@@ -262,12 +281,12 @@ contract BalancerValidatorManagerTest is Test {
         validatorRegistrationCompleted
     {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeEndValidation(VALIDATION_ID_01);
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRemoval(VALIDATION_ID_01);
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
         assert(validator.status == ValidatorStatus.PendingRemoved);
-        assertEq(validator.endedAt, block.timestamp);
+        assertEq(validator.endTime, block.timestamp);
         assertEq(validator.weight, 0);
         assertEq(weight, 0);
     }
@@ -288,7 +307,7 @@ contract BalancerValidatorManagerTest is Test {
                 testSecurityModules[1]
             )
         );
-        PoASecurityModule(testSecurityModules[1]).initializeEndValidation(VALIDATION_ID_01);
+        PoASecurityModule(testSecurityModules[1]).initiateValidatorRemoval(VALIDATION_ID_01);
     }
 
     function testCompleteEndValidation()
@@ -297,13 +316,13 @@ contract BalancerValidatorManagerTest is Test {
         validatorRegistrationCompleted
     {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeEndValidation(VALIDATION_ID_01);
-        PoASecurityModule(testSecurityModules[0]).completeEndValidation(
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRemoval(VALIDATION_ID_01);
+        PoASecurityModule(testSecurityModules[0]).completeValidatorRemoval(
             VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
-        bytes32 validationID = validatorManager.registeredValidators(VALIDATOR_NODE_ID_01);
+        bytes32 validationID = validatorManager.getNodeValidationID(VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.Completed);
         assertEq(validationID, bytes32(0));
     }
@@ -317,13 +336,13 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 days);
 
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).completeEndValidation(
+        PoASecurityModule(testSecurityModules[0]).completeValidatorRemoval(
             VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assert(validator.status == ValidatorStatus.Invalidated);
-        assertEq(validator.startedAt, 0);
-        assertEq(validator.endedAt, 0);
+        assertEq(validator.startTime, 0);
+        assertEq(validator.endTime, 0);
     }
 }

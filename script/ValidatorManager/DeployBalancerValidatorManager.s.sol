@@ -11,7 +11,7 @@ import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {ValidatorManagerSettings} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {Options} from "@openzeppelin/foundry-upgrades/Options.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
@@ -45,7 +45,8 @@ contract DeployBalancerValidatorManager is Script {
         vm.startBroadcast(proxyAdminOwnerKey);
 
         ValidatorManagerSettings memory settings = ValidatorManagerSettings({
-            l1ID: l1ID,
+            admin: address(0), // Will be transferred after initialization
+            subnetID: l1ID,
             churnPeriodSeconds: churnPeriodSeconds,
             maximumChurnPercentage: maximumChurnPercentage
         });

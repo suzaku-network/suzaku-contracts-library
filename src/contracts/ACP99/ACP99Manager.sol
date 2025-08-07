@@ -25,7 +25,7 @@ import {
 import {
     InitialValidator,
     PChainOwner
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {
     IWarpMessenger,
     WarpMessage
@@ -140,7 +140,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
             // Validation ID of the initial validators is the sha256 hash of the
             // Subnet ID and the index of the initial validator.
-            bytes32 validationID = sha256(abi.encodePacked(conversionData.l1ID, i));
+            bytes32 validationID = sha256(abi.encodePacked(conversionData.subnetID, i));
 
             // Save the initial validator as an active validator.
 
@@ -212,7 +212,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         (bytes32 validationID, bytes memory registrationMessage) = ValidatorMessages
             .packRegisterL1ValidatorMessage(
             ValidatorMessages.ValidationPeriod({
-                l1ID: l1ID,
+                subnetID: l1ID,
                 nodeID: nodeID,
                 blsPublicKey: blsPublicKey,
                 registrationExpiry: registrationExpiry,

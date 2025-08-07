@@ -5,21 +5,15 @@ pragma solidity 0.8.25;
 
 import {IBalancerValidatorManager} from
     "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {IPoAValidatorManager} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IPoAValidatorManager.sol";
-import {
-    ConversionData,
-    IValidatorManager,
-    ValidatorRegistrationInput
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+import {PChainOwner} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 
 /**
- * @dev Implementation of the {IPoAValidatorManager} interface.
+ * @dev Proof-of-Authority security module for BalancerValidatorManager.
  *
  * @custom:security-contact security@suzaku.network
  */
-contract PoASecurityModule is IPoAValidatorManager, Ownable {
+contract PoASecurityModule is Ownable {
     error ZeroAddress();
 
     IBalancerValidatorManager public immutable balancerValidatorManager;
@@ -32,54 +26,69 @@ contract PoASecurityModule is IPoAValidatorManager, Ownable {
         balancerValidatorManager = IBalancerValidatorManager(balancerValidatorManager_);
     }
 
-    /// @inheritdoc IValidatorManager
-    function initializeValidatorSet(
-        ConversionData calldata conversionData,
-        uint32 messageIndex
-    ) external {
-        balancerValidatorManager.initializeValidatorSet(conversionData, messageIndex);
+    function initiateValidatorRegistration(
+        bytes memory nodeID,
+        bytes memory blsPublicKey,
+        PChainOwner memory remainingBalanceOwner,
+        PChainOwner memory disableOwner,
+        uint64 weight
+    ) external onlyOwner returns (bytes32 validationID) {
+        return balancerValidatorManager.initiateValidatorRegistrationWithSecurityModule(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, weight
+        );
     }
 
-    /// @inheritdoc IValidatorManager
+    function initiateValidatorRemoval(
+        bytes32 validationID
+    ) external onlyOwner {
+        // IPoAManager expects void return, but BalancerValidatorManager returns Validator memory
+        // We ignore the return value as the PoA module doesn't need it
+        balancerValidatorManager.initiateValidatorRemovalWithSecurityModule(validationID);
+    }
+
+    function initiateValidatorWeightUpdate(
+        bytes32 validationID,
+        uint64 newWeight
+    ) external onlyOwner returns (uint64 nonce, bytes32 messageID) {
+        return balancerValidatorManager.initiateValidatorWeightUpdateWithSecurityModule(
+            validationID, newWeight
+        );
+    }
+
+    function completeValidatorRegistration(
+        uint32 messageIndex
+    ) external returns (bytes32 validationID) {
+        return
+            balancerValidatorManager.completeValidatorRegistrationWithSecurityModule(messageIndex);
+    }
+
+    function completeValidatorRemoval(
+        uint32 messageIndex
+    ) external returns (bytes32 validationID) {
+        return balancerValidatorManager.completeValidatorRemovalWithSecurityModule(messageIndex);
+    }
+
+    function completeValidatorWeightUpdate(bytes32 validationID, uint32 messageIndex) external {
+        balancerValidatorManager.completeValidatorWeightUpdateWithSecurityModule(
+            validationID, messageIndex
+        );
+    }
+
     function resendRegisterValidatorMessage(
         bytes32 validationID
     ) external {
-        balancerValidatorManager.resendRegisterValidatorMessage(validationID);
+        balancerValidatorManager.resendRegisterValidatorMessageWithSecurityModule(validationID);
     }
 
-    /// @inheritdoc IPoAValidatorManager
-    function initializeValidatorRegistration(
-        ValidatorRegistrationInput calldata registrationInput,
-        uint64 weight
-    ) external onlyOwner returns (bytes32 validationID) {
-        return balancerValidatorManager.initializeValidatorRegistration(registrationInput, weight);
-    }
-
-    /// @inheritdoc IValidatorManager
-    function completeValidatorRegistration(
-        uint32 messageIndex
-    ) external {
-        balancerValidatorManager.completeValidatorRegistration(messageIndex);
-    }
-
-    /// @inheritdoc IPoAValidatorManager
-    function initializeEndValidation(
-        bytes32 validationID
-    ) external override onlyOwner {
-        balancerValidatorManager.initializeEndValidation(validationID);
-    }
-
-    /// @inheritdoc IValidatorManager
-    function resendEndValidatorMessage(
+    function resendValidatorRemovalMessage(
         bytes32 validationID
     ) external {
-        balancerValidatorManager.resendEndValidatorMessage(validationID);
+        balancerValidatorManager.resendValidatorRemovalMessageWithSecurityModule(validationID);
     }
 
-    /// @inheritdoc IValidatorManager
-    function completeEndValidation(
-        uint32 messageIndex
+    function resendValidatorWeightUpdate(
+        bytes32 validationID
     ) external {
-        balancerValidatorManager.completeEndValidation(messageIndex);
+        balancerValidatorManager.resendValidatorWeightUpdate(validationID);
     }
 }

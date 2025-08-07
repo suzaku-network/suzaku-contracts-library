@@ -11,7 +11,7 @@ import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {PoAUpgradeConfig} from "./PoAUpgradeConfigTypes.s.sol";
 import {ValidatorManagerSettings} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -37,7 +37,8 @@ contract UpgradePoAToBalancer is Script {
             BalancerValidatorManager(balancerConfig.proxyAddress);
         BalancerValidatorManagerSettings memory settings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
-                l1ID: balancerConfig.l1ID,
+                admin: balancerConfig.validatorManagerOwnerAddress, // Set owner directly
+                subnetID: balancerConfig.l1ID,
                 churnPeriodSeconds: balancerConfig.churnPeriodSeconds,
                 maximumChurnPercentage: balancerConfig.maximumChurnPercentage
             }),

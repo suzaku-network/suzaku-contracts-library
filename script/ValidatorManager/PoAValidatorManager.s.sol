@@ -5,9 +5,11 @@ pragma solidity 0.8.25;
 
 import {PoAUpgradeConfig} from "./PoAUpgradeConfigTypes.s.sol";
 
-import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
+import {PoAManager} from "@avalabs/icm-contracts/validator-manager/PoAManager.sol";
 import {ValidatorManagerSettings} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+import {IValidatorManagerExternalOwnable} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManagerExternalOwnable.sol";
 // import {Options, Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
@@ -16,14 +18,15 @@ import {Script} from "forge-std/Script.sol";
 /**
  * @dev Deploy a PoA Validator Manager
  */
-contract ExecutePoAValidatorManager is Script {
+contract ExecutePoAManager is Script {
     function executeDeployPoA(
         PoAUpgradeConfig memory poaConfig,
         uint256 proxyAdminOwnerKey
     ) external returns (address) {
         vm.startBroadcast(proxyAdminOwnerKey);
         ValidatorManagerSettings memory settings = ValidatorManagerSettings({
-            l1ID: poaConfig.l1ID,
+            admin: poaConfig.validatorManagerOwnerAddress,
+            subnetID: poaConfig.l1ID,
             churnPeriodSeconds: poaConfig.churnPeriodSeconds,
             maximumChurnPercentage: poaConfig.maximumChurnPercentage
         });
@@ -35,21 +38,25 @@ contract ExecutePoAValidatorManager is Script {
         // opts.constructorData = abi.encode(ICMInitializable.Allowed);
         // opts.unsafeAllow = "constructor,missing-initializer-call,external-library-linking";
         // address proxy = Upgrades.deployTransparentProxy(
-        //     "PoAValidatorManager.sol:PoAValidatorManager",
+        //     "PoAManager.sol:PoAManager",
         //     proxyAdminOwnerAddress,
-        //     abi.encodeCall(PoAValidatorManager.initialize, (settings, validatorManagerOwnerAddress)),
+        //     abi.encodeCall(PoAManager.initialize, (settings, validatorManagerOwnerAddress)),
         //     opts
         // );
 
-        PoAValidatorManager validatorSetManager = new PoAValidatorManager(ICMInitializable.Allowed);
-
-        address proxy = UnsafeUpgrades.deployTransparentProxy(
-            address(validatorSetManager),
-            poaConfig.proxyAdminOwnerAddress,
-            abi.encodeCall(
-                PoAValidatorManager.initialize, (settings, poaConfig.validatorManagerOwnerAddress)
-            )
+        // Deploy the ValidatorManager first (placeholder for actual deployment)
+        // In v2, PoAManager is a separate contract that wraps a ValidatorManager
+        // This would need to be updated based on the actual deployment flow
+        address validatorManagerAddress = address(0); // TODO: Deploy actual ValidatorManager
+        PoAManager validatorSetManager = new PoAManager(
+            poaConfig.validatorManagerOwnerAddress,
+            IValidatorManagerExternalOwnable(validatorManagerAddress)
         );
+
+        // In v2, PoAManager is not upgradeable and doesn't have initialize
+        // The ValidatorManager would be the upgradeable contract
+        // This script needs major refactoring for v2 architecture
+        address proxy = address(validatorSetManager); // Temporary fix
         vm.stopBroadcast();
 
         return proxy;

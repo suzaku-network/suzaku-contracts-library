@@ -12,7 +12,7 @@ import {
     ValidatorMessages
 } from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {InitialValidator} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {WarpMessage} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 
@@ -86,7 +86,7 @@ contract ACP77WarpMessengerTestMock {
         initialValidators[1] =
             InitialValidator({nodeID: DEFAULT_NODE_ID_03, weight: 20, blsPublicKey: new bytes(48)});
         ConversionData memory conversionData = ConversionData({
-            l1ID: DEFAULT_L1_ID,
+            subnetID: DEFAULT_L1_ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: validatorManagerAddress,
             initialValidators: initialValidators

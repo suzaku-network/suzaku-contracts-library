@@ -5,7 +5,7 @@ pragma solidity 0.8.25;
 
 import {HelperConfig} from "../../script/ValidatorManager/HelperConfig.s.sol";
 import {PoAUpgradeConfig} from "../../script/ValidatorManager/PoAUpgradeConfigTypes.s.sol";
-import {ExecutePoAValidatorManager} from "../../script/ValidatorManager/PoAValidatorManager.s.sol";
+import {ExecutePoAManager} from "../../script/ValidatorManager/PoAValidatorManager.s.sol";
 import {UpgradePoAToBalancer} from "../../script/ValidatorManager/UpgradePoAToBalancer.s.sol";
 
 import {
@@ -15,24 +15,32 @@ import {
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
+
+import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
+import {PoAManager} from "@avalabs/icm-contracts/validator-manager/PoAManager.sol";
+import {ValidatorManager} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+import {IValidatorManagerExternalOwnable} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManagerExternalOwnable.sol";
+
+import {ValidatorManagerSettings} from
+    "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {
     ConversionData,
     InitialValidator,
     PChainOwner,
-    Validator,
-    ValidatorManagerSettings,
-    ValidatorRegistrationInput,
-    ValidatorStatus
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    Validator
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+import {ValidatorStatus} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract PoAToBalancerValidatorManagerTest is Test {
-    ExecutePoAValidatorManager poADeployer;
+    ExecutePoAManager poADeployer;
     address validatorManagerProxyAddress;
-    PoAValidatorManager poAValidatorManager;
+    PoAManager poAValidatorManager;
+    ValidatorManager validatorManager;
     uint256 proxyAdminOwnerKey;
     uint256 validatorManagerOwnerKey;
     address validatorManagerOwnerAddress;
@@ -70,7 +78,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
     uint64 constant DEFAULT_MAX_WEIGHT = 100;
 
     function setUp() public {
-        poADeployer = new ExecutePoAValidatorManager();
+        poADeployer = new ExecutePoAManager();
 
         HelperConfig helperConfig = new HelperConfig();
         (
@@ -100,8 +108,27 @@ contract PoAToBalancerValidatorManagerTest is Test {
             migratedValidators: new bytes[](0) // Not used for deployment
         });
 
-        validatorManagerProxyAddress = poADeployer.executeDeployPoA(poaConfig, proxyAdminOwnerKey);
-        poAValidatorManager = PoAValidatorManager(validatorManagerProxyAddress);
+        // Deploy ValidatorManager implementation
+        validatorManager = new ValidatorManager(ICMInitializable.Allowed);
+
+        // For testing purposes, we'll use the ValidatorManager directly
+        // In production, this would be behind a proxy
+        validatorManagerProxyAddress = address(validatorManager);
+
+        // Initialize the ValidatorManager with settings
+        ValidatorManagerSettings memory settings = ValidatorManagerSettings({
+            subnetID: l1ID,
+            admin: validatorManagerOwnerAddress, // Set proper admin for PoA
+            churnPeriodSeconds: churnPeriodSeconds,
+            maximumChurnPercentage: maximumChurnPercentage
+        });
+        validatorManager.initialize(settings);
+
+        // Deploy PoAManager wrapper
+        poAValidatorManager = new PoAManager(
+            validatorManagerOwnerAddress,
+            IValidatorManagerExternalOwnable(address(validatorManager))
+        );
 
         ACP77WarpMessengerTestMock warpMessengerTestMock =
             new ACP77WarpMessengerTestMock(validatorManagerProxyAddress);
@@ -111,8 +138,9 @@ contract PoAToBalancerValidatorManagerTest is Test {
         addresses[0] = 0x1234567812345678123456781234567812345678;
         pChainOwner = PChainOwner({threshold: 1, addresses: addresses});
 
-        // Initialize the validator set of the PoA Validator Manager
-        poAValidatorManager.initializeValidatorSet(
+        // Initialize the validator set on the underlying ValidatorManager
+        vm.prank(validatorManagerOwnerAddress);
+        validatorManager.initializeValidatorSet(
             _generateTestConversionData(), INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX
         );
 
@@ -122,16 +150,28 @@ contract PoAToBalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationInitialized() {
         vm.prank(testSecurityModules[0]);
-        poAValidatorManager.initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        ) = _getTestValidatorRegistrationParams();
+        poAValidatorManager.initiateValidatorRegistration(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, VALIDATOR_WEIGHT
         );
         _;
     }
 
     modifier validatorRegistrationCompleted() {
         vm.startPrank(testSecurityModules[0]);
-        poAValidatorManager.initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        ) = _getTestValidatorRegistrationParams();
+        poAValidatorManager.initiateValidatorRegistration(
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, VALIDATOR_WEIGHT
         );
         poAValidatorManager.completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
@@ -140,18 +180,18 @@ contract PoAToBalancerValidatorManagerTest is Test {
         _;
     }
 
-    function _generateTestValidatorRegistrationInput()
+    // Helper function to return validator registration parameters
+    function _getTestValidatorRegistrationParams()
         private
         view
-        returns (ValidatorRegistrationInput memory)
+        returns (
+            bytes memory nodeID,
+            bytes memory blsPublicKey,
+            PChainOwner memory remainingBalanceOwner,
+            PChainOwner memory disableOwner
+        )
     {
-        return ValidatorRegistrationInput({
-            nodeID: VALIDATOR_NODE_ID_01,
-            blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
-            registrationExpiry: DEFAULT_EXPIRY,
-            remainingBalanceOwner: pChainOwner,
-            disableOwner: pChainOwner
-        });
+        return (VALIDATOR_NODE_ID_01, VALIDATOR_01_BLS_PUBLIC_KEY, pChainOwner, pChainOwner);
     }
 
     function _generateTestConversionData() private view returns (ConversionData memory) {
@@ -167,7 +207,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            l1ID: l1ID,
+            subnetID: l1ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: validatorManagerProxyAddress,
             initialValidators: initialValidators
@@ -175,7 +215,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
         return conversionData;
     }
 
-    function _upgradePoAValidatorManagerToBalancerValidatorManager(
+    function _upgradePoAManagerToBalancerValidatorManager(
         bytes[] memory migratedValidators
     ) private returns (BalancerValidatorManager, address) {
         UpgradePoAToBalancer upgrader = new UpgradePoAToBalancer();
@@ -205,7 +245,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
         migratedValidators[1] = VALIDATOR_NODE_ID_03;
 
         (BalancerValidatorManager balancerValidatorManager, address securityModuleAddr) =
-            _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidators);
+            _upgradePoAManagerToBalancerValidatorManager(migratedValidators);
 
         assertEq(balancerValidatorManager.owner(), validatorManagerOwnerAddress);
         assertEq(balancerValidatorManager.getChurnPeriodSeconds(), churnPeriodSeconds);
@@ -256,15 +296,8 @@ contract PoAToBalancerValidatorManagerTest is Test {
     function testUpgradeToBalancerValidatorManagerWithPoAValidator() public {
         // Add another validator before upgrading
         vm.startPrank(validatorManagerOwnerAddress);
-        poAValidatorManager.initializeValidatorRegistration(
-            ValidatorRegistrationInput({
-                nodeID: VALIDATOR_NODE_ID_01,
-                blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
-                registrationExpiry: DEFAULT_EXPIRY,
-                remainingBalanceOwner: pChainOwner,
-                disableOwner: pChainOwner
-            }),
-            20
+        poAValidatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01, VALIDATOR_01_BLS_PUBLIC_KEY, pChainOwner, pChainOwner, 20
         );
         poAValidatorManager.completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
@@ -277,7 +310,7 @@ contract PoAToBalancerValidatorManagerTest is Test {
         migratedValidators[2] = VALIDATOR_NODE_ID_03;
 
         (BalancerValidatorManager balancerValidatorManager, address securityModuleAddr) =
-            _upgradePoAValidatorManagerToBalancerValidatorManager(migratedValidators);
+            _upgradePoAManagerToBalancerValidatorManager(migratedValidators);
 
         Validator memory validator = balancerValidatorManager.getValidator(VALIDATION_ID_01);
         (uint64 weight,) = balancerValidatorManager.getSecurityModuleWeights(securityModuleAddr);
@@ -288,13 +321,15 @@ contract PoAToBalancerValidatorManagerTest is Test {
 
         // Remove the validator
         vm.startPrank(securityModuleAddr);
-        balancerValidatorManager.initializeEndValidation(VALIDATION_ID_01);
-        balancerValidatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+        balancerValidatorManager.initiateValidatorRemovalWithSecurityModule(VALIDATION_ID_01);
+        balancerValidatorManager.completeValidatorRemovalWithSecurityModule(
+            VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX
+        );
 
         validator = balancerValidatorManager.getValidator(VALIDATION_ID_01);
         (weight,) = balancerValidatorManager.getSecurityModuleWeights(securityModuleAddr);
         assert(validator.status == ValidatorStatus.Completed);
-        assertEq(validator.endedAt, block.timestamp);
+        assertEq(validator.endTime, block.timestamp);
         assertEq(validator.weight, 0);
         assertEq(weight, 200);
     }

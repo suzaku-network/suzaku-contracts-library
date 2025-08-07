@@ -22,7 +22,7 @@ import {
 import {
     InitialValidator,
     PChainOwner
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract ACP99ManagerTest is Test {
@@ -173,7 +173,7 @@ contract ACP99ManagerTest is Test {
             blsPublicKey: VALIDATOR_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            l1ID: l1ID,
+            subnetID: l1ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: address(manager),
             initialValidators: initialValidators
@@ -196,7 +196,7 @@ contract ACP99ManagerTest is Test {
         assertEq(manager.getActiveValidatorSet()[0], bytes32(VALIDATOR_NODE_ID_02));
         assertEq(manager.getActiveValidatorSet()[1], bytes32(VALIDATOR_NODE_ID_03));
         Validation memory validation =
-            manager.getValidation(sha256(abi.encodePacked(conversionData.l1ID, uint32(0))));
+            manager.getValidation(sha256(abi.encodePacked(conversionData.subnetID, uint32(0))));
         assertEq(validation.nodeID, bytes32(VALIDATOR_NODE_ID_02));
         assertEq(validation.periods[0].weight, 180);
         assertEq(validation.periods[0].startTime, block.timestamp);
