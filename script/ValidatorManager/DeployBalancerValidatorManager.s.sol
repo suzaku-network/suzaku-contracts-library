@@ -10,10 +10,15 @@ import {
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
+
 import {ValidatorManagerSettings} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
-import {Options} from "@openzeppelin/foundry-upgrades/Options.sol";
-import {Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
+    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
+import {
+    ValidatorManager as VM2,
+    ValidatorManagerSettings as VM2Settings
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
 contract DeployBalancerValidatorManager is Script {
@@ -21,62 +26,74 @@ contract DeployBalancerValidatorManager is Script {
         address initialSecurityModule,
         uint64 initialSecurityModuleWeight,
         bytes[] calldata migratedValidators
-    ) external returns (address, address) {
+    ) external returns (address balancer, address securityModule, address vmAddress) {
         HelperConfig helperConfig = new HelperConfig();
         (
             uint256 proxyAdminOwnerKey,
             uint256 validatorManagerOwnerKey,
-            bytes32 l1ID,
+            bytes32 subnetID,
             uint64 churnPeriodSeconds,
             uint8 maximumChurnPercentage
         ) = helperConfig.activeNetworkConfig();
         address proxyAdminOwnerAddress = vm.addr(proxyAdminOwnerKey);
         address validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
-        // Predict the address where PoASecurityModule will be deployed if deployPoASecurityModule is true
-        // This will be the next address after the proxy deployment
         bool deployPoASecurityModule = initialSecurityModule == address(0);
-        if (deployPoASecurityModule) {
-            initialSecurityModule = vm.computeCreateAddress(
-                proxyAdminOwnerAddress, vm.getNonce(proxyAdminOwnerAddress) + 2
-            );
-        }
 
         vm.startBroadcast(proxyAdminOwnerKey);
 
-        ValidatorManagerSettings memory settings = ValidatorManagerSettings({
-            l1ID: l1ID,
+        // 1) Deploy v2 VM (proxy)
+        VM2Settings memory vmSettings = VM2Settings({
+            admin: validatorManagerOwnerAddress,
+            subnetID: subnetID,
             churnPeriodSeconds: churnPeriodSeconds,
             maximumChurnPercentage: maximumChurnPercentage
         });
+        VM2 vmImpl = new VM2(ICMInitializable.Allowed);
+        vmAddress = UnsafeUpgrades.deployTransparentProxy(
+            address(vmImpl), proxyAdminOwnerAddress, abi.encodeCall(VM2.initialize, (vmSettings))
+        );
+
+        // 2) Deploy Balancer (proxy)
         BalancerValidatorManagerSettings memory balancerSettings = BalancerValidatorManagerSettings({
-            baseSettings: settings,
+            baseSettings: ValidatorManagerSettings({
+                subnetID: subnetID,
+                churnPeriodSeconds: churnPeriodSeconds,
+                maximumChurnPercentage: maximumChurnPercentage
+            }),
             initialOwner: validatorManagerOwnerAddress,
             initialSecurityModule: initialSecurityModule,
             initialSecurityModuleMaxWeight: initialSecurityModuleWeight,
             migratedValidators: migratedValidators
         });
-
-        Options memory opts;
-        opts.unsafeAllow = "missing-initializer-call";
-        address proxy = Upgrades.deployTransparentProxy(
-            "BalancerValidatorManager.sol:BalancerValidatorManager",
+        BalancerValidatorManager balancerImpl = new BalancerValidatorManager();
+        balancer = UnsafeUpgrades.deployTransparentProxy(
+            address(balancerImpl),
             proxyAdminOwnerAddress,
-            abi.encodeCall(BalancerValidatorManager.initialize, balancerSettings),
-            opts
+            abi.encodeCall(BalancerValidatorManager.initialize, (balancerSettings, vmAddress))
         );
 
-        address securityModuleDeploymentAddress;
-        if (deployPoASecurityModule) {
-            securityModuleDeploymentAddress =
-                address(new PoASecurityModule(proxy, validatorManagerOwnerAddress));
-            if (securityModuleDeploymentAddress != initialSecurityModule) {
-                revert("PoASecurityModule deployed at unexpected address");
-            }
-        }
-
+        // 3) Transfer VM ownership to Balancer so it can call VM-onlyOwner functions
+        vm.stopBroadcast();
+        vm.startBroadcast(validatorManagerOwnerKey);
+        VM2(vmAddress).transferOwnership(balancer);
         vm.stopBroadcast();
 
-        return (proxy, initialSecurityModule);
+        // 4) Optionally deploy PoA security module and register it
+        if (deployPoASecurityModule) {
+            vm.startBroadcast(proxyAdminOwnerKey);
+            securityModule = address(new PoASecurityModule(balancer, validatorManagerOwnerAddress));
+            vm.stopBroadcast();
+
+            vm.startBroadcast(validatorManagerOwnerKey);
+            BalancerValidatorManager(balancer).setUpSecurityModule(
+                securityModule, initialSecurityModuleWeight
+            );
+            vm.stopBroadcast();
+        } else {
+            securityModule = initialSecurityModule;
+        }
+
+        return (balancer, securityModule, vmAddress);
     }
 }

@@ -20,9 +20,11 @@ import {
     InitialValidator,
     PChainOwner,
     Validator,
-    ValidatorRegistrationInput,
     ValidatorStatus
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+
+import {ValidatorRegistrationInput} from
+    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Test, console} from "forge-std/Test.sol";
@@ -32,7 +34,8 @@ contract BalancerValidatorManagerTest is Test {
     BalancerValidatorManager validatorManager;
     uint256 validatorManagerOwnerKey;
     address validatorManagerOwnerAddress;
-    bytes32 l1ID;
+    address vmAddress; // Store VM2 address for test setup
+    bytes32 subnetID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
     address[] testSecurityModules;
@@ -46,16 +49,15 @@ contract BalancerValidatorManagerTest is Test {
     uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
     uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
     uint32 constant VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX = 7;
-    bytes constant VALIDATOR_NODE_ID_01 =
-        bytes(hex"1234567812345678123456781234567812345678123456781234567812345678");
-    bytes constant VALIDATOR_NODE_ID_02 =
-        bytes(hex"2345678123456781234567812345678123456781234567812345678123456781");
-    bytes constant VALIDATOR_NODE_ID_03 =
-        bytes(hex"3456781234567812345678123456781234567812345678123456781234567812");
+    // Node IDs must be exactly 20 bytes
+    bytes constant VALIDATOR_NODE_ID_01 = bytes(hex"1234567812345678123456781234567812345678");
+    bytes constant VALIDATOR_NODE_ID_02 = bytes(hex"2345678123456781234567812345678123456781");
+    bytes constant VALIDATOR_NODE_ID_03 = bytes(hex"3456781234567812345678123456781234567812");
     bytes constant VALIDATOR_01_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 20;
+    // Validation IDs calculated from 20-byte node IDs
     bytes32 constant VALIDATION_ID_01 =
-        0x3a41d4db60b49389d4b121c2137a1382431a89369c5445c2a46877c3929dd9c6;
+        0xbf7a1a38fbdfbc95c69a680620bf7651bac6065038ac761cf65c8ed19ac0f1b1;
     bytes32 constant VALIDATION_ID_02 =
         0x0ff9e5c77da268eef8379d3ff1572d16d0fa519fcaa6f10b366c34ce3e97ca5a;
     bytes32 constant VALIDATION_ID_03 =
@@ -67,21 +69,22 @@ contract BalancerValidatorManagerTest is Test {
         deployer = new DeployBalancerValidatorManager();
 
         HelperConfig helperConfig = new HelperConfig();
-        (, validatorManagerOwnerKey, l1ID, churnPeriodSeconds, maximumChurnPercentage) =
+        (, validatorManagerOwnerKey, subnetID, churnPeriodSeconds, maximumChurnPercentage) =
             helperConfig.activeNetworkConfig();
         validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
         testSecurityModules = new address[](2);
 
-        (address validatorManagerAddress, address securityModuleAddress) =
+        (address validatorManagerAddress, address securityModuleAddress, address _vmAddress) =
             deployer.run(address(0), DEFAULT_MAX_WEIGHT, new bytes[](0));
         validatorManager = BalancerValidatorManager(validatorManagerAddress);
+        vmAddress = _vmAddress; // Store for use in tests
         testSecurityModules[0] = securityModuleAddress;
         testSecurityModules[1] =
             address(new PoASecurityModule(validatorManagerAddress, validatorManagerOwnerAddress));
 
-        ACP77WarpMessengerTestMock warpMessengerTestMock =
-            new ACP77WarpMessengerTestMock(validatorManagerAddress);
+        // Initialize mock with VM2 address (not BalancerValidatorManager)
+        ACP77WarpMessengerTestMock warpMessengerTestMock = new ACP77WarpMessengerTestMock(vmAddress);
         vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
 
         address[] memory addresses = new address[](1);
@@ -152,9 +155,9 @@ contract BalancerValidatorManagerTest is Test {
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            l1ID: l1ID,
+            subnetID: subnetID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
-            validatorManagerAddress: address(validatorManager),
+            validatorManagerAddress: vmAddress, // Use VM2 address, not BalancerValidatorManager
             initialValidators: initialValidators
         });
         return conversionData;
@@ -233,10 +236,10 @@ contract BalancerValidatorManagerTest is Test {
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assertEq(validator.nodeID, VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.PendingAdded);
-        assertEq(validator.messageNonce, 0);
+        assertEq(validator.sentNonce, 0);
         assertEq(validator.weight, VALIDATOR_WEIGHT);
-        assertEq(validator.startedAt, 0);
-        assertEq(validator.endedAt, 0);
+        assertEq(validator.startTime, 0);
+        assertEq(validator.endTime, 0);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
         assertEq(weight, VALIDATOR_WEIGHT);
     }
@@ -253,7 +256,7 @@ contract BalancerValidatorManagerTest is Test {
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assert(validator.status == ValidatorStatus.Active);
-        assertEq(validator.startedAt, block.timestamp);
+        assertEq(validator.startTime, block.timestamp);
     }
 
     function testInitializeEndValidation()
@@ -267,7 +270,7 @@ contract BalancerValidatorManagerTest is Test {
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
         assert(validator.status == ValidatorStatus.PendingRemoved);
-        assertEq(validator.endedAt, block.timestamp);
+        assertEq(validator.endTime, block.timestamp);
         assertEq(validator.weight, 0);
         assertEq(weight, 0);
     }
@@ -303,7 +306,7 @@ contract BalancerValidatorManagerTest is Test {
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
-        bytes32 validationID = validatorManager.registeredValidators(VALIDATOR_NODE_ID_01);
+        bytes32 validationID = validatorManager.getNodeValidationID(VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.Completed);
         assertEq(validationID, bytes32(0));
     }
@@ -323,7 +326,7 @@ contract BalancerValidatorManagerTest is Test {
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assert(validator.status == ValidatorStatus.Invalidated);
-        assertEq(validator.startedAt, 0);
-        assertEq(validator.endedAt, 0);
+        assertEq(validator.startTime, 0);
+        assertEq(validator.endTime, 0);
     }
 }

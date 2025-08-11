@@ -11,7 +11,7 @@ import {
 import {
     InitialValidator,
     PChainOwner
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
 /// @notice L1 validation status
 enum ValidationStatus {

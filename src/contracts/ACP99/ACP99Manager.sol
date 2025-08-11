@@ -25,7 +25,7 @@ import {
 import {
     InitialValidator,
     PChainOwner
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {
     IWarpMessenger,
     WarpMessage
@@ -51,7 +51,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
     IWarpMessenger private immutable warpMessenger;
 
     /// @notice The ID of the L1 tied to this manager
-    bytes32 public immutable l1ID;
+    bytes32 public immutable subnetID;
 
     /// @notice The address of the security module attached to this manager
     IACP99SecurityModule private securityModule;
@@ -85,13 +85,13 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         _;
     }
 
-    constructor(bytes32 l1ID_, address securityModule_) Ownable(msg.sender) {
+    constructor(bytes32 subnetID_, address securityModule_) Ownable(msg.sender) {
         if (securityModule_ == address(0)) {
             revert ACP99Manager__ZeroAddressSecurityModule();
         }
 
         warpMessenger = IWarpMessenger(WARP_MESSENGER_ADDR);
-        l1ID = l1ID_;
+        subnetID = subnetID_;
         securityModule = IACP99SecurityModule(securityModule_);
     }
 
@@ -140,7 +140,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
 
             // Validation ID of the initial validators is the sha256 hash of the
             // Subnet ID and the index of the initial validator.
-            bytes32 validationID = sha256(abi.encodePacked(conversionData.l1ID, i));
+            bytes32 validationID = sha256(abi.encodePacked(conversionData.subnetID, i));
 
             // Save the initial validator as an active validator.
 
@@ -212,7 +212,7 @@ contract ACP99Manager is Ownable2Step, IACP99Manager {
         (bytes32 validationID, bytes memory registrationMessage) = ValidatorMessages
             .packRegisterL1ValidatorMessage(
             ValidatorMessages.ValidationPeriod({
-                l1ID: l1ID,
+                subnetID: subnetID,
                 nodeID: nodeID,
                 blsPublicKey: blsPublicKey,
                 registrationExpiry: registrationExpiry,

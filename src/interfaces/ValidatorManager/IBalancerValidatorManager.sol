@@ -3,13 +3,35 @@
 
 pragma solidity 0.8.25;
 
+import {IValidatorManager} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+
+import {ValidatorChurnPeriod} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+
 import {
-    IValidatorManager,
-    Validator,
-    ValidatorChurnPeriod,
-    ValidatorManagerSettings,
-    ValidatorRegistrationInput
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    PChainOwner,
+    Validator
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+
+/**
+ * @dev Struct for validator registration inputs (v1 compatibility)
+ */
+struct ValidatorRegistrationInput {
+    bytes nodeID;
+    bytes blsPublicKey;
+    uint64 registrationExpiry;
+    PChainOwner remainingBalanceOwner;
+    PChainOwner disableOwner;
+}
+
+/**
+ * @dev Validator Manager settings (v1 compatibility structure)
+ */
+struct ValidatorManagerSettings {
+    bytes32 subnetID;
+    uint64 churnPeriodSeconds;
+    uint8 maximumChurnPercentage;
+}
 
 /**
  * @dev Balancer Validator Manager settings, used to initialize the Balancer Validator Manager
@@ -58,6 +80,8 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__NoPendingWeightUpdate(bytes32 validationID);
     error BalancerValidatorManager__InvalidNonce(uint64 nonce);
     error BalancerValidatorManager__ValidatorAlreadyMigrated(bytes32 validationID);
+    error BalancerValidatorManager__ZeroValidatorManagerAddress();
+    error BalancerValidatorManager__ValidatorManagerNotOwnedByBalancer();
 
     /**
      * @notice Returns the ValidatorManager churn period in seconds
@@ -103,12 +127,6 @@ interface IBalancerValidatorManager is IValidatorManager {
     function isValidatorPendingWeightUpdate(
         bytes32 validationID
     ) external view returns (bool);
-
-    /**
-     * @notice Returns the L1ID associated with this validator manager
-     * @return l1ID The L1ID
-     */
-    function getL1ID() external view returns (bytes32 l1ID);
 
     /**
      * @notice Registers a new security module with a maximum weight limit
@@ -158,6 +176,14 @@ interface IBalancerValidatorManager is IValidatorManager {
     ) external returns (Validator memory validator);
 
     /**
+     * @notice Completes the process of ending a validation period
+     * @param messageIndex The index of the Warp message containing the confirmation
+     */
+    function completeEndValidation(
+        uint32 messageIndex
+    ) external;
+
+    /**
      * @notice Completes a pending validator weight update after P-Chain confirmation
      * @dev Can only be called by the security module that registered the validator
      * @param validationID The ID of the validation period being updated
@@ -170,6 +196,22 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @param validationID The ID of the validation period being updated
      */
     function resendValidatorWeightUpdate(
+        bytes32 validationID
+    ) external;
+
+    /**
+     * @notice Resends a validator registration message
+     * @param validationID The ID of the validation period
+     */
+    function resendRegisterValidatorMessage(
+        bytes32 validationID
+    ) external;
+
+    /**
+     * @notice Resends an end validator message
+     * @param validationID The ID of the validation period
+     */
+    function resendEndValidatorMessage(
         bytes32 validationID
     ) external;
 }

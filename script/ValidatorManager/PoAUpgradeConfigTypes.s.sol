@@ -9,7 +9,7 @@ struct PoAUpgradeConfig {
     bytes[] migratedValidators;
     address proxyAdminOwnerAddress;
     address validatorManagerOwnerAddress;
-    bytes32 l1ID;
+    bytes32 subnetID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
 }

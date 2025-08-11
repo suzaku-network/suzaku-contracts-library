@@ -2,7 +2,7 @@
   "ProxyAddress": "0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e",
   "initialSecurityModuleMaxWeight": 10000,
   "migratedValidators": [],
-  "l1ID": "0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9",
+  "subnetID": "0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9",
   "churnPeriodSeconds": 3600,
   "maximumChurnPercentage": 20
 }

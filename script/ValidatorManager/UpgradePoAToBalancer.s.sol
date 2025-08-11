@@ -9,9 +9,16 @@ import {
 } from "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
-import {PoAUpgradeConfig} from "./PoAUpgradeConfigTypes.s.sol";
+
 import {ValidatorManagerSettings} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+import {PoAUpgradeConfig} from "./PoAUpgradeConfigTypes.s.sol";
+
+import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
+import {
+    ValidatorManager as VM2,
+    ValidatorManagerSettings as VM2Settings
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -19,25 +26,37 @@ contract UpgradePoAToBalancer is Script {
     function executeUpgradePoAToBalancer(
         PoAUpgradeConfig memory balancerConfig,
         uint256 proxyAdminOwnerKey
-    ) external returns (address, address) {
+    ) external returns (address proxyAddress, address securityModuleAddress, address vmAddress) {
         vm.startBroadcast(proxyAdminOwnerKey);
-        // Deploy new implementation
-        BalancerValidatorManager newImplementation = new BalancerValidatorManager();
+        // 1) Deploy VM2
+        VM2Settings memory vmSettings = VM2Settings({
+            admin: balancerConfig.validatorManagerOwnerAddress,
+            subnetID: balancerConfig.subnetID,
+            churnPeriodSeconds: balancerConfig.churnPeriodSeconds,
+            maximumChurnPercentage: balancerConfig.maximumChurnPercentage
+        });
+        VM2 vmImpl = new VM2(ICMInitializable.Allowed);
+        vmAddress = UnsafeUpgrades.deployTransparentProxy(
+            address(vmImpl),
+            balancerConfig.proxyAdminOwnerAddress,
+            abi.encodeCall(VM2.initialize, (vmSettings))
+        );
 
-        // Upgrade proxy implementation
+        // 2) Upgrade PoA proxy -> Balancer wrapper implementation
+        BalancerValidatorManager newImplementation = new BalancerValidatorManager();
         UnsafeUpgrades.upgradeProxy(balancerConfig.proxyAddress, address(newImplementation), "");
 
-        // Deploy PoASecurityModule
+        // 3) Deploy PoASecurityModule
         PoASecurityModule securityModule = new PoASecurityModule(
             balancerConfig.proxyAddress, balancerConfig.validatorManagerOwnerAddress
         );
 
-        // Initialize new implementation
+        // Prepare init settings
         BalancerValidatorManager balancerValidatorManager =
             BalancerValidatorManager(balancerConfig.proxyAddress);
         BalancerValidatorManagerSettings memory settings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
-                l1ID: balancerConfig.l1ID,
+                subnetID: balancerConfig.subnetID,
                 churnPeriodSeconds: balancerConfig.churnPeriodSeconds,
                 maximumChurnPercentage: balancerConfig.maximumChurnPercentage
             }),
@@ -47,9 +66,14 @@ contract UpgradePoAToBalancer is Script {
             migratedValidators: balancerConfig.migratedValidators
         });
 
-        balancerValidatorManager.initialize(settings);
+        // 4) Initialize Balancer wrapper with VM2 address
+        balancerValidatorManager.initialize(settings, vmAddress);
+
+        // 5) Transfer VM2 ownership to the Balancer (upgraded proxy)
+        VM2(vmAddress).transferOwnership(balancerConfig.proxyAddress);
         vm.stopBroadcast();
 
-        return (balancerConfig.proxyAddress, address(securityModule));
+        // The proxy address stays the same (upgraded implementation)
+        return (balancerConfig.proxyAddress, address(securityModule), vmAddress);
     }
 }

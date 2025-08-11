@@ -5,16 +5,20 @@ pragma solidity 0.8.25;
 
 import {PoAUpgradeConfig} from "./PoAUpgradeConfigTypes.s.sol";
 
-import {PoAValidatorManager} from "@avalabs/icm-contracts/validator-manager/PoAValidatorManager.sol";
-import {ValidatorManagerSettings} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
-// import {Options, Upgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
+import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
+import {PoAManager} from "@avalabs/icm-contracts/validator-manager/PoAManager.sol";
+import {
+    ValidatorManager as VM2,
+    ValidatorManagerSettings as VM2Settings
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+import {IValidatorManagerExternalOwnable} from
+    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManagerExternalOwnable.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
-import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 import {Script} from "forge-std/Script.sol";
 
 /**
- * @dev Deploy a PoA Validator Manager
+ * @dev Deploy a PoA-style Validator Manager using v2.1 architecture
+ * This deploys ValidatorManager + PoAManager (not the old PoAValidatorManager)
  */
 contract ExecutePoAValidatorManager is Script {
     function executeDeployPoA(
@@ -22,36 +26,34 @@ contract ExecutePoAValidatorManager is Script {
         uint256 proxyAdminOwnerKey
     ) external returns (address) {
         vm.startBroadcast(proxyAdminOwnerKey);
-        ValidatorManagerSettings memory settings = ValidatorManagerSettings({
-            l1ID: poaConfig.l1ID,
+
+        // 1. Deploy ValidatorManager (v2.1 style)
+        VM2Settings memory settings = VM2Settings({
+            admin: poaConfig.validatorManagerOwnerAddress,
+            subnetID: poaConfig.subnetID,
             churnPeriodSeconds: poaConfig.churnPeriodSeconds,
             maximumChurnPercentage: poaConfig.maximumChurnPercentage
         });
 
-        // Keeping this for reference. Cannot use the regular Upgrades because libraries are not supported.
-        // See https://github.com/foundry-rs/book/issues/1361
-
-        // Options memory opts;
-        // opts.constructorData = abi.encode(ICMInitializable.Allowed);
-        // opts.unsafeAllow = "constructor,missing-initializer-call,external-library-linking";
-        // address proxy = Upgrades.deployTransparentProxy(
-        //     "PoAValidatorManager.sol:PoAValidatorManager",
-        //     proxyAdminOwnerAddress,
-        //     abi.encodeCall(PoAValidatorManager.initialize, (settings, validatorManagerOwnerAddress)),
-        //     opts
-        // );
-
-        PoAValidatorManager validatorSetManager = new PoAValidatorManager(ICMInitializable.Allowed);
-
-        address proxy = UnsafeUpgrades.deployTransparentProxy(
-            address(validatorSetManager),
+        VM2 vmImpl = new VM2(ICMInitializable.Allowed);
+        address vmProxy = UnsafeUpgrades.deployTransparentProxy(
+            address(vmImpl),
             poaConfig.proxyAdminOwnerAddress,
-            abi.encodeCall(
-                PoAValidatorManager.initialize, (settings, poaConfig.validatorManagerOwnerAddress)
-            )
+            abi.encodeCall(VM2.initialize, (settings))
         );
+
+        // 2. Deploy PoAManager as the owner
+        PoAManager poaManager = new PoAManager(
+            poaConfig.validatorManagerOwnerAddress, IValidatorManagerExternalOwnable(vmProxy)
+        );
+
+        // 3. Transfer VM ownership to PoAManager
+        VM2(vmProxy).transferOwnership(address(poaManager));
+
         vm.stopBroadcast();
 
-        return proxy;
+        // Return the ValidatorManager proxy address (not PoAManager)
+        // This maintains compatibility with existing tests that expect the VM address
+        return vmProxy;
     }
 }
