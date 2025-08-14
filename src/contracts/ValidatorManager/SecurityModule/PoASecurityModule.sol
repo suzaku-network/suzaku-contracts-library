@@ -3,18 +3,16 @@
 
 pragma solidity 0.8.25;
 
-import {IBalancerValidatorManager} from
-    "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-// IPoAValidatorManager doesn't exist in v2.1 - removed import
+import {
+    IBalancerValidatorManager,
+    ValidatorRegistrationInput
+} from "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {ConversionData} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
-
-import {ValidatorRegistrationInput} from
-    "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 
 /**
  * @dev PoA-style security module for the Balancer Validator Manager.
- * Allows owner-only control over validator management operations.
+ * Owner-gated for initiates; completes/resends are permissionless for liveness.
  *
  * @custom:security-contact security@suzaku.network
  */
@@ -34,7 +32,7 @@ contract PoASecurityModule is Ownable {
         balancerValidatorManager = IBalancerValidatorManager(balancerValidatorManagerAddress);
     }
 
-    /// @notice Initializes the validator set by delegating to the Balancer
+    // --- Initial validator set (rarely used here; usually done by admin scripts) ---
     function initializeValidatorSet(
         ConversionData calldata conversionData,
         uint32 messageIndex
@@ -42,46 +40,68 @@ contract PoASecurityModule is Ownable {
         balancerValidatorManager.initializeValidatorSet(conversionData, messageIndex);
     }
 
-    /// @notice Resends the register validator message
+    // --- Registration ---
     function resendRegisterValidatorMessage(
         bytes32 validationID
     ) external {
         balancerValidatorManager.resendRegisterValidatorMessage(validationID);
     }
 
-    /// @notice Initiates validator registration (owner only)
-    function initializeValidatorRegistration(
+    function initiateValidatorRegistration(
         ValidatorRegistrationInput calldata registrationInput,
         uint64 weight
     ) external onlyOwner returns (bytes32 validationID) {
-        return balancerValidatorManager.initializeValidatorRegistration(registrationInput, weight);
+        return balancerValidatorManager.initiateValidatorRegistration(
+            registrationInput.nodeID,
+            registrationInput.blsPublicKey,
+            registrationInput.remainingBalanceOwner,
+            registrationInput.disableOwner,
+            weight
+        );
     }
 
-    /// @notice Completes validator registration
     function completeValidatorRegistration(
         uint32 messageIndex
     ) external {
         balancerValidatorManager.completeValidatorRegistration(messageIndex);
     }
 
-    /// @notice Initiates validator removal (owner only)
-    function initializeEndValidation(
+    // --- Removal ---
+    function initiateValidatorRemoval(
         bytes32 validationID
     ) external onlyOwner {
-        balancerValidatorManager.initializeEndValidation(validationID);
+        balancerValidatorManager.initiateValidatorRemoval(validationID);
     }
 
-    /// @notice Resends the end validator message
-    function resendEndValidatorMessage(
+    function resendValidatorRemovalMessage(
         bytes32 validationID
     ) external {
-        balancerValidatorManager.resendEndValidatorMessage(validationID);
+        balancerValidatorManager.resendValidatorRemovalMessage(validationID);
     }
 
-    /// @notice Completes validator removal
-    function completeEndValidation(
+    function completeValidatorRemoval(
         uint32 messageIndex
     ) external {
-        balancerValidatorManager.completeEndValidation(messageIndex);
+        balancerValidatorManager.completeValidatorRemoval(messageIndex);
+    }
+
+    // --- Weight update ---
+    function initiateValidatorWeightUpdate(
+        bytes32 validationID,
+        uint64 newWeight
+    ) external onlyOwner returns (uint64 nonce, bytes32 messageID) {
+        return balancerValidatorManager.initiateValidatorWeightUpdate(validationID, newWeight);
+    }
+
+    function resendValidatorWeightUpdate(
+        bytes32 validationID
+    ) external {
+        balancerValidatorManager.resendValidatorWeightUpdate(validationID);
+    }
+
+    function completeValidatorWeightUpdate(
+        uint32 messageIndex
+    ) external returns (bytes32 validationID, uint64 nonce) {
+        return balancerValidatorManager.completeValidatorWeightUpdate(messageIndex);
     }
 }

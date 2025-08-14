@@ -22,6 +22,13 @@ import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
 contract DeployBalancerValidatorManager is Script {
+    /**
+     * @notice Deploy BalancerValidatorManager with optional validator migration
+     * @param initialSecurityModule Address of initial security module (0 to deploy PoASecurityModule)
+     * @param initialSecurityModuleWeight Maximum weight for the security module
+     * @param migratedValidators Array of validator node IDs to migrate from existing setup
+     * @dev Pass extracted validators from ExtractValidators.s.sol or MigratePoAToBalancer.s.sol
+     */
     function run(
         address initialSecurityModule,
         uint64 initialSecurityModuleWeight,
@@ -54,7 +61,24 @@ contract DeployBalancerValidatorManager is Script {
             address(vmImpl), proxyAdminOwnerAddress, abi.encodeCall(VM2.initialize, (vmSettings))
         );
 
-        // 2) Deploy Balancer (proxy)
+        // 2) Deploy Balancer implementation
+        BalancerValidatorManager balancerImpl = new BalancerValidatorManager();
+
+        // 3) Deploy Balancer proxy without initialization (empty calldata)
+        balancer = UnsafeUpgrades.deployTransparentProxy(
+            address(balancerImpl),
+            proxyAdminOwnerAddress,
+            "" // Don't initialize yet
+        );
+
+        // 4) Transfer VM ownership to Balancer proxy before initialization
+        vm.stopBroadcast();
+        vm.startBroadcast(validatorManagerOwnerKey);
+        VM2(vmAddress).transferOwnership(balancer);
+        vm.stopBroadcast();
+
+        // 5) Now initialize the Balancer (VM is already owned by Balancer)
+        vm.startBroadcast(proxyAdminOwnerKey);
         BalancerValidatorManagerSettings memory balancerSettings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
                 subnetID: subnetID,
@@ -66,20 +90,10 @@ contract DeployBalancerValidatorManager is Script {
             initialSecurityModuleMaxWeight: initialSecurityModuleWeight,
             migratedValidators: migratedValidators
         });
-        BalancerValidatorManager balancerImpl = new BalancerValidatorManager();
-        balancer = UnsafeUpgrades.deployTransparentProxy(
-            address(balancerImpl),
-            proxyAdminOwnerAddress,
-            abi.encodeCall(BalancerValidatorManager.initialize, (balancerSettings, vmAddress))
-        );
-
-        // 3) Transfer VM ownership to Balancer so it can call VM-onlyOwner functions
-        vm.stopBroadcast();
-        vm.startBroadcast(validatorManagerOwnerKey);
-        VM2(vmAddress).transferOwnership(balancer);
+        BalancerValidatorManager(balancer).initialize(balancerSettings, vmAddress);
         vm.stopBroadcast();
 
-        // 4) Optionally deploy PoA security module and register it
+        // 6) Optionally deploy PoA security module and register it
         if (deployPoASecurityModule) {
             vm.startBroadcast(proxyAdminOwnerKey);
             securityModule = address(new PoASecurityModule(balancer, validatorManagerOwnerAddress));

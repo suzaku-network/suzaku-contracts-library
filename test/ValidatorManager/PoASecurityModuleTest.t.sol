@@ -110,7 +110,7 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationInitialized() {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeValidatorRegistration(
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
             _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
         );
         _;
@@ -118,7 +118,7 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationCompleted() {
         vm.startPrank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeValidatorRegistration(
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
             _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
         );
         PoASecurityModule(testSecurityModules[0]).completeValidatorRegistration(
@@ -227,9 +227,9 @@ contract BalancerValidatorManagerTest is Test {
         validatorManager.setUpSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
     }
 
-    function testInitializeValidatorRegistration() public validatorSetInitialized {
+    function testInitiateValidatorRegistration() public validatorSetInitialized {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeValidatorRegistration(
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
             _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
         );
 
@@ -259,13 +259,13 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(validator.startTime, block.timestamp);
     }
 
-    function testInitializeEndValidation()
+    function testInitiateValidatorRemoval()
         public
         validatorSetInitialized
         validatorRegistrationCompleted
     {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeEndValidation(VALIDATION_ID_01);
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRemoval(VALIDATION_ID_01);
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
@@ -275,7 +275,7 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(weight, 0);
     }
 
-    function testInitializeEndValidationRevertsIfWrongSecurityModule()
+    function testInitiateValidatorRemovalRevertsIfWrongSecurityModule()
         public
         validatorSetInitialized
         securityModulesSetUp
@@ -291,17 +291,17 @@ contract BalancerValidatorManagerTest is Test {
                 testSecurityModules[1]
             )
         );
-        PoASecurityModule(testSecurityModules[1]).initializeEndValidation(VALIDATION_ID_01);
+        PoASecurityModule(testSecurityModules[1]).initiateValidatorRemoval(VALIDATION_ID_01);
     }
 
-    function testCompleteEndValidation()
+    function testCompleteValidatorRemoval()
         public
         validatorSetInitialized
         validatorRegistrationCompleted
     {
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).initializeEndValidation(VALIDATION_ID_01);
-        PoASecurityModule(testSecurityModules[0]).completeEndValidation(
+        PoASecurityModule(testSecurityModules[0]).initiateValidatorRemoval(VALIDATION_ID_01);
+        PoASecurityModule(testSecurityModules[0]).completeValidatorRemoval(
             VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX
         );
 
@@ -311,7 +311,7 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(validationID, bytes32(0));
     }
 
-    function testCompleteEndValidationExpired()
+    function testCompleteValidatorRemovalExpired()
         public
         validatorSetInitialized
         validatorRegistrationInitialized
@@ -320,7 +320,7 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 days);
 
         vm.prank(validatorManagerOwnerAddress);
-        PoASecurityModule(testSecurityModules[0]).completeEndValidation(
+        PoASecurityModule(testSecurityModules[0]).completeValidatorRemoval(
             VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX
         );
 

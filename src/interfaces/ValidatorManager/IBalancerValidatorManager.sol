@@ -82,6 +82,10 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__ValidatorAlreadyMigrated(bytes32 validationID);
     error BalancerValidatorManager__ZeroValidatorManagerAddress();
     error BalancerValidatorManager__ValidatorManagerNotOwnedByBalancer();
+    error BalancerValidatorManager__InitialSecurityModuleRequiredForMigration();
+    error BalancerValidatorManager__MigratedValidatorsRequired();
+    error BalancerValidatorManager__InvalidWarpMessage();
+    error BalancerValidatorManager__InconsistentNonce();
 
     /**
      * @notice Returns the ValidatorManager churn period in seconds
@@ -120,6 +124,15 @@ interface IBalancerValidatorManager is IValidatorManager {
     ) external view returns (uint64 weight, uint64 maxWeight);
 
     /**
+     * @notice Returns the security module that manages a validator
+     * @param validationID The ID of the validator
+     * @return The security module address (address(0) if unassigned)
+     */
+    function getValidatorSecurityModule(
+        bytes32 validationID
+    ) external view returns (address);
+
+    /**
      * @notice Returns whether a validator has a pending weight update
      * @param validationID The ID of the validator
      * @return Whether the validator has a pending weight update
@@ -136,62 +149,6 @@ interface IBalancerValidatorManager is IValidatorManager {
     function setUpSecurityModule(address securityModule, uint64 maxWeight) external;
 
     /**
-     * @notice Begins the validator registration process, and sets the {weight} of the validator.
-     * @param registrationInput The inputs for a validator registration.
-     * @param weight The weight of the validator being registered.
-     * @return validationID The ID of the validator registration.
-     */
-    /**
-     * @notice Begins the validator registration process, and sets the {weight} of the validator.
-     * @dev Can only be called by registered security modules
-     * @param registrationInput The inputs for a validator registration.
-     * @param weight The weight of the validator being registered.
-     * @return validationID The ID of the validator registration.
-     */
-    function initializeValidatorRegistration(
-        ValidatorRegistrationInput calldata registrationInput,
-        uint64 weight
-    ) external returns (bytes32 validationID);
-
-    /**
-     * @notice Begins the process of ending an active validation period. The validation period must have been previously
-     * started by a successful call to {completeValidatorRegistration} with the given validationID.
-     * @dev Can only be called by the security module that registered the validator
-     * @param validationID The ID of the validation period being ended.
-     * @return validator The validator that is being ended
-     */
-    function initializeEndValidation(
-        bytes32 validationID
-    ) external returns (Validator memory validator);
-
-    /**
-     * @notice Initiates a weight update for a validator
-     * @dev Can only be called by the security module that registered the validator
-     * @param validationID The ID of the validation period being updated
-     * @param newWeight The new weight to set for the validator
-     */
-    function initializeValidatorWeightUpdate(
-        bytes32 validationID,
-        uint64 newWeight
-    ) external returns (Validator memory validator);
-
-    /**
-     * @notice Completes the process of ending a validation period
-     * @param messageIndex The index of the Warp message containing the confirmation
-     */
-    function completeEndValidation(
-        uint32 messageIndex
-    ) external;
-
-    /**
-     * @notice Completes a pending validator weight update after P-Chain confirmation
-     * @dev Can only be called by the security module that registered the validator
-     * @param validationID The ID of the validation period being updated
-     * @param messageIndex The index of the Warp message containing the weight update confirmation
-     */
-    function completeValidatorWeightUpdate(bytes32 validationID, uint32 messageIndex) external;
-
-    /**
      * @notice Resends a pending validator weight update message to the P-Chain
      * @param validationID The ID of the validation period being updated
      */
@@ -204,14 +161,6 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @param validationID The ID of the validation period
      */
     function resendRegisterValidatorMessage(
-        bytes32 validationID
-    ) external;
-
-    /**
-     * @notice Resends an end validator message
-     * @param validationID The ID of the validation period
-     */
-    function resendEndValidatorMessage(
         bytes32 validationID
     ) external;
 }
