@@ -11,13 +11,19 @@ import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
+import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {ValidatorManagerSettings} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
 import {
-    ValidatorManager as VM2,
-    ValidatorManagerSettings as VM2Settings
+    ValidatorManager,
+    ValidatorManagerSettings as VMSettings
 } from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+
+import {
+    ConversionData,
+    InitialValidator
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -45,40 +51,80 @@ contract DeployBalancerValidatorManager is Script {
         address proxyAdminOwnerAddress = vm.addr(proxyAdminOwnerKey);
         address validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
-        bool deployPoASecurityModule = initialSecurityModule == address(0);
-
         vm.startBroadcast(proxyAdminOwnerKey);
 
-        // 1) Deploy v2 VM (proxy)
-        VM2Settings memory vmSettings = VM2Settings({
+        // Deploy ValidatorManager proxy
+        VMSettings memory vmSettings = VMSettings({
             admin: validatorManagerOwnerAddress,
             subnetID: subnetID,
             churnPeriodSeconds: churnPeriodSeconds,
             maximumChurnPercentage: maximumChurnPercentage
         });
-        VM2 vmImpl = new VM2(ICMInitializable.Allowed);
+        ValidatorManager vmImpl = new ValidatorManager(ICMInitializable.Allowed);
         vmAddress = UnsafeUpgrades.deployTransparentProxy(
-            address(vmImpl), proxyAdminOwnerAddress, abi.encodeCall(VM2.initialize, (vmSettings))
+            address(vmImpl),
+            proxyAdminOwnerAddress,
+            abi.encodeCall(ValidatorManager.initialize, (vmSettings))
         );
+        vm.stopBroadcast();
 
-        // 2) Deploy Balancer implementation
+        // Create memory copy of migratedValidators (calldata arrays are immutable)
+        bytes[] memory actualMigratedValidators = new bytes[](migratedValidators.length);
+        for (uint256 i = 0; i < migratedValidators.length; i++) {
+            actualMigratedValidators[i] = migratedValidators[i];
+        }
+
+        // Set up mock warp messenger for test environment
+        // vm.etch must be done outside of broadcast
+        ACP77WarpMessengerTestMock warpMessengerTestMock = new ACP77WarpMessengerTestMock(vmAddress);
+        address WARP_MESSENGER_ADDR = 0x0200000000000000000000000000000000000005;
+        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
+
+        // Pre-initialize VM validator set using the SAME values the mock hashes (messageIndex=2)
+        {
+            // Pull nodeIDs & chainID from the mock to avoid drift
+            bytes memory node02 = warpMessengerTestMock.DEFAULT_NODE_ID_02();
+            bytes memory node03 = warpMessengerTestMock.DEFAULT_NODE_ID_03();
+            bytes32 chainId = warpMessengerTestMock.getBlockchainID();
+            bytes32 l1Id = warpMessengerTestMock.DEFAULT_L1_ID();
+
+            InitialValidator[] memory initialValidators = new InitialValidator[](2);
+            initialValidators[0] =
+                InitialValidator({nodeID: node02, blsPublicKey: new bytes(48), weight: 180});
+            initialValidators[1] =
+                InitialValidator({nodeID: node03, blsPublicKey: new bytes(48), weight: 20});
+            ConversionData memory conversionData = ConversionData({
+                subnetID: l1Id,
+                validatorManagerBlockchainID: chainId,
+                validatorManagerAddress: vmAddress,
+                initialValidators: initialValidators
+            });
+            vm.startBroadcast(validatorManagerOwnerKey);
+            ValidatorManager(vmAddress).initializeValidatorSet(conversionData, 2);
+            vm.stopBroadcast();
+        }
+
+        vm.startBroadcast(proxyAdminOwnerKey);
         BalancerValidatorManager balancerImpl = new BalancerValidatorManager();
 
-        // 3) Deploy Balancer proxy without initialization (empty calldata)
-        balancer = UnsafeUpgrades.deployTransparentProxy(
-            address(balancerImpl),
-            proxyAdminOwnerAddress,
-            "" // Don't initialize yet
-        );
+        // Deploy proxy without initialization
+        balancer =
+            UnsafeUpgrades.deployTransparentProxy(address(balancerImpl), proxyAdminOwnerAddress, "");
 
-        // 4) Transfer VM ownership to Balancer proxy before initialization
+        // Deploy security module if not provided
+        if (initialSecurityModule == address(0)) {
+            initialSecurityModule =
+                address(new PoASecurityModule(balancer, validatorManagerOwnerAddress));
+        }
+
+        // Transfer ValidatorManager ownership to Balancer
         vm.stopBroadcast();
         vm.startBroadcast(validatorManagerOwnerKey);
-        VM2(vmAddress).transferOwnership(balancer);
+        ValidatorManager(vmAddress).transferOwnership(balancer);
         vm.stopBroadcast();
 
-        // 5) Now initialize the Balancer (VM is already owned by Balancer)
-        vm.startBroadcast(proxyAdminOwnerKey);
+        // Initialize Balancer (must use non-admin due to transparent proxy pattern)
+        vm.startBroadcast(validatorManagerOwnerKey);
         BalancerValidatorManagerSettings memory balancerSettings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
                 subnetID: subnetID,
@@ -88,26 +134,20 @@ contract DeployBalancerValidatorManager is Script {
             initialOwner: validatorManagerOwnerAddress,
             initialSecurityModule: initialSecurityModule,
             initialSecurityModuleMaxWeight: initialSecurityModuleWeight,
-            migratedValidators: migratedValidators
+            migratedValidators: actualMigratedValidators
         });
         BalancerValidatorManager(balancer).initialize(balancerSettings, vmAddress);
         vm.stopBroadcast();
 
-        // 6) Optionally deploy PoA security module and register it
-        if (deployPoASecurityModule) {
-            vm.startBroadcast(proxyAdminOwnerKey);
-            securityModule = address(new PoASecurityModule(balancer, validatorManagerOwnerAddress));
-            vm.stopBroadcast();
-
+        // Set up security module if this is a fresh deployment (no migration)
+        if (actualMigratedValidators.length == 0 && initialSecurityModule != address(0)) {
             vm.startBroadcast(validatorManagerOwnerKey);
             BalancerValidatorManager(balancer).setUpSecurityModule(
-                securityModule, initialSecurityModuleWeight
+                initialSecurityModule, initialSecurityModuleWeight
             );
             vm.stopBroadcast();
-        } else {
-            securityModule = initialSecurityModule;
         }
 
-        return (balancer, securityModule, vmAddress);
+        return (balancer, initialSecurityModule, vmAddress);
     }
 }

@@ -61,7 +61,6 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
         uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
     );
-    error BalancerValidatorManager__SecurityModuleAlreadyRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleNotRegistered(address securityModule);
     error BalancerValidatorManager__SecurityModuleMaxWeightExceeded(
         address securityModule, uint64 weight, uint64 maxWeight
@@ -72,6 +71,7 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__InitialSecurityModuleMaxWeightLowerThanTotalWeight(
         address securityModule, uint64 initialMaxWeight, uint64 totalWeight
     );
+    error BalancerValidatorManager__CannotRemoveModuleWithWeight(address securityModule);
     error BalancerValidatorManager__NewWeightIsZero();
     error BalancerValidatorManager__ValidatorNotBelongingToSecurityModule(
         bytes32 validationID, address securityModule
@@ -86,11 +86,13 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__MigratedValidatorsRequired();
     error BalancerValidatorManager__InvalidWarpMessage();
     error BalancerValidatorManager__InconsistentNonce();
-
+    error BalancerValidatorManager__MigratedNodeIDNotFound(bytes nodeID);
+    error BalancerValidatorManager__VMValidatorSetNotInitialized();
     /**
      * @notice Returns the ValidatorManager churn period in seconds
      * @return churnPeriodSeconds The churn period in seconds
      */
+
     function getChurnPeriodSeconds() external view returns (uint64 churnPeriodSeconds);
 
     /**

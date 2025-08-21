@@ -15,12 +15,13 @@ import {
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
+import {ValidatorRegistrationInput} from
+    "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+
 import {
     ValidatorChurnPeriod,
-    ValidatorRegistrationInput
-} from "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-
-import {ValidatorManager} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+    ValidatorManager
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 
 import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {
@@ -32,6 +33,12 @@ import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
 
+/**
+ * @title BalancerValidatorManager
+ * @author ADDPHO
+ * @notice The Balancer Validator Manager contract allows to balance the weight of an L1 between multiple security modules.
+ * @custom:security-contact security@suzaku.network
+ */
 contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
 
@@ -40,9 +47,13 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
 
     /// @custom:storage-location erc7201:suzaku.storage.BalancerValidatorManager
     struct BalancerValidatorManagerStorage {
+        /// @notice The registered security modules along with their maximum weight
         EnumerableMap.AddressToUintMap securityModules;
+        /// @notice The total weight of all validators for a given security module
         mapping(address securityModule => uint64 weight) securityModuleWeight;
+        /// @notice The security module to which each validator belongs
         mapping(bytes32 validationID => address securityModule) validatorSecurityModule;
+        /// @notice Tracks initial weight for registrations in progress (temporary state)
         mapping(bytes32 validationID => uint64 weight) registrationInitWeight;
     }
 
@@ -50,16 +61,18 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
     bytes32 public constant BALANCER_VALIDATOR_MANAGER_STORAGE_LOCATION =
         0x9d2d7650aa35ca910e5b713f6b3de6524a06fbcb31ffc9811340c6f331a23400;
 
-    // solhint-disable func-name-mixedcase
+    // solhint-disable func-name-mixedcase, ordering
     function _getBalancerValidatorManagerStorage()
         private
         pure
         returns (BalancerValidatorManagerStorage storage $)
     {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             $.slot := BALANCER_VALIDATOR_MANAGER_STORAGE_LOCATION
         }
     }
+    // solhint-enable func-name-mixedcase
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -69,25 +82,31 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
     // Underlying ValidatorManager (composed, owned by this Balancer)
     ValidatorManager internal VALIDATOR_MANAGER;
 
-    /// @notice Initialize the Balancer wrapper and bind it to a ValidatorManager address.
-    /// @dev The ValidatorManager must have been deployed & will have its ownership transferred to this contract by scripts.
+    /**
+     * @notice Initialize the Balancer Validator Manager
+     * @param settings The settings for the Balancer Validator Manager
+     * @param validatorManagerAddress The address of the ValidatorManager to wrap
+     */
     function initialize(
         BalancerValidatorManagerSettings calldata settings,
-        address VALIDATOR_MANAGERAddress
+        address validatorManagerAddress
     ) external initializer {
         __Ownable_init(settings.initialOwner);
-        if (VALIDATOR_MANAGERAddress == address(0)) {
+        if (validatorManagerAddress == address(0)) {
             revert BalancerValidatorManager__ZeroValidatorManagerAddress();
         }
-        VALIDATOR_MANAGER = ValidatorManager(VALIDATOR_MANAGERAddress);
+        VALIDATOR_MANAGER = ValidatorManager(validatorManagerAddress);
         if (VALIDATOR_MANAGER.owner() != address(this)) {
             revert BalancerValidatorManager__ValidatorManagerNotOwnedByBalancer();
         }
+        if (!VALIDATOR_MANAGER.isValidatorSetInitialized()) {
+            revert BalancerValidatorManager__VMValidatorSetNotInitialized();
+        }
 
-        // Ensure initial cap is sufficient (mirror old semantics)
+        // Get current total weight from ValidatorManager
         uint64 totalWeight = VALIDATOR_MANAGER.l1TotalWeight();
 
-        // Migration requirement: if VM2 already has weight, require migration
+        // Migration requirement: if ValidatorManager already has weight, require migration
         if (totalWeight > 0) {
             if (settings.initialSecurityModule == address(0)) {
                 revert BalancerValidatorManager__InitialSecurityModuleRequiredForMigration();
@@ -110,13 +129,21 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
             );
         }
 
-        // Optional migration (old _migrateValidators behavior)
+        // Migrate validators if provided
         if (settings.migratedValidators.length > 0) {
             BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
             uint64 migratedValidatorsTotalWeight = 0;
             for (uint256 i = 0; i < settings.migratedValidators.length; i++) {
                 bytes32 validationID =
                     VALIDATOR_MANAGER.getNodeValidationID(settings.migratedValidators[i]);
+
+                // Ensure nodeID exists on ValidatorManager
+                if (validationID == bytes32(0)) {
+                    revert BalancerValidatorManager__MigratedNodeIDNotFound(
+                        settings.migratedValidators[i]
+                    );
+                }
+
                 if ($.validatorSecurityModule[validationID] != address(0)) {
                     revert BalancerValidatorManager__ValidatorAlreadyMigrated(validationID);
                 }
@@ -132,6 +159,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         }
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function setUpSecurityModule(address securityModule, uint64 maxWeight) external onlyOwner {
         _setUpSecurityModule(securityModule, maxWeight);
     }
@@ -145,6 +173,10 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
             );
         }
         if (maxWeight == 0) {
+            // Forbid removal while weight > 0
+            if (currentWeight != 0) {
+                revert BalancerValidatorManager__CannotRemoveModuleWithWeight(securityModule);
+            }
             if (!$.securityModules.remove(securityModule)) {
                 revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
             }
@@ -175,24 +207,8 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
 
     function _requireOwned(bytes32 validationID, address securityModule) internal view {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        if (
-            $.validatorSecurityModule[validationID] != address(0)
-                && $.validatorSecurityModule[validationID] != securityModule
-        ) {
-            revert BalancerValidatorManager__ValidatorNotBelongingToSecurityModule(
-                validationID, securityModule
-            );
-        }
-    }
-
-    function _checkValidatorSecurityModule(
-        bytes32 validationID,
-        address securityModule
-    ) internal view {
-        BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        if ($.validatorSecurityModule[validationID] == address(0)) {
-            return;
-        } else if ($.validatorSecurityModule[validationID] != securityModule) {
+        address owner = $.validatorSecurityModule[validationID];
+        if (owner != securityModule) {
             revert BalancerValidatorManager__ValidatorNotBelongingToSecurityModule(
                 validationID, securityModule
             );
@@ -203,10 +219,9 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         bytes32 validationID
     ) internal view returns (bool) {
         Validator memory validator = VALIDATOR_MANAGER.getValidator(validationID);
-        return validator.sentNonce > validator.receivedNonce; // explicit and clear
+        return validator.sentNonce > validator.receivedNonce;
     }
 
-    // NOTE: tests call this directly (no owner/module restriction)
     function initializeValidatorSet(
         ConversionData calldata conversionData,
         uint32 messageIndex
@@ -223,6 +238,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         return validationID;
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function resendValidatorWeightUpdate(
         bytes32 validationID
     ) external {
@@ -233,9 +249,6 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         if (!_hasPendingWeightMsg(validationID)) {
             revert BalancerValidatorManager__NoPendingWeightUpdate(validationID);
         }
-        if (validator.sentNonce == 0) {
-            revert InvalidValidationID(validationID);
-        }
 
         WARP_MESSENGER.sendWarpMessage(
             ValidatorMessages.packL1ValidatorWeightMessage(
@@ -244,21 +257,25 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         );
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function resendRegisterValidatorMessage(
         bytes32 validationID
     ) external {
         VALIDATOR_MANAGER.resendRegisterValidatorMessage(validationID);
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function getChurnPeriodSeconds() external view returns (uint64) {
         return VALIDATOR_MANAGER.getChurnPeriodSeconds();
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function getMaximumChurnPercentage() external view returns (uint64) {
         (, uint8 maximumChurnPercentage,) = VALIDATOR_MANAGER.getChurnTracker();
         return uint64(maximumChurnPercentage);
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function getCurrentChurnPeriod()
         external
         view
@@ -267,25 +284,35 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         (,, churnPeriod) = VALIDATOR_MANAGER.getChurnTracker();
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function getSecurityModules() external view returns (address[] memory securityModules) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
-        return $.securityModules.keys();
+        uint256 len = $.securityModules.length();
+        securityModules = new address[](len);
+        for (uint256 i = 0; i < len; ++i) {
+            (address key,) = $.securityModules.at(i);
+            securityModules[i] = key;
+        }
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function getSecurityModuleWeights(
         address securityModule
     ) external view returns (uint64 weight, uint64 maxWeight) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         weight = $.securityModuleWeight[securityModule];
-        maxWeight = uint64($.securityModules.get(securityModule));
+        (bool securityModuleExists, uint256 max) = $.securityModules.tryGet(securityModule);
+        maxWeight = securityModuleExists ? uint64(max) : 0;
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function getValidatorSecurityModule(
         bytes32 validationID
     ) external view returns (address) {
         return _getBalancerValidatorManagerStorage().validatorSecurityModule[validationID];
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function isValidatorPendingWeightUpdate(
         bytes32 validationID
     ) external view returns (bool) {
@@ -326,7 +353,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
     ) external onlySecurityModule {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
 
-        _checkValidatorSecurityModule(validationID, msg.sender);
+        _requireOwned(validationID, msg.sender);
 
         Validator memory validator = VALIDATOR_MANAGER.getValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
@@ -381,7 +408,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
             revert BalancerValidatorManager__PendingWeightUpdate(validationID);
         }
 
-        _checkValidatorSecurityModule(validationID, msg.sender);
+        _requireOwned(validationID, msg.sender);
 
         (nonce, messageID) =
             VALIDATOR_MANAGER.initiateValidatorWeightUpdate(validationID, newWeight);
@@ -389,13 +416,12 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         _updateSecurityModuleWeight(
             msg.sender, $.securityModuleWeight[msg.sender] + newWeight - validator.weight
         );
-        // no local pending tracking needed
     }
 
     function completeValidatorWeightUpdate(
         uint32 messageIndex
     ) external returns (bytes32 validationID, uint64 nonce) {
-        // peek at the warp payload to get validationID + received nonce for pre-checks
+        // Get warp message to extract validationID and nonce
         (WarpMessage memory warpMessage, bool valid) =
             WARP_MESSENGER.getVerifiedWarpMessage(messageIndex);
         if (!valid) {
@@ -431,7 +457,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         VALIDATOR_MANAGER.resendValidatorRemovalMessage(validationID);
     }
 
-    function migrateFromV1(bytes32 validationID, uint32 receivedNonce) external {
+    function migrateFromV1(bytes32 validationID, uint32 receivedNonce) external onlyOwner {
         VALIDATOR_MANAGER.migrateFromV1(validationID, receivedNonce);
     }
 
