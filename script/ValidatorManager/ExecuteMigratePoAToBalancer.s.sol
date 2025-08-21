@@ -87,6 +87,7 @@ contract MigratePoAToBalancer is Script {
         // 4) Initialize Balancer (from NON-admin key) with PoA module & migrated validators
         BalancerValidatorManagerSettings memory settings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
+                admin: address(0), // Will be set by ValidatorManager initialization
                 subnetID: config.subnetID,
                 churnPeriodSeconds: config.churnPeriodSeconds,
                 maximumChurnPercentage: config.maximumChurnPercentage

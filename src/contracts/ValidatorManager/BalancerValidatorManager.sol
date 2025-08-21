@@ -15,9 +15,6 @@ import {
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
-import {ValidatorRegistrationInput} from
-    "../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-
 import {
     ValidatorChurnPeriod,
     ValidatorManager
@@ -331,6 +328,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         return VALIDATOR_MANAGER.getNodeValidationID(nodeID);
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function initiateValidatorRegistration(
         bytes memory nodeID,
         bytes memory blsPublicKey,
@@ -348,6 +346,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         _updateSecurityModuleWeight(msg.sender, $.securityModuleWeight[msg.sender] + weight);
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function initiateValidatorRemoval(
         bytes32 validationID
     ) external onlySecurityModule {
@@ -389,6 +388,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         delete $.validatorSecurityModule[validationID];
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function initiateValidatorWeightUpdate(
         bytes32 validationID,
         uint64 newWeight
@@ -418,6 +418,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         );
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function completeValidatorWeightUpdate(
         uint32 messageIndex
     ) external returns (bytes32 validationID, uint64 nonce) {
@@ -451,6 +452,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         }
     }
 
+    /// @inheritdoc IBalancerValidatorManager
     function resendValidatorRemovalMessage(
         bytes32 validationID
     ) external {

@@ -127,6 +127,7 @@ contract DeployBalancerValidatorManager is Script {
         vm.startBroadcast(validatorManagerOwnerKey);
         BalancerValidatorManagerSettings memory balancerSettings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
+                admin: address(0), // Will be set by ValidatorManager initialization
                 subnetID: subnetID,
                 churnPeriodSeconds: churnPeriodSeconds,
                 maximumChurnPercentage: maximumChurnPercentage

@@ -6,7 +6,10 @@ pragma solidity 0.8.25;
 import {IValidatorManager} from
     "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
 
-import {ValidatorChurnPeriod} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
+import {
+    ValidatorChurnPeriod,
+    ValidatorManagerSettings
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 
 import {
     PChainOwner,
@@ -14,7 +17,7 @@ import {
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
 /**
- * @dev Struct for validator registration inputs (v1 compatibility)
+ * @dev Struct for validator registration inputs
  */
 struct ValidatorRegistrationInput {
     bytes nodeID;
@@ -22,15 +25,6 @@ struct ValidatorRegistrationInput {
     uint64 registrationExpiry;
     PChainOwner remainingBalanceOwner;
     PChainOwner disableOwner;
-}
-
-/**
- * @dev Validator Manager settings (v1 compatibility structure)
- */
-struct ValidatorManagerSettings {
-    bytes32 subnetID;
-    uint64 churnPeriodSeconds;
-    uint8 maximumChurnPercentage;
 }
 
 /**
@@ -151,6 +145,56 @@ interface IBalancerValidatorManager is IValidatorManager {
     function setUpSecurityModule(address securityModule, uint64 maxWeight) external;
 
     /**
+     * @notice Begins the validator registration process
+     * @dev Can only be called by registered security modules
+     * @param nodeID The node ID of the validator
+     * @param blsPublicKey The BLS public key of the validator
+     * @param remainingBalanceOwner The P-Chain owner for the remaining balance
+     * @param disableOwner The P-Chain owner that can disable the validator
+     * @param weight The weight of the validator being registered
+     * @return validationID The ID of the validator registration
+     */
+    function initiateValidatorRegistration(
+        bytes memory nodeID,
+        bytes memory blsPublicKey,
+        PChainOwner memory remainingBalanceOwner,
+        PChainOwner memory disableOwner,
+        uint64 weight
+    ) external returns (bytes32 validationID);
+
+    /**
+     * @notice Begins the process of removing a validator
+     * @dev Can only be called by the security module that registered the validator
+     * @param validationID The ID of the validation period being ended
+     */
+    function initiateValidatorRemoval(
+        bytes32 validationID
+    ) external;
+
+    /**
+     * @notice Initiates a weight update for a validator
+     * @dev Can only be called by the security module that registered the validator
+     * @param validationID The ID of the validation period being updated
+     * @param newWeight The new weight to set for the validator
+     * @return nonce The nonce of the weight update message
+     * @return messageID The ID of the weight update message
+     */
+    function initiateValidatorWeightUpdate(
+        bytes32 validationID,
+        uint64 newWeight
+    ) external returns (uint64 nonce, bytes32 messageID);
+
+    /**
+     * @notice Completes a pending validator weight update after P-Chain confirmation
+     * @param messageIndex The index of the Warp message containing the weight update confirmation
+     * @return validationID The ID of the validation period
+     * @return nonce The nonce of the weight update
+     */
+    function completeValidatorWeightUpdate(
+        uint32 messageIndex
+    ) external returns (bytes32 validationID, uint64 nonce);
+
+    /**
      * @notice Resends a pending validator weight update message to the P-Chain
      * @param validationID The ID of the validation period being updated
      */
@@ -163,6 +207,14 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @param validationID The ID of the validation period
      */
     function resendRegisterValidatorMessage(
+        bytes32 validationID
+    ) external;
+
+    /**
+     * @notice Resends a validator removal message
+     * @param validationID The ID of the validation period
+     */
+    function resendValidatorRemovalMessage(
         bytes32 validationID
     ) external;
 }
