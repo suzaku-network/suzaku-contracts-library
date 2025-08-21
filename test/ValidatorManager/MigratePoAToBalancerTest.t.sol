@@ -28,8 +28,18 @@ import {
     Validator,
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+import {TransparentUpgradeableProxy} from
+    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 
 import {Test, console} from "forge-std/Test.sol";
+
+// V2 implementation for upgradeability tests: same storage layout, adds one new function
+contract BalancerValidatorManagerV2 is BalancerValidatorManager {
+    function version() external pure returns (string memory) {
+        return "v2";
+    }
+}
 
 contract MigratePoAToBalancerTest is Test {
     MigratePoAToBalancer migrator;
@@ -236,5 +246,103 @@ contract MigratePoAToBalancerTest is Test {
         migrator.executeMigratePoAToBalancer(
             cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY
         );
+    }
+
+    // Upgradeability tests
+    function testUpgradeability_PreservesStateAndExposesNewLogic() public {
+        // First perform the migration
+        bytes[] memory nodeIds = new bytes[](2);
+        nodeIds[0] = NODE_ID_1;
+        nodeIds[1] = NODE_ID_2;
+        bytes[] memory migratedValidators =
+            extractor.extractActiveOrPendingAdded(validatorManager, nodeIds);
+
+        BalancerMigrationConfig memory cfg = BalancerMigrationConfig({
+            proxyAddress: address(0),
+            validatorManagerProxy: validatorManager,
+            poaManager: poaManager,
+            initialSecurityModuleMaxWeight: SECURITY_MODULE_MAX_WEIGHT,
+            migratedValidators: migratedValidators,
+            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            validatorManagerOwnerAddress: owner,
+            subnetID: TEST_SUBNET_ID,
+            churnPeriodSeconds: CHURN_PERIOD,
+            maximumChurnPercentage: MAX_CHURN_PERCENTAGE
+        });
+
+        (address balancerProxy, , ) = migrator
+            .executeMigratePoAToBalancer(cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
+
+        BalancerValidatorManager bal = BalancerValidatorManager(balancerProxy);
+
+        // Pre-upgrade state snapshot
+        address[] memory beforeModules = bal.getSecurityModules();
+        (uint64 wBefore, uint64 maxBefore) = bal.getSecurityModuleWeights(beforeModules[0]);
+        bytes32 val1IdBefore = bal.getNodeValidationID(NODE_ID_1);
+        address val1ModuleBefore = bal.getValidatorSecurityModule(val1IdBefore);
+
+        // Deploy new implementation
+        BalancerValidatorManagerV2 v2 = new BalancerValidatorManagerV2();
+
+        // Upgrade as proxy admin
+        UnsafeUpgrades.upgradeProxy(
+            balancerProxy,
+            address(v2),
+            "",
+            vm.addr(PROXY_ADMIN_OWNER_KEY)
+        );
+
+        // New logic is live (called via the proxy from a non-admin)
+        string memory ver = BalancerValidatorManagerV2(balancerProxy).version();
+        assertEq(keccak256(bytes(ver)), keccak256(bytes("v2")), "new logic not active");
+
+        // State is preserved
+        address[] memory afterModules = bal.getSecurityModules();
+        (uint64 wAfter, uint64 maxAfter) = bal.getSecurityModuleWeights(afterModules[0]);
+        assertEq(afterModules.length, beforeModules.length, "modules length changed");
+        assertEq(afterModules[0], beforeModules[0], "module address changed");
+        assertEq(wAfter, wBefore, "module weight changed across upgrade");
+        assertEq(maxAfter, maxBefore, "module maxWeight changed across upgrade");
+
+        // Validator mappings preserved
+        bytes32 val1IdAfter = bal.getNodeValidationID(NODE_ID_1);
+        address val1ModuleAfter = bal.getValidatorSecurityModule(val1IdAfter);
+        assertEq(val1IdAfter, val1IdBefore, "validation ID changed");
+        assertEq(val1ModuleAfter, val1ModuleBefore, "validator module mapping changed");
+    }
+
+    function testTransparentProxy_AdminCannotCallLogic() public {
+        // First perform the migration to get the balancer proxy
+        bytes[] memory nodeIds = new bytes[](2);
+        nodeIds[0] = NODE_ID_1;
+        nodeIds[1] = NODE_ID_2;
+        bytes[] memory migratedValidators =
+            extractor.extractActiveOrPendingAdded(validatorManager, nodeIds);
+
+        BalancerMigrationConfig memory cfg = BalancerMigrationConfig({
+            proxyAddress: address(0),
+            validatorManagerProxy: validatorManager,
+            poaManager: poaManager,
+            initialSecurityModuleMaxWeight: SECURITY_MODULE_MAX_WEIGHT,
+            migratedValidators: migratedValidators,
+            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            validatorManagerOwnerAddress: owner,
+            subnetID: TEST_SUBNET_ID,
+            churnPeriodSeconds: CHURN_PERIOD,
+            maximumChurnPercentage: MAX_CHURN_PERCENTAGE
+        });
+
+        (address balancerProxy, , ) = migrator
+            .executeMigratePoAToBalancer(cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
+
+        // The proxy admin must not be able to reach implementation functions via fallback
+        // (transparent proxy safety).
+        // Get the actual proxy admin address (which is a ProxyAdmin contract, not the owner)
+        address proxyAdmin = UnsafeUpgrades.getAdminAddress(balancerProxy);
+        
+        vm.startPrank(proxyAdmin);
+        vm.expectRevert();
+        BalancerValidatorManager(balancerProxy).getChurnPeriodSeconds();
+        vm.stopPrank();
     }
 }
