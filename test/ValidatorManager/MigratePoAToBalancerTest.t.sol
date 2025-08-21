@@ -5,6 +5,9 @@ pragma solidity 0.8.25;
 
 import {BalancerMigrationConfig} from "../../script/ValidatorManager/BalancerConfigTypes.s.sol";
 import {MigratePoAToBalancer} from "../../script/ValidatorManager/ExecuteMigratePoAToBalancer.s.sol";
+
+import {ExecutePoAValidatorManager} from
+    "../../script/ValidatorManager/ExecutePoAValidatorManager.s.sol";
 import {ExtractValidators} from "../../script/ValidatorManager/ExtractValidators.s.sol";
 
 import {BalancerValidatorManager} from
@@ -14,7 +17,6 @@ import {PoASecurityModule} from
 
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
-import {PoAManager} from "@avalabs/icm-contracts/validator-manager/PoAManager.sol";
 import {
     ValidatorManager,
     ValidatorManagerSettings as VMSettings
@@ -26,8 +28,6 @@ import {
     Validator,
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
-import {IValidatorManagerExternalOwnable} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManagerExternalOwnable.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -78,32 +78,33 @@ contract MigratePoAToBalancerTest is Test {
     }
 
     function _deployExistingSetup() internal {
-        // Deploy existing ValidatorManager
-        VMSettings memory settings = VMSettings({
-            admin: owner,
+        // Deploy PoA VM + PoAManager via the deploy script
+        BalancerMigrationConfig memory cfg = BalancerMigrationConfig({
+            proxyAddress: address(0),
+            validatorManagerProxy: address(0),
+            poaManager: address(0),
+            initialSecurityModuleMaxWeight: 0,
+            migratedValidators: new bytes[](0),
+            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            validatorManagerOwnerAddress: owner,
             subnetID: TEST_SUBNET_ID,
             churnPeriodSeconds: CHURN_PERIOD,
             maximumChurnPercentage: MAX_CHURN_PERCENTAGE
         });
 
-        vm.startPrank(owner);
-        ValidatorManager vmImpl = new ValidatorManager(ICMInitializable.Allowed);
-        validatorManager = address(vmImpl);
-        ValidatorManager(validatorManager).initialize(settings);
+        ExecutePoAValidatorManager poaDeployer = new ExecutePoAValidatorManager();
+        (address vmProxy, address poaMgr) =
+            poaDeployer.executeDeployPoA(cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
 
-        // Deploy PoAManager to manage it
-        poaManager =
-            address(new PoAManager(owner, IValidatorManagerExternalOwnable(validatorManager)));
-        ValidatorManager(validatorManager).transferOwnership(poaManager);
+        validatorManager = vmProxy;
+        poaManager = poaMgr;
 
-        // Update warp mock with the VM address
-        ACP77WarpMessengerTestMock warpMock = new ACP77WarpMessengerTestMock(validatorManager);
-        vm.etch(WARP_MESSENGER_ADDR, address(warpMock).code);
+        // Bind the warp mock to the freshly deployed VM
+        ACP77WarpMessengerTestMock warpMock2 = new ACP77WarpMessengerTestMock(validatorManager);
+        vm.etch(WARP_MESSENGER_ADDR, address(warpMock2).code);
 
         // Initialize validator set with test validators
         _initializeValidatorSet();
-
-        vm.stopPrank();
     }
 
     function _initializeValidatorSet() internal {

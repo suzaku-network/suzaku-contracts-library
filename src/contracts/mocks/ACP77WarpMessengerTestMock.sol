@@ -14,7 +14,7 @@ import {
 import {InitialValidator} from
     "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {WarpMessage} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+    "@avalabs/subnet-evm-contracts@1.2.2/contracts/interfaces/IWarpMessenger.sol";
 
 contract ACP77WarpMessengerTestMock {
     address private constant TELEPORTER_MESSENGER_ADDRESS =
