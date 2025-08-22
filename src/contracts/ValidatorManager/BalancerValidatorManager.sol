@@ -459,6 +459,13 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         VALIDATOR_MANAGER.resendValidatorRemovalMessage(validationID);
     }
 
+    /// @inheritdoc IBalancerValidatorManager
+    function transferValidatorManagerOwnership(
+        address newOwner
+    ) external onlyOwner {
+        VALIDATOR_MANAGER.transferOwnership(newOwner);
+    }
+
     function migrateFromV1(bytes32 validationID, uint32 receivedNonce) external onlyOwner {
         VALIDATOR_MANAGER.migrateFromV1(validationID, receivedNonce);
     }

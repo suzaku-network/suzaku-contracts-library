@@ -206,4 +206,12 @@ interface IBalancerValidatorManager is IValidatorManager {
     function resendValidatorRemovalMessage(
         bytes32 validationID
     ) external;
+
+    /**
+     * @notice Transfers ownership of the validator manager contract.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferValidatorManagerOwnership(
+        address newOwner
+    ) external;
 }
