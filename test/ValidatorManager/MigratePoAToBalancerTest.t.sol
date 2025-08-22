@@ -270,8 +270,9 @@ contract MigratePoAToBalancerTest is Test {
             maximumChurnPercentage: MAX_CHURN_PERCENTAGE
         });
 
-        (address balancerProxy, , ) = migrator
-            .executeMigratePoAToBalancer(cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
+        (address balancerProxy,,) = migrator.executeMigratePoAToBalancer(
+            cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY
+        );
 
         BalancerValidatorManager bal = BalancerValidatorManager(balancerProxy);
 
@@ -285,12 +286,7 @@ contract MigratePoAToBalancerTest is Test {
         BalancerValidatorManagerV2 v2 = new BalancerValidatorManagerV2();
 
         // Upgrade as proxy admin
-        UnsafeUpgrades.upgradeProxy(
-            balancerProxy,
-            address(v2),
-            "",
-            vm.addr(PROXY_ADMIN_OWNER_KEY)
-        );
+        UnsafeUpgrades.upgradeProxy(balancerProxy, address(v2), "", vm.addr(PROXY_ADMIN_OWNER_KEY));
 
         // New logic is live (called via the proxy from a non-admin)
         string memory ver = BalancerValidatorManagerV2(balancerProxy).version();
@@ -332,14 +328,15 @@ contract MigratePoAToBalancerTest is Test {
             maximumChurnPercentage: MAX_CHURN_PERCENTAGE
         });
 
-        (address balancerProxy, , ) = migrator
-            .executeMigratePoAToBalancer(cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
+        (address balancerProxy,,) = migrator.executeMigratePoAToBalancer(
+            cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY
+        );
 
         // The proxy admin must not be able to reach implementation functions via fallback
         // (transparent proxy safety).
         // Get the actual proxy admin address (which is a ProxyAdmin contract, not the owner)
         address proxyAdmin = UnsafeUpgrades.getAdminAddress(balancerProxy);
-        
+
         vm.startPrank(proxyAdmin);
         vm.expectRevert();
         BalancerValidatorManager(balancerProxy).getChurnPeriodSeconds();

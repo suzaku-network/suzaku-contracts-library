@@ -17,17 +17,6 @@ import {
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
 /**
- * @dev Struct for validator registration inputs
- */
-struct ValidatorRegistrationInput {
-    bytes nodeID;
-    bytes blsPublicKey;
-    uint64 registrationExpiry;
-    PChainOwner remainingBalanceOwner;
-    PChainOwner disableOwner;
-}
-
-/**
  * @dev Balancer Validator Manager settings, used to initialize the Balancer Validator Manager
  */
 struct BalancerValidatorManagerSettings {

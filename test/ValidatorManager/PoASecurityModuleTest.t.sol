@@ -23,8 +23,6 @@ import {
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
-import {ValidatorRegistrationInput} from
-    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
@@ -115,7 +113,11 @@ contract PoASecurityModuleTest is Test {
     modifier validatorRegistrationInitialized() {
         vm.prank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
         _;
     }
@@ -123,27 +125,17 @@ contract PoASecurityModuleTest is Test {
     modifier validatorRegistrationCompleted() {
         vm.startPrank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
         PoASecurityModule(testSecurityModules[0]).completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
         );
         vm.stopPrank();
         _;
-    }
-
-    function _generateTestValidatorRegistrationInput()
-        private
-        view
-        returns (ValidatorRegistrationInput memory)
-    {
-        return ValidatorRegistrationInput({
-            nodeID: VALIDATOR_NODE_ID_01,
-            blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
-            registrationExpiry: DEFAULT_EXPIRY,
-            remainingBalanceOwner: pChainOwner,
-            disableOwner: pChainOwner
-        });
     }
 
     function _generateTestConversionData() private view returns (ConversionData memory) {
@@ -234,7 +226,11 @@ contract PoASecurityModuleTest is Test {
     function testInitiateValidatorRegistration() public validatorSetInitialized {
         vm.prank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
@@ -489,7 +485,11 @@ contract PoASecurityModuleTest is Test {
         // Module 0 adds a validator
         vm.prank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
         PoASecurityModule(testSecurityModules[0]).completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX

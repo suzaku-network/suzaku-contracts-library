@@ -3,11 +3,12 @@
 
 pragma solidity 0.8.25;
 
+import {IBalancerValidatorManager} from
+    "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {
-    IBalancerValidatorManager,
-    ValidatorRegistrationInput
-} from "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
-import {ConversionData} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+    ConversionData,
+    PChainOwner
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 
 /**
@@ -32,7 +33,7 @@ contract PoASecurityModule is Ownable {
         balancerValidatorManager = IBalancerValidatorManager(balancerValidatorManagerAddress);
     }
 
-    // --- Initial validator set (rarely used here; usually done by admin scripts) ---
+    // --- Initial validator set
     function initializeValidatorSet(
         ConversionData calldata conversionData,
         uint32 messageIndex
@@ -48,15 +49,14 @@ contract PoASecurityModule is Ownable {
     }
 
     function initiateValidatorRegistration(
-        ValidatorRegistrationInput calldata registrationInput,
+        bytes calldata nodeID,
+        bytes calldata blsPublicKey,
+        PChainOwner calldata remainingBalanceOwner,
+        PChainOwner calldata disableOwner,
         uint64 weight
     ) external onlyOwner returns (bytes32 validationID) {
         return balancerValidatorManager.initiateValidatorRegistration(
-            registrationInput.nodeID,
-            registrationInput.blsPublicKey,
-            registrationInput.remainingBalanceOwner,
-            registrationInput.disableOwner,
-            weight
+            nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, weight
         );
     }
 

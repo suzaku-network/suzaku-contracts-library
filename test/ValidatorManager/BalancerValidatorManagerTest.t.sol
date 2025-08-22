@@ -12,10 +12,8 @@ import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMes
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 
-import {
-    ValidatorChurnPeriod,
-    ValidatorRegistrationInput
-} from "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+import {ValidatorChurnPeriod} from
+    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {
     ConversionData,
     InitialValidator,
@@ -113,12 +111,11 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationInitialized() {
         vm.prank(testSecurityModules[0]);
-        ValidatorRegistrationInput memory input = _generateTestValidatorRegistrationInput();
         validatorManager.initiateValidatorRegistration(
-            input.nodeID,
-            input.blsPublicKey,
-            input.remainingBalanceOwner,
-            input.disableOwner,
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
             VALIDATOR_WEIGHT
         );
         _;
@@ -126,12 +123,11 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationCompleted() {
         vm.startPrank(testSecurityModules[0]);
-        ValidatorRegistrationInput memory input = _generateTestValidatorRegistrationInput();
         validatorManager.initiateValidatorRegistration(
-            input.nodeID,
-            input.blsPublicKey,
-            input.remainingBalanceOwner,
-            input.disableOwner,
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
             VALIDATOR_WEIGHT
         );
         validatorManager.completeValidatorRegistration(
@@ -139,20 +135,6 @@ contract BalancerValidatorManagerTest is Test {
         );
         vm.stopPrank();
         _;
-    }
-
-    function _generateTestValidatorRegistrationInput()
-        private
-        view
-        returns (ValidatorRegistrationInput memory)
-    {
-        return ValidatorRegistrationInput({
-            nodeID: VALIDATOR_NODE_ID_01,
-            blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
-            registrationExpiry: DEFAULT_EXPIRY,
-            remainingBalanceOwner: pChainOwner,
-            disableOwner: pChainOwner
-        });
     }
 
     function _generateTestConversionData() private view returns (ConversionData memory) {
@@ -242,12 +224,11 @@ contract BalancerValidatorManagerTest is Test {
 
     function testInitializeValidatorRegistration() public validatorSetInitialized {
         vm.prank(testSecurityModules[0]);
-        ValidatorRegistrationInput memory input = _generateTestValidatorRegistrationInput();
         validatorManager.initiateValidatorRegistration(
-            input.nodeID,
-            input.blsPublicKey,
-            input.remainingBalanceOwner,
-            input.disableOwner,
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
             VALIDATOR_WEIGHT
         );
 
