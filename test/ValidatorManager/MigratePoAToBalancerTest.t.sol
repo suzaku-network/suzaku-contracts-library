@@ -66,6 +66,8 @@ contract MigratePoAToBalancerTest is Test {
         0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80; // anvil[0]
     uint256 constant VALIDATOR_MANAGER_OWNER_KEY =
         0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d; // anvil[1]
+    uint256 constant MIGRATION_DEPLOYER_KEY =
+        0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a; // anvil[2] - for migration deployments
 
     address owner;
     address validatorManager;
@@ -95,7 +97,7 @@ contract MigratePoAToBalancerTest is Test {
             poaManager: address(0),
             initialSecurityModuleMaxWeight: 0,
             migratedValidators: new bytes[](0),
-            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            proxyAdminOwnerAddress: vm.addr(MIGRATION_DEPLOYER_KEY),
             validatorManagerOwnerAddress: owner,
             subnetID: TEST_SUBNET_ID,
             churnPeriodSeconds: CHURN_PERIOD,
@@ -171,7 +173,7 @@ contract MigratePoAToBalancerTest is Test {
             poaManager: poaManager,
             initialSecurityModuleMaxWeight: SECURITY_MODULE_MAX_WEIGHT,
             migratedValidators: migratedValidators,
-            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            proxyAdminOwnerAddress: vm.addr(MIGRATION_DEPLOYER_KEY),
             validatorManagerOwnerAddress: owner,
             subnetID: TEST_SUBNET_ID,
             churnPeriodSeconds: CHURN_PERIOD,
@@ -181,7 +183,7 @@ contract MigratePoAToBalancerTest is Test {
         // Execute migration
         MigratePoAToBalancer _migrator = new MigratePoAToBalancer();
         (address balancerProxy, address poaSecurityModule, address vmAddress) = _migrator
-            .executeMigratePoAToBalancer(cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
+            .executeMigratePoAToBalancer(cfg, MIGRATION_DEPLOYER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
 
         // ValidatorManager ownership moved to Balancer
         assertEq(vmAddress, validatorManager, "returned VM address should match");
@@ -234,7 +236,7 @@ contract MigratePoAToBalancerTest is Test {
             poaManager: poaManager,
             initialSecurityModuleMaxWeight: SECURITY_MODULE_MAX_WEIGHT,
             migratedValidators: migrated,
-            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            proxyAdminOwnerAddress: vm.addr(MIGRATION_DEPLOYER_KEY),
             validatorManagerOwnerAddress: owner,
             subnetID: TEST_SUBNET_ID,
             churnPeriodSeconds: CHURN_PERIOD,
@@ -244,7 +246,7 @@ contract MigratePoAToBalancerTest is Test {
         // Rejects unknown nodeIDs
         vm.expectRevert(bytes("migrated nodeID not registered"));
         migrator.executeMigratePoAToBalancer(
-            cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY
+            cfg, MIGRATION_DEPLOYER_KEY, VALIDATOR_MANAGER_OWNER_KEY
         );
     }
 
@@ -263,7 +265,7 @@ contract MigratePoAToBalancerTest is Test {
             poaManager: poaManager,
             initialSecurityModuleMaxWeight: SECURITY_MODULE_MAX_WEIGHT,
             migratedValidators: migratedValidators,
-            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            proxyAdminOwnerAddress: vm.addr(MIGRATION_DEPLOYER_KEY),
             validatorManagerOwnerAddress: owner,
             subnetID: TEST_SUBNET_ID,
             churnPeriodSeconds: CHURN_PERIOD,
@@ -271,7 +273,7 @@ contract MigratePoAToBalancerTest is Test {
         });
 
         (address balancerProxy,,) = migrator.executeMigratePoAToBalancer(
-            cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY
+            cfg, MIGRATION_DEPLOYER_KEY, VALIDATOR_MANAGER_OWNER_KEY
         );
 
         BalancerValidatorManager bal = BalancerValidatorManager(balancerProxy);
@@ -285,8 +287,8 @@ contract MigratePoAToBalancerTest is Test {
         // Deploy new implementation
         BalancerValidatorManagerV2 v2 = new BalancerValidatorManagerV2();
 
-        // Upgrade as proxy admin
-        UnsafeUpgrades.upgradeProxy(balancerProxy, address(v2), "", vm.addr(PROXY_ADMIN_OWNER_KEY));
+        // Upgrade as proxy admin (now owned by MIGRATION_DEPLOYER_KEY)
+        UnsafeUpgrades.upgradeProxy(balancerProxy, address(v2), "", vm.addr(MIGRATION_DEPLOYER_KEY));
 
         // New logic is live (called via the proxy from a non-admin)
         string memory ver = BalancerValidatorManagerV2(balancerProxy).version();
@@ -321,7 +323,7 @@ contract MigratePoAToBalancerTest is Test {
             poaManager: poaManager,
             initialSecurityModuleMaxWeight: SECURITY_MODULE_MAX_WEIGHT,
             migratedValidators: migratedValidators,
-            proxyAdminOwnerAddress: vm.addr(PROXY_ADMIN_OWNER_KEY),
+            proxyAdminOwnerAddress: vm.addr(MIGRATION_DEPLOYER_KEY),
             validatorManagerOwnerAddress: owner,
             subnetID: TEST_SUBNET_ID,
             churnPeriodSeconds: CHURN_PERIOD,
@@ -329,7 +331,7 @@ contract MigratePoAToBalancerTest is Test {
         });
 
         (address balancerProxy,,) = migrator.executeMigratePoAToBalancer(
-            cfg, PROXY_ADMIN_OWNER_KEY, VALIDATOR_MANAGER_OWNER_KEY
+            cfg, MIGRATION_DEPLOYER_KEY, VALIDATOR_MANAGER_OWNER_KEY
         );
 
         // The proxy admin must not be able to reach implementation functions via fallback

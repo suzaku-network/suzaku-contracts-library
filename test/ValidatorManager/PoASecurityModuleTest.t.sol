@@ -6,15 +6,24 @@ pragma solidity 0.8.25;
 import {DeployBalancerValidatorManager} from
     "../../script/ValidatorManager/DeployBalancerValidatorManager.s.sol";
 import {HelperConfig} from "../../script/ValidatorManager/HelperConfig.s.sol";
-import {BalancerValidatorManager} from
-    "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
+import {
+    BalancerValidatorManager,
+    BalancerValidatorManagerSettings
+} from "../../src/contracts/ValidatorManager/BalancerValidatorManager.sol";
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
+import {ValidatorManagerSettings} from
+    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 
 import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMessengerTestMock.sol";
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+import {ICMInitializable} from "@avalabs/icm-contracts/utilities/ICMInitializable.sol";
 
+import {
+    ValidatorManager,
+    ValidatorManagerSettings as VMSettings
+} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {
     ConversionData,
     InitialValidator,
@@ -26,6 +35,7 @@ import {
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
+import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract PoASecurityModuleTest is Test {
@@ -436,17 +446,89 @@ contract PoASecurityModuleTest is Test {
     }
 
     function testInitializeValidatorSetThroughModule() public {
-        // Deploy fresh contracts for this test
-        DeployBalancerValidatorManager freshDeployer = new DeployBalancerValidatorManager();
+        // Deploy fresh contracts for this test without using the script to avoid broadcast nonce issues
 
-        // Provide migrated validators to satisfy Balancer.initialize() since the VM
-        // is pre-initialized by the deployer (total weight = 180 + 20 = 200).
+        // Deploy ValidatorManager
+        address freshProxyAdminOwner = makeAddr("freshProxyAdmin");
+        address freshVMOwner = makeAddr("freshVMOwner");
+
+        ValidatorManager freshVMImpl = new ValidatorManager(ICMInitializable.Allowed);
+        address freshVMAddress = UnsafeUpgrades.deployTransparentProxy(
+            address(freshVMImpl),
+            freshProxyAdminOwner,
+            abi.encodeCall(
+                ValidatorManager.initialize,
+                (
+                    VMSettings({
+                        admin: freshVMOwner,
+                        subnetID: subnetID,
+                        churnPeriodSeconds: churnPeriodSeconds,
+                        maximumChurnPercentage: maximumChurnPercentage
+                    })
+                )
+            )
+        );
+
+        // Set up fresh warp messenger for this VM
+        ACP77WarpMessengerTestMock freshWarpMock = new ACP77WarpMessengerTestMock(freshVMAddress);
+        vm.etch(WARP_MESSENGER_ADDR, address(freshWarpMock).code);
+
+        // Pre-initialize the VM with validators
+        InitialValidator[] memory initVals = new InitialValidator[](2);
+        initVals[0] = InitialValidator({
+            nodeID: freshWarpMock.DEFAULT_NODE_ID_02(),
+            blsPublicKey: new bytes(48),
+            weight: 180
+        });
+        initVals[1] = InitialValidator({
+            nodeID: freshWarpMock.DEFAULT_NODE_ID_03(),
+            blsPublicKey: new bytes(48),
+            weight: 20
+        });
+        ConversionData memory initData = ConversionData({
+            subnetID: freshWarpMock.DEFAULT_L1_ID(),
+            validatorManagerBlockchainID: freshWarpMock.getBlockchainID(),
+            validatorManagerAddress: freshVMAddress,
+            initialValidators: initVals
+        });
+        vm.prank(freshVMOwner);
+        ValidatorManager(freshVMAddress).initializeValidatorSet(initData, 2);
+
+        // Deploy BalancerValidatorManager
+        BalancerValidatorManager freshBalancerImpl = new BalancerValidatorManager();
+        address freshBalancer = UnsafeUpgrades.deployTransparentProxy(
+            address(freshBalancerImpl), freshProxyAdminOwner, ""
+        );
+
+        // Deploy PoA security module
+        address freshSecurityModuleAddress =
+            address(new PoASecurityModule(freshBalancer, freshVMOwner));
+
+        // Transfer VM ownership to Balancer
+        vm.prank(freshVMOwner);
+        ValidatorManager(freshVMAddress).transferOwnership(freshBalancer);
+
+        // Initialize Balancer
         bytes[] memory migrated = new bytes[](2);
-        migrated[0] = VALIDATOR_NODE_ID_02; // 180
-        migrated[1] = VALIDATOR_NODE_ID_03; // 20
+        migrated[0] = VALIDATOR_NODE_ID_02;
+        migrated[1] = VALIDATOR_NODE_ID_03;
 
-        (, address freshSecurityModuleAddress, address freshVMAddress) =
-            freshDeployer.run(address(0), DEFAULT_MAX_WEIGHT, migrated);
+        vm.prank(freshVMOwner);
+        BalancerValidatorManager(freshBalancer).initialize(
+            BalancerValidatorManagerSettings({
+                baseSettings: ValidatorManagerSettings({
+                    admin: address(0),
+                    subnetID: subnetID,
+                    churnPeriodSeconds: churnPeriodSeconds,
+                    maximumChurnPercentage: maximumChurnPercentage
+                }),
+                initialOwner: freshVMOwner,
+                initialSecurityModule: freshSecurityModuleAddress,
+                initialSecurityModuleMaxWeight: DEFAULT_MAX_WEIGHT,
+                migratedValidators: migrated
+            }),
+            freshVMAddress
+        );
 
         PoASecurityModule freshModule = PoASecurityModule(freshSecurityModuleAddress);
 
