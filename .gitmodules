@@ -13,4 +13,4 @@
 [submodule "lib/icm-contracts"]
 	path = lib/icm-contracts
 	url = https://github.com/ava-labs/icm-contracts
-	tags = v2.1.0
+	tags = validator-manager-v2.1.0
