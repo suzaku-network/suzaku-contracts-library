@@ -90,9 +90,9 @@ contract DeployBalancerValidatorManager is Script {
 
             InitialValidator[] memory initialValidators = new InitialValidator[](2);
             initialValidators[0] =
-                InitialValidator({nodeID: node02, blsPublicKey: new bytes(48), weight: 180});
+                InitialValidator({nodeID: node02, blsPublicKey: new bytes(48), weight: 500_000});
             initialValidators[1] =
-                InitialValidator({nodeID: node03, blsPublicKey: new bytes(48), weight: 20});
+                InitialValidator({nodeID: node03, blsPublicKey: new bytes(48), weight: 500_000});
             ConversionData memory conversionData = ConversionData({
                 subnetID: l1Id,
                 validatorManagerBlockchainID: chainId,
