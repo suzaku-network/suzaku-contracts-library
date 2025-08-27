@@ -12,25 +12,28 @@ import {ACP77WarpMessengerTestMock} from "../../src/contracts/mocks/ACP77WarpMes
 import {IBalancerValidatorManager} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 
+import {ValidatorChurnPeriod} from
+    "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 import {
     ConversionData,
     InitialValidator,
     PChainOwner,
     Validator,
-    ValidatorChurnPeriod,
-    ValidatorRegistrationInput,
     ValidatorStatus
-} from "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+} from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+import {OwnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract BalancerValidatorManagerTest is Test {
     DeployBalancerValidatorManager deployer;
     BalancerValidatorManager validatorManager;
     uint256 validatorManagerOwnerKey;
+    address vmAddress;
     address validatorManagerOwnerAddress;
-    bytes32 l1ID;
+    bytes32 subnetID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
     address[] testSecurityModules;
@@ -44,28 +47,28 @@ contract BalancerValidatorManagerTest is Test {
     uint32 constant VALIDATOR_UPTIME_MESSAGE_INDEX = 4;
     uint32 constant COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX = 5;
     uint32 constant VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX = 7;
-    bytes constant VALIDATOR_NODE_ID_01 =
-        bytes(hex"1234567812345678123456781234567812345678123456781234567812345678");
-    bytes constant VALIDATOR_NODE_ID_02 =
-        bytes(hex"2345678123456781234567812345678123456781234567812345678123456781");
-    bytes constant VALIDATOR_NODE_ID_03 =
-        bytes(hex"3456781234567812345678123456781234567812345678123456781234567812");
+    // Node IDs must be exactly 20 bytes
+    bytes constant VALIDATOR_NODE_ID_01 = bytes(hex"1234567812345678123456781234567812345678");
+    bytes constant VALIDATOR_NODE_ID_02 = bytes(hex"2345678123456781234567812345678123456781");
+    bytes constant VALIDATOR_NODE_ID_03 = bytes(hex"3456781234567812345678123456781234567812");
     bytes constant VALIDATOR_01_BLS_PUBLIC_KEY = new bytes(48);
     uint64 constant VALIDATOR_WEIGHT = 20;
+    // Validation IDs calculated from 20-byte node IDs
     bytes32 constant VALIDATION_ID_01 =
-        0x3a41d4db60b49389d4b121c2137a1382431a89369c5445c2a46877c3929dd9c6;
+        0xbf7a1a38fbdfbc95c69a680620bf7651bac6065038ac761cf65c8ed19ac0f1b1;
     bytes32 constant VALIDATION_ID_02 =
         0x0ff9e5c77da268eef8379d3ff1572d16d0fa519fcaa6f10b366c34ce3e97ca5a;
     bytes32 constant VALIDATION_ID_03 =
         0xff7f451c6758256d0b0a32a7e32aef5180693e6e296b329e80a8ee70cfb5f19a;
     uint64 constant DEFAULT_EXPIRY = 1_704_067_200 + 1 days;
-    uint64 constant DEFAULT_MAX_WEIGHT = 100;
+    uint64 constant DEFAULT_MAX_WEIGHT = 300;
+    uint64 constant INITIAL_VM_WEIGHT = 200; // 180 + 20
 
     function setUp() public {
         deployer = new DeployBalancerValidatorManager();
 
         HelperConfig helperConfig = new HelperConfig();
-        (, validatorManagerOwnerKey, l1ID, churnPeriodSeconds, maximumChurnPercentage) =
+        (, validatorManagerOwnerKey, subnetID, churnPeriodSeconds, maximumChurnPercentage) =
             helperConfig.activeNetworkConfig();
         validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
@@ -74,13 +77,15 @@ contract BalancerValidatorManagerTest is Test {
         testSecurityModules[1] = makeAddr("securityModule2");
         testSecurityModules[2] = makeAddr("securityModule3");
 
-        (address validatorManagerAddress,) =
-            deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT, new bytes[](0));
-        validatorManager = BalancerValidatorManager(validatorManagerAddress);
+        // Pass the migrated validators (matches warp mock initialize set)
+        bytes[] memory migrated = new bytes[](2);
+        migrated[0] = VALIDATOR_NODE_ID_02; // 180
+        migrated[1] = VALIDATOR_NODE_ID_03; // 20
 
-        ACP77WarpMessengerTestMock warpMessengerTestMock =
-            new ACP77WarpMessengerTestMock(validatorManagerAddress);
-        vm.etch(WARP_MESSENGER_ADDR, address(warpMessengerTestMock).code);
+        (address validatorManagerAddress,, address _vmAddress) =
+            deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT, migrated);
+        vmAddress = _vmAddress;
+        validatorManager = BalancerValidatorManager(validatorManagerAddress);
 
         address[] memory addresses = new address[](1);
         addresses[0] = 0x1234567812345678123456781234567812345678;
@@ -91,9 +96,10 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     modifier validatorSetInitialized() {
-        validatorManager.initializeValidatorSet(
+        // Deployer already initializes the VM; tolerate duplicate calls here
+        try validatorManager.initializeValidatorSet(
             _generateTestConversionData(), INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX
-        );
+        ) {} catch {}
         _;
     }
 
@@ -105,36 +111,30 @@ contract BalancerValidatorManagerTest is Test {
 
     modifier validatorRegistrationInitialized() {
         vm.prank(testSecurityModules[0]);
-        validatorManager.initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
         _;
     }
 
     modifier validatorRegistrationCompleted() {
         vm.startPrank(testSecurityModules[0]);
-        validatorManager.initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
         validatorManager.completeValidatorRegistration(
             COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
         );
         vm.stopPrank();
         _;
-    }
-
-    function _generateTestValidatorRegistrationInput()
-        private
-        view
-        returns (ValidatorRegistrationInput memory)
-    {
-        return ValidatorRegistrationInput({
-            nodeID: VALIDATOR_NODE_ID_01,
-            blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
-            registrationExpiry: DEFAULT_EXPIRY,
-            remainingBalanceOwner: pChainOwner,
-            disableOwner: pChainOwner
-        });
     }
 
     function _generateTestConversionData() private view returns (ConversionData memory) {
@@ -150,9 +150,9 @@ contract BalancerValidatorManagerTest is Test {
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
-            l1ID: l1ID,
+            subnetID: subnetID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
-            validatorManagerAddress: address(validatorManager),
+            validatorManagerAddress: vmAddress, // This should be the VM2 address
             initialValidators: initialValidators
         });
         return conversionData;
@@ -207,7 +207,7 @@ contract BalancerValidatorManagerTest is Test {
                     .selector,
                 testSecurityModules[0],
                 10,
-                20
+                INITIAL_VM_WEIGHT + 20
             )
         );
         validatorManager.setUpSecurityModule(testSecurityModules[0], 10);
@@ -224,19 +224,23 @@ contract BalancerValidatorManagerTest is Test {
 
     function testInitializeValidatorRegistration() public validatorSetInitialized {
         vm.prank(testSecurityModules[0]);
-        validatorManager.initializeValidatorRegistration(
-            _generateTestValidatorRegistrationInput(), VALIDATOR_WEIGHT
+        validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assertEq(validator.nodeID, VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.PendingAdded);
-        assertEq(validator.messageNonce, 0);
+        assertEq(validator.sentNonce, 0);
         assertEq(validator.weight, VALIDATOR_WEIGHT);
-        assertEq(validator.startedAt, 0);
-        assertEq(validator.endedAt, 0);
+        assertEq(validator.startTime, 0);
+        assertEq(validator.endTime, 0);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
-        assertEq(weight, VALIDATOR_WEIGHT);
+        assertEq(weight, INITIAL_VM_WEIGHT + VALIDATOR_WEIGHT);
     }
 
     function testCompleteValidatorRegistration()
@@ -251,7 +255,7 @@ contract BalancerValidatorManagerTest is Test {
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assert(validator.status == ValidatorStatus.Active);
-        assertEq(validator.startedAt, block.timestamp);
+        assertEq(validator.startTime, block.timestamp);
     }
 
     function testInitializeValidatorWeightUpdate()
@@ -263,11 +267,11 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 hours);
 
         vm.prank(testSecurityModules[0]);
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assertEq(validator.weight, 40);
-        assertEq(validator.messageNonce, 1);
+        assertEq(validator.sentNonce, 1);
         assert(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
     }
 
@@ -287,7 +291,7 @@ contract BalancerValidatorManagerTest is Test {
                 testSecurityModules[1]
             )
         );
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
     }
 
     function testInitializeValidatorWeightUpdateRevertsIfPendingUpdate()
@@ -299,7 +303,7 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 hours);
 
         vm.startPrank(testSecurityModules[0]);
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -307,7 +311,7 @@ contract BalancerValidatorManagerTest is Test {
                 VALIDATION_ID_01
             )
         );
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 50);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 50);
     }
 
     function testInitializeValidatorWeightUpdateRevertsIfExceedsMaxWeight()
@@ -315,9 +319,9 @@ contract BalancerValidatorManagerTest is Test {
         validatorSetInitialized
         validatorRegistrationCompleted
     {
-        // Lower the max weight of the security module
+        // Lower the max weight of the security module (but high enough to not fail immediately)
         vm.prank(validatorManagerOwnerAddress);
-        validatorManager.setUpSecurityModule(testSecurityModules[0], 30);
+        validatorManager.setUpSecurityModule(testSecurityModules[0], 230);
 
         // Warp to 2024-01-01 02:00:00 to exit the churn period (1 hour)
         vm.warp(1_704_067_200 + 2 hours);
@@ -328,12 +332,12 @@ contract BalancerValidatorManagerTest is Test {
                     .BalancerValidatorManager__SecurityModuleMaxWeightExceeded
                     .selector,
                 testSecurityModules[0],
-                40,
-                30
+                240, // 220 + 40 - 20
+                230
             )
         );
         vm.prank(testSecurityModules[0]);
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
     }
 
     function testCompleteValidatorWeightUpdate()
@@ -345,17 +349,17 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 hours);
 
         vm.startPrank(testSecurityModules[0]);
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
 
         validatorManager.completeValidatorWeightUpdate(
-            VALIDATION_ID_01, COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX
+            COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assertEq(validator.weight, 40);
         assert(!validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
-        assertEq(weight, 40);
+        assertEq(weight, INITIAL_VM_WEIGHT + 40);
     }
 
     function testResendValidatorWeightUpdate()
@@ -367,7 +371,7 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 hours);
 
         vm.startPrank(testSecurityModules[0]);
-        validatorManager.initializeValidatorWeightUpdate(VALIDATION_ID_01, 40);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
 
         vm.warp(1_704_067_200 + 3 hours);
 
@@ -380,14 +384,14 @@ contract BalancerValidatorManagerTest is Test {
         validatorRegistrationCompleted
     {
         vm.prank(testSecurityModules[0]);
-        validatorManager.initializeEndValidation(VALIDATION_ID_01);
+        validatorManager.initiateValidatorRemoval(VALIDATION_ID_01);
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
         assert(validator.status == ValidatorStatus.PendingRemoved);
-        assertEq(validator.endedAt, block.timestamp);
+        assertEq(validator.endTime, block.timestamp);
         assertEq(validator.weight, 0);
-        assertEq(weight, 0);
+        assertEq(weight, INITIAL_VM_WEIGHT);
     }
 
     function testInitializeEndValidationRevertsIfWrongSecurityModule()
@@ -406,7 +410,7 @@ contract BalancerValidatorManagerTest is Test {
                 testSecurityModules[1]
             )
         );
-        validatorManager.initializeEndValidation(VALIDATION_ID_01);
+        validatorManager.initiateValidatorRemoval(VALIDATION_ID_01);
     }
 
     function testCompleteEndValidation()
@@ -414,13 +418,13 @@ contract BalancerValidatorManagerTest is Test {
         validatorSetInitialized
         validatorRegistrationCompleted
     {
-        vm.prank(testSecurityModules[0]);
-
-        validatorManager.initializeEndValidation(VALIDATION_ID_01);
-        validatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+        vm.startPrank(testSecurityModules[0]);
+        validatorManager.initiateValidatorRemoval(VALIDATION_ID_01);
+        validatorManager.completeValidatorRemoval(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+        vm.stopPrank();
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
-        bytes32 validationID = validatorManager.registeredValidators(VALIDATOR_NODE_ID_01);
+        bytes32 validationID = validatorManager.getNodeValidationID(VALIDATOR_NODE_ID_01);
         assert(validator.status == ValidatorStatus.Completed);
         assertEq(validationID, bytes32(0));
     }
@@ -434,15 +438,16 @@ contract BalancerValidatorManagerTest is Test {
         vm.warp(1_704_067_200 + 2 days);
 
         vm.prank(testSecurityModules[0]);
-        validatorManager.completeEndValidation(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+        validatorManager.completeValidatorRemoval(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
         assert(validator.status == ValidatorStatus.Invalidated);
-        assertEq(validator.startedAt, 0);
-        assertEq(validator.endedAt, 0);
+        assertEq(validator.startTime, 0);
+        assertEq(validator.endTime, 0);
 
+        // Expired validators that were invalidated have their weight subtracted
         (uint64 weight,) = validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
-        assertEq(weight, 0);
+        assertEq(weight, INITIAL_VM_WEIGHT); // returns to pre-registration weight
     }
 
     function testGetChurnPeriodSeconds() public view {
@@ -456,7 +461,7 @@ contract BalancerValidatorManagerTest is Test {
     function testGetCurrentChurnPeriod() public validatorSetInitialized {
         ValidatorChurnPeriod memory churnPeriod = validatorManager.getCurrentChurnPeriod();
 
-        assertEq(churnPeriod.startedAt, 0);
+        assertEq(churnPeriod.startTime, 0);
         assertEq(churnPeriod.initialWeight, 0);
         assertEq(churnPeriod.totalWeight, 200);
         assertEq(churnPeriod.churnAmount, 0);
@@ -477,11 +482,128 @@ contract BalancerValidatorManagerTest is Test {
     {
         (uint64 weight, uint64 maxWeight) =
             validatorManager.getSecurityModuleWeights(testSecurityModules[0]);
-        assertEq(weight, 20);
-        assertEq(maxWeight, 100);
+        assertEq(weight, INITIAL_VM_WEIGHT + 20);
+        assertEq(maxWeight, DEFAULT_MAX_WEIGHT);
 
         (weight, maxWeight) = validatorManager.getSecurityModuleWeights(testSecurityModules[1]);
         assertEq(weight, 0);
-        assertEq(maxWeight, 100);
+        assertEq(maxWeight, DEFAULT_MAX_WEIGHT);
+    }
+
+    function testGetValidatorSecurityModule()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        address securityModule = validatorManager.getValidatorSecurityModule(VALIDATION_ID_01);
+        assertEq(securityModule, testSecurityModules[0]);
+
+        // Test unregistered validator
+        bytes32 unknownValidationID = keccak256("unknown");
+        address unknownModule = validatorManager.getValidatorSecurityModule(unknownValidationID);
+        assertEq(unknownModule, address(0));
+    }
+
+    function testIsValidatorPendingWeightUpdate()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        // Initially no pending update
+        assertFalse(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
+
+        // Warp to exit churn period
+        vm.warp(1_704_067_200 + 2 hours);
+
+        // Initiate weight update
+        vm.prank(testSecurityModules[0]);
+        validatorManager.initiateValidatorWeightUpdate(VALIDATION_ID_01, 40);
+
+        // Now should have pending update
+        assertTrue(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
+
+        // Complete the update
+        validatorManager.completeValidatorWeightUpdate(
+            COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX
+        );
+
+        // No longer pending
+        assertFalse(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
+    }
+
+    function testResendRegisterValidatorMessage()
+        public
+        validatorSetInitialized
+        validatorRegistrationInitialized
+    {
+        // Anyone can call resend
+        vm.prank(makeAddr("randomUser"));
+        validatorManager.resendRegisterValidatorMessage(VALIDATION_ID_01);
+    }
+
+    function testResendValidatorRemovalMessage()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        // First initiate removal
+        vm.prank(testSecurityModules[0]);
+        validatorManager.initiateValidatorRemoval(VALIDATION_ID_01);
+
+        // Anyone can resend
+        vm.prank(makeAddr("randomUser"));
+        validatorManager.resendValidatorRemovalMessage(VALIDATION_ID_01);
+    }
+
+    function testL1TotalWeight() public validatorSetInitialized validatorRegistrationCompleted {
+        // Initial weight from validator set initialization (180 + 20) + new validator (20)
+        uint64 totalWeight = validatorManager.l1TotalWeight();
+        assertEq(totalWeight, 220);
+    }
+
+    function testSubnetID() public view {
+        bytes32 retrievedSubnetID = validatorManager.subnetID();
+        assertEq(retrievedSubnetID, subnetID);
+    }
+
+    function testRemoveSecurityModule() public securityModulesSetUp {
+        // First verify module is registered
+        (uint64 weight, uint64 maxWeight) =
+            validatorManager.getSecurityModuleWeights(testSecurityModules[1]);
+        assertEq(weight, 0);
+        assertEq(maxWeight, DEFAULT_MAX_WEIGHT);
+
+        // Remove by setting maxWeight to 0
+        vm.prank(validatorManagerOwnerAddress);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], 0);
+
+        // Verify module is removed
+        address[] memory modules = validatorManager.getSecurityModules();
+        assertEq(modules.length, 1);
+        assertEq(modules[0], testSecurityModules[0]);
+
+        (weight, maxWeight) = validatorManager.getSecurityModuleWeights(testSecurityModules[1]);
+        assertEq(weight, 0);
+        assertEq(maxWeight, 0);
+    }
+
+    function testCannotRemoveSecurityModuleWithActiveValidators()
+        public
+        validatorSetInitialized
+        validatorRegistrationCompleted
+    {
+        // Try to remove module with active validators
+        vm.prank(validatorManagerOwnerAddress);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager
+                    .BalancerValidatorManager__SecurityModuleNewMaxWeightLowerThanCurrentWeight
+                    .selector,
+                testSecurityModules[0],
+                0,
+                INITIAL_VM_WEIGHT + 20
+            )
+        );
+        validatorManager.setUpSecurityModule(testSecurityModules[0], 0);
     }
 }

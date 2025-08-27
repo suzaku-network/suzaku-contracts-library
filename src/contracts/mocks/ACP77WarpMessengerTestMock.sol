@@ -12,9 +12,9 @@ import {
     ValidatorMessages
 } from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {InitialValidator} from
-    "@avalabs/icm-contracts/validator-manager/interfaces/IValidatorManager.sol";
+    "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {WarpMessage} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+    "@avalabs/subnet-evm-contracts@1.2.2/contracts/interfaces/IWarpMessenger.sol";
 
 contract ACP77WarpMessengerTestMock {
     address private constant TELEPORTER_MESSENGER_ADDRESS =
@@ -26,14 +26,14 @@ contract ACP77WarpMessengerTestMock {
         0x1000000000000000000000000000000000000000000000000000000000000000;
     bytes32 public constant DEFAULT_L1_ID =
         0x5f4c8570d996184af03052f1b3acc1c7b432b0a41e7480de1b72d4c6f5983eb9;
-    bytes public constant DEFAULT_NODE_ID_02 =
-        bytes(hex"2345678123456781234567812345678123456781234567812345678123456781");
-    bytes public constant DEFAULT_NODE_ID_03 =
-        bytes(hex"3456781234567812345678123456781234567812345678123456781234567812");
+    // Node IDs must be exactly 20 bytes to match NODE_ID_LENGTH
+    bytes public constant DEFAULT_NODE_ID_02 = bytes(hex"2345678123456781234567812345678123456781");
+    bytes public constant DEFAULT_NODE_ID_03 = bytes(hex"3456781234567812345678123456781234567812");
     bytes32 private constant DEFAULT_MESSAGE_ID =
         0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
+    // Validation ID calculated from 20-byte node ID
     bytes32 private constant DEFAULT_VALIDATION_ID =
-        0x3a41d4db60b49389d4b121c2137a1382431a89369c5445c2a46877c3929dd9c6;
+        0xbf7a1a38fbdfbc95c69a680620bf7651bac6065038ac761cf65c8ed19ac0f1b1;
     uint64 private constant DEFAULT_VALIDATION_UPTIME_SECONDS = uint64(2_544_480);
 
     address private immutable validatorManagerAddress;
@@ -86,7 +86,7 @@ contract ACP77WarpMessengerTestMock {
         initialValidators[1] =
             InitialValidator({nodeID: DEFAULT_NODE_ID_03, weight: 20, blsPublicKey: new bytes(48)});
         ConversionData memory conversionData = ConversionData({
-            l1ID: DEFAULT_L1_ID,
+            subnetID: DEFAULT_L1_ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
             validatorManagerAddress: validatorManagerAddress,
             initialValidators: initialValidators

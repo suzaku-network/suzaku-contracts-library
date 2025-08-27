@@ -3,13 +3,15 @@
 
 pragma solidity 0.8.25;
 
-struct PoAUpgradeConfig {
+struct BalancerMigrationConfig {
     address proxyAddress;
+    address validatorManagerProxy;
+    address poaManager;
     uint64 initialSecurityModuleMaxWeight;
     bytes[] migratedValidators;
     address proxyAdminOwnerAddress;
     address validatorManagerOwnerAddress;
-    bytes32 l1ID;
+    bytes32 subnetID;
     uint64 churnPeriodSeconds;
     uint8 maximumChurnPercentage;
 }
