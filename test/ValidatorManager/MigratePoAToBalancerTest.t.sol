@@ -54,7 +54,7 @@ contract MigratePoAToBalancerTest is Test {
     uint64 constant CHURN_PERIOD = 1 hours;
     uint8 constant MAX_CHURN_PERCENTAGE = 20;
     uint64 constant DEFAULT_WEIGHT = 100;
-    uint64 constant SECURITY_MODULE_MAX_WEIGHT = 1000;
+    uint64 constant SECURITY_MODULE_MAX_WEIGHT = 2_000_000; // 2 million for testing
 
     // Test validator node IDs (20 bytes each) - matching mock expectations
     bytes constant NODE_ID_1 = hex"2345678123456781234567812345678123456781";
@@ -124,10 +124,10 @@ contract MigratePoAToBalancerTest is Test {
 
         // Setup initial validators matching mock expectations
         initialValidators[0] =
-            InitialValidator({nodeID: NODE_ID_1, blsPublicKey: new bytes(48), weight: 180});
+            InitialValidator({nodeID: NODE_ID_1, blsPublicKey: new bytes(48), weight: 500_000});
 
         initialValidators[1] =
-            InitialValidator({nodeID: NODE_ID_2, blsPublicKey: new bytes(48), weight: 20});
+            InitialValidator({nodeID: NODE_ID_2, blsPublicKey: new bytes(48), weight: 500_000});
 
         ConversionData memory conversionData = ConversionData({
             subnetID: TEST_SUBNET_ID,

@@ -32,6 +32,7 @@ import {
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
+import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {IWarpMessenger} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
@@ -63,17 +64,14 @@ contract PoASecurityModuleTest is Test {
     bytes constant VALIDATOR_NODE_ID_02 = bytes(hex"2345678123456781234567812345678123456781");
     bytes constant VALIDATOR_NODE_ID_03 = bytes(hex"3456781234567812345678123456781234567812");
     bytes constant VALIDATOR_01_BLS_PUBLIC_KEY = new bytes(48);
-    uint64 constant VALIDATOR_WEIGHT = 20;
-    // Validation IDs calculated from 20-byte node IDs
-    bytes32 constant VALIDATION_ID_01 =
-        0xbf7a1a38fbdfbc95c69a680620bf7651bac6065038ac761cf65c8ed19ac0f1b1;
-    bytes32 constant VALIDATION_ID_02 =
-        0x0ff9e5c77da268eef8379d3ff1572d16d0fa519fcaa6f10b366c34ce3e97ca5a;
-    bytes32 constant VALIDATION_ID_03 =
-        0xff7f451c6758256d0b0a32a7e32aef5180693e6e296b329e80a8ee70cfb5f19a;
+    uint64 constant VALIDATOR_WEIGHT = 100_000;
+    // Validation IDs calculated dynamically in setUp
+    bytes32 VALIDATION_ID_01;
+    bytes32 VALIDATION_ID_02;
+    bytes32 VALIDATION_ID_03;
     uint64 constant DEFAULT_EXPIRY = 1_704_067_200 + 1 days;
-    uint64 constant DEFAULT_MAX_WEIGHT = 300;
-    uint64 constant INITIAL_VM_WEIGHT = 200; // 180 + 20
+    uint64 constant DEFAULT_MAX_WEIGHT = 2_000_000; // 2 million max weight
+    uint64 constant INITIAL_VM_WEIGHT = 1_000_000; // 500000 + 500000
 
     function setUp() public {
         deployer = new DeployBalancerValidatorManager();
@@ -101,6 +99,11 @@ contract PoASecurityModuleTest is Test {
         address[] memory addresses = new address[](1);
         addresses[0] = 0x1234567812345678123456781234567812345678;
         pChainOwner = PChainOwner({threshold: 1, addresses: addresses});
+
+        // Calculate validation IDs
+        VALIDATION_ID_01 = _calculateValidationID01();
+        VALIDATION_ID_02 = sha256(abi.encodePacked(subnetID, uint32(0))); // Initial validator index 0
+        VALIDATION_ID_03 = sha256(abi.encodePacked(subnetID, uint32(1))); // Initial validator index 1
 
         // Warp to 2024-01-01 00:00:00
         vm.warp(1_704_067_200);
@@ -152,12 +155,12 @@ contract PoASecurityModuleTest is Test {
         InitialValidator[] memory initialValidators = new InitialValidator[](2);
         initialValidators[0] = InitialValidator({
             nodeID: VALIDATOR_NODE_ID_02,
-            weight: 180,
+            weight: 500_000,
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         initialValidators[1] = InitialValidator({
             nodeID: VALIDATOR_NODE_ID_03,
-            weight: 20,
+            weight: 500_000,
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
@@ -218,7 +221,7 @@ contract PoASecurityModuleTest is Test {
                     .selector,
                 testSecurityModules[0],
                 10,
-                INITIAL_VM_WEIGHT + 20
+                INITIAL_VM_WEIGHT + VALIDATOR_WEIGHT
             )
         );
         validatorManager.setUpSecurityModule(testSecurityModules[0], 10);
@@ -350,11 +353,11 @@ contract PoASecurityModuleTest is Test {
 
         vm.prank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorWeightUpdate(
-            VALIDATION_ID_01, 40
+            VALIDATION_ID_01, 2 * VALIDATOR_WEIGHT
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
-        assertEq(validator.weight, 40);
+        assertEq(validator.weight, 2 * VALIDATOR_WEIGHT);
         assertTrue(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
     }
 
@@ -373,7 +376,7 @@ contract PoASecurityModuleTest is Test {
             abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, notOwner)
         );
         PoASecurityModule(testSecurityModules[0]).initiateValidatorWeightUpdate(
-            VALIDATION_ID_01, 40
+            VALIDATION_ID_01, 2 * VALIDATOR_WEIGHT
         );
     }
 
@@ -388,7 +391,7 @@ contract PoASecurityModuleTest is Test {
         // Initiate weight update
         vm.prank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorWeightUpdate(
-            VALIDATION_ID_01, 40
+            VALIDATION_ID_01, 2 * VALIDATOR_WEIGHT
         );
 
         // Anyone can complete
@@ -398,7 +401,7 @@ contract PoASecurityModuleTest is Test {
         );
 
         Validator memory validator = validatorManager.getValidator(VALIDATION_ID_01);
-        assertEq(validator.weight, 40);
+        assertEq(validator.weight, 2 * VALIDATOR_WEIGHT);
         assertFalse(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
     }
 
@@ -413,7 +416,7 @@ contract PoASecurityModuleTest is Test {
         // Initiate weight update
         vm.prank(validatorManagerOwnerAddress);
         PoASecurityModule(testSecurityModules[0]).initiateValidatorWeightUpdate(
-            VALIDATION_ID_01, 40
+            VALIDATION_ID_01, 2 * VALIDATOR_WEIGHT
         );
 
         // Anyone can resend
@@ -478,12 +481,12 @@ contract PoASecurityModuleTest is Test {
         initVals[0] = InitialValidator({
             nodeID: freshWarpMock.DEFAULT_NODE_ID_02(),
             blsPublicKey: new bytes(48),
-            weight: 180
+            weight: 500_000
         });
         initVals[1] = InitialValidator({
             nodeID: freshWarpMock.DEFAULT_NODE_ID_03(),
             blsPublicKey: new bytes(48),
-            weight: 20
+            weight: 500_000
         });
         ConversionData memory initData = ConversionData({
             subnetID: freshWarpMock.DEFAULT_L1_ID(),
@@ -536,12 +539,12 @@ contract PoASecurityModuleTest is Test {
         InitialValidator[] memory initialValidators = new InitialValidator[](2);
         initialValidators[0] = InitialValidator({
             nodeID: VALIDATOR_NODE_ID_02,
-            weight: 180,
+            weight: 500_000,
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         initialValidators[1] = InitialValidator({
             nodeID: VALIDATOR_NODE_ID_03,
-            weight: 20,
+            weight: 500_000,
             blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY
         });
         ConversionData memory conversionData = ConversionData({
@@ -605,5 +608,20 @@ contract PoASecurityModuleTest is Test {
     function testPoASecurityModuleConstructorZeroAddress() public {
         vm.expectRevert(PoASecurityModule.ZeroAddress.selector);
         new PoASecurityModule(address(0), validatorManagerOwnerAddress);
+    }
+
+    // Helper function to calculate validation ID for NODE_ID_01
+    function _calculateValidationID01() internal view returns (bytes32) {
+        ValidatorMessages.ValidationPeriod memory period = ValidatorMessages.ValidationPeriod({
+            subnetID: subnetID,
+            nodeID: VALIDATOR_NODE_ID_01,
+            blsPublicKey: VALIDATOR_01_BLS_PUBLIC_KEY,
+            registrationExpiry: DEFAULT_EXPIRY,
+            remainingBalanceOwner: pChainOwner,
+            disableOwner: pChainOwner,
+            weight: VALIDATOR_WEIGHT
+        });
+        (bytes32 validationID,) = ValidatorMessages.packRegisterL1ValidatorMessage(period);
+        return validationID;
     }
 }

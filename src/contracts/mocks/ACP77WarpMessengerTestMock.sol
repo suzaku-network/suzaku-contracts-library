@@ -33,10 +33,12 @@ contract ACP77WarpMessengerTestMock {
         0x39fa07214dc7ff1d2f8b6dfe6cd26f6b138ee9d40d013724382a5c539c8641e2;
     // Validation ID calculated from 20-byte node ID
     bytes32 private constant DEFAULT_VALIDATION_ID =
-        0xbf7a1a38fbdfbc95c69a680620bf7651bac6065038ac761cf65c8ed19ac0f1b1;
+        0xeff50f7a8eeb7cc7e7799bdff2003c5a19de374d75da4a8cbcff6abea22b4e56;
     uint64 private constant DEFAULT_VALIDATION_UPTIME_SECONDS = uint64(2_544_480);
 
     address private immutable validatorManagerAddress;
+    // Store validation IDs for dynamically registered validators
+    mapping(bytes => bytes32) private nodeIDToValidationID;
 
     constructor(
         address _validatorManagerAddress
@@ -49,8 +51,30 @@ contract ACP77WarpMessengerTestMock {
     }
 
     function sendWarpMessage(
-        bytes calldata
-    ) external pure returns (bytes32) {
+        bytes calldata payload
+    ) external returns (bytes32) {
+        // If this is a validator registration message, store the validation ID
+        if (payload.length > 6) {
+            uint16 codecID = uint16(uint8(payload[0])) << 8 | uint16(uint8(payload[1]));
+            uint32 typeID = uint32(uint8(payload[2])) << 24 | uint32(uint8(payload[3])) << 16
+                | uint32(uint8(payload[4])) << 8 | uint32(uint8(payload[5]));
+
+            if (
+                codecID == ValidatorMessages.CODEC_ID
+                    && typeID == ValidatorMessages.REGISTER_L1_VALIDATOR_MESSAGE_TYPE_ID
+            ) {
+                // Calculate validation ID from the payload
+                bytes32 validationID = sha256(payload);
+
+                // Extract node ID from the payload
+                ValidatorMessages.ValidationPeriod memory period =
+                    ValidatorMessages.unpackRegisterL1ValidatorMessage(payload);
+
+                // Store the mapping
+                nodeIDToValidationID[period.nodeID] = validationID;
+            }
+        }
+
         return DEFAULT_MESSAGE_ID;
     }
 
@@ -81,10 +105,16 @@ contract ACP77WarpMessengerTestMock {
 
     function _initializeValidatorSetWarpMessage() private view returns (WarpMessage memory, bool) {
         InitialValidator[] memory initialValidators = new InitialValidator[](2);
-        initialValidators[0] =
-            InitialValidator({nodeID: DEFAULT_NODE_ID_02, weight: 180, blsPublicKey: new bytes(48)});
-        initialValidators[1] =
-            InitialValidator({nodeID: DEFAULT_NODE_ID_03, weight: 20, blsPublicKey: new bytes(48)});
+        initialValidators[0] = InitialValidator({
+            nodeID: DEFAULT_NODE_ID_02,
+            weight: 500_000,
+            blsPublicKey: new bytes(48)
+        });
+        initialValidators[1] = InitialValidator({
+            nodeID: DEFAULT_NODE_ID_03,
+            weight: 500_000,
+            blsPublicKey: new bytes(48)
+        });
         ConversionData memory conversionData = ConversionData({
             subnetID: DEFAULT_L1_ID,
             validatorManagerBlockchainID: ANVIL_CHAIN_ID_HEX,
@@ -107,14 +137,20 @@ contract ACP77WarpMessengerTestMock {
         return (warpMessage, true);
     }
 
-    function _validatorRegistrationWarpMessage() private pure returns (WarpMessage memory, bool) {
+    function _validatorRegistrationWarpMessage() private view returns (WarpMessage memory, bool) {
+        // Use the stored validation ID if available, otherwise use default
+        bytes32 validationID = nodeIDToValidationID[hex"1234567812345678123456781234567812345678"];
+        if (validationID == bytes32(0)) {
+            validationID = DEFAULT_VALIDATION_ID;
+        }
+
         WarpMessage memory warpMessage = WarpMessage({
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
                 ValidatorMessages.CODEC_ID,
                 ValidatorMessages.L1_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID,
-                DEFAULT_VALIDATION_ID,
+                validationID,
                 true
             )
         });
@@ -122,14 +158,20 @@ contract ACP77WarpMessengerTestMock {
         return (warpMessage, true);
     }
 
-    function _validatorUptimeWarpMessage() private pure returns (WarpMessage memory, bool) {
+    function _validatorUptimeWarpMessage() private view returns (WarpMessage memory, bool) {
+        // Use the stored validation ID if available, otherwise use default
+        bytes32 validationID = nodeIDToValidationID[hex"1234567812345678123456781234567812345678"];
+        if (validationID == bytes32(0)) {
+            validationID = DEFAULT_VALIDATION_ID;
+        }
+
         WarpMessage memory warpMessage = WarpMessage({
             sourceChainID: ANVIL_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
                 ValidatorMessages.CODEC_ID,
                 ValidatorMessages.VALIDATION_UPTIME_MESSAGE_TYPE_ID,
-                DEFAULT_VALIDATION_ID,
+                validationID,
                 DEFAULT_VALIDATION_UPTIME_SECONDS
             )
         });
@@ -137,30 +179,42 @@ contract ACP77WarpMessengerTestMock {
         return (warpMessage, true);
     }
 
-    function _validatorWeightUpdateWarpMessage() private pure returns (WarpMessage memory, bool) {
+    function _validatorWeightUpdateWarpMessage() private view returns (WarpMessage memory, bool) {
+        // Use the stored validation ID if available, otherwise use default
+        bytes32 validationID = nodeIDToValidationID[hex"1234567812345678123456781234567812345678"];
+        if (validationID == bytes32(0)) {
+            validationID = DEFAULT_VALIDATION_ID;
+        }
+
         WarpMessage memory warpMessage = WarpMessage({
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
                 ValidatorMessages.CODEC_ID,
                 ValidatorMessages.L1_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID,
-                DEFAULT_VALIDATION_ID,
+                validationID,
                 uint64(1),
-                uint64(40)
+                uint64(200_000) // 2 * 100K validator weight
             )
         });
 
         return (warpMessage, true);
     }
 
-    function _validatorWeightZeroWarpMessage() private pure returns (WarpMessage memory, bool) {
+    function _validatorWeightZeroWarpMessage() private view returns (WarpMessage memory, bool) {
+        // Use the stored validation ID if available, otherwise use default
+        bytes32 validationID = nodeIDToValidationID[hex"1234567812345678123456781234567812345678"];
+        if (validationID == bytes32(0)) {
+            validationID = DEFAULT_VALIDATION_ID;
+        }
+
         WarpMessage memory warpMessage = WarpMessage({
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
                 ValidatorMessages.CODEC_ID,
                 ValidatorMessages.L1_VALIDATOR_WEIGHT_MESSAGE_TYPE_ID,
-                DEFAULT_VALIDATION_ID,
+                validationID,
                 uint64(1),
                 uint64(0)
             )
@@ -171,16 +225,22 @@ contract ACP77WarpMessengerTestMock {
 
     function _validatorRegistrationExpiredWarpMessage()
         private
-        pure
+        view
         returns (WarpMessage memory, bool)
     {
+        // Use the stored validation ID if available, otherwise use default
+        bytes32 validationID = nodeIDToValidationID[hex"1234567812345678123456781234567812345678"];
+        if (validationID == bytes32(0)) {
+            validationID = DEFAULT_VALIDATION_ID;
+        }
+
         WarpMessage memory warpMessage = WarpMessage({
             sourceChainID: P_CHAIN_ID_HEX,
             originSenderAddress: address(0),
             payload: abi.encodePacked(
                 ValidatorMessages.CODEC_ID,
                 ValidatorMessages.L1_VALIDATOR_REGISTRATION_MESSAGE_TYPE_ID,
-                DEFAULT_VALIDATION_ID,
+                validationID,
                 false
             )
         });
