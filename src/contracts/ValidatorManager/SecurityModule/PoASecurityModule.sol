@@ -5,11 +5,14 @@ pragma solidity 0.8.25;
 
 import {IBalancerValidatorManager} from
     "../../../interfaces/ValidatorManager/IBalancerValidatorManager.sol";
+import {ISecurityModule} from "../../../interfaces/ValidatorManager/ISecurityModule.sol";
 import {
     ConversionData,
     PChainOwner
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
+import {ERC165} from "@openzeppelin/contracts@5.0.2/utils/introspection/ERC165.sol";
+import {IERC165} from "@openzeppelin/contracts@5.0.2/utils/introspection/IERC165.sol";
 
 /**
  * @dev PoA-style security module for the Balancer Validator Manager.
@@ -17,7 +20,7 @@ import {Ownable} from "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
  *
  * @custom:security-contact security@suzaku.network
  */
-contract PoASecurityModule is Ownable {
+contract PoASecurityModule is Ownable, ERC165, ISecurityModule {
     error ZeroAddress();
 
     IBalancerValidatorManager public immutable balancerValidatorManager;
@@ -31,6 +34,13 @@ contract PoASecurityModule is Ownable {
         }
 
         balancerValidatorManager = IBalancerValidatorManager(balancerValidatorManagerAddress);
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override (ERC165, IERC165) returns (bool) {
+        return
+            interfaceId == type(ISecurityModule).interfaceId || super.supportsInterface(interfaceId);
     }
 
     // --- Initial validator set
@@ -62,8 +72,8 @@ contract PoASecurityModule is Ownable {
 
     function completeValidatorRegistration(
         uint32 messageIndex
-    ) external {
-        balancerValidatorManager.completeValidatorRegistration(messageIndex);
+    ) external returns (bytes32) {
+        return balancerValidatorManager.completeValidatorRegistration(messageIndex);
     }
 
     // --- Removal ---
@@ -81,8 +91,8 @@ contract PoASecurityModule is Ownable {
 
     function completeValidatorRemoval(
         uint32 messageIndex
-    ) external {
-        balancerValidatorManager.completeValidatorRemoval(messageIndex);
+    ) external returns (bytes32) {
+        return balancerValidatorManager.completeValidatorRemoval(messageIndex);
     }
 
     // --- Weight update ---

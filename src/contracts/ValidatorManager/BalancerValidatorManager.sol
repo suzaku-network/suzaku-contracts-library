@@ -26,8 +26,10 @@ import {
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.2/contracts/interfaces/IWarpMessenger.sol";
 
+import {ISecurityModule} from "../../interfaces/ValidatorManager/ISecurityModule.sol";
 import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+import {IERC165} from "@openzeppelin/contracts@5.0.2/utils/introspection/IERC165.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
 
 /**
@@ -178,6 +180,15 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
                 revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
             }
         } else {
+            // require ERC-165 support for the security-module interface
+            try IERC165(securityModule).supportsInterface(type(ISecurityModule).interfaceId)
+            returns (bool ok) {
+                if (!ok) {
+                    revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
+                }
+            } catch {
+                revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
+            }
             $.securityModules.set(securityModule, uint256(maxWeight));
         }
         emit SetUpSecurityModule(securityModule, maxWeight);
