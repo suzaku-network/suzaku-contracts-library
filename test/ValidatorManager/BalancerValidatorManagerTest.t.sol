@@ -533,6 +533,7 @@ contract BalancerValidatorManagerTest is Test {
         assertTrue(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
 
         // Complete the update
+        vm.prank(testSecurityModules[0]);
         validatorManager.completeValidatorWeightUpdate(
             COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX
         );
