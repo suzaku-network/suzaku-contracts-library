@@ -17,30 +17,6 @@ import {IERC165} from "@openzeppelin/contracts@5.0.2/utils/introspection/IERC165
  */
 interface ISecurityModule is IERC165 {
     /**
-     * @notice Resends a pending validator registration message to the P‑Chain.
-     * @param validationID The ID of the validation period.
-     */
-    function resendRegisterValidatorMessage(
-        bytes32 validationID
-    ) external;
-
-    /**
-     * @notice Resends a pending validator removal message (weight = 0) to the P‑Chain.
-     * @param validationID The ID of the validation period.
-     */
-    function resendValidatorRemovalMessage(
-        bytes32 validationID
-    ) external;
-
-    /**
-     * @notice Resends the last pending validator weight update message to the P‑Chain.
-     * @param validationID The ID of the validation period.
-     */
-    function resendValidatorWeightUpdate(
-        bytes32 validationID
-    ) external;
-
-    /**
      * @notice Completes a validator registration after P‑Chain acknowledgment.
      * @param messageIndex The index of the Warp message carrying the registration result.
      * @return validationID The ID of the acknowledged validation period.

@@ -52,12 +52,6 @@ contract PoASecurityModule is Ownable, ERC165, ISecurityModule {
     }
 
     // --- Registration ---
-    function resendRegisterValidatorMessage(
-        bytes32 validationID
-    ) external {
-        balancerValidatorManager.resendRegisterValidatorMessage(validationID);
-    }
-
     function initiateValidatorRegistration(
         bytes calldata nodeID,
         bytes calldata blsPublicKey,
@@ -83,12 +77,6 @@ contract PoASecurityModule is Ownable, ERC165, ISecurityModule {
         balancerValidatorManager.initiateValidatorRemoval(validationID);
     }
 
-    function resendValidatorRemovalMessage(
-        bytes32 validationID
-    ) external {
-        balancerValidatorManager.resendValidatorRemovalMessage(validationID);
-    }
-
     function completeValidatorRemoval(
         uint32 messageIndex
     ) external returns (bytes32) {
@@ -101,12 +89,6 @@ contract PoASecurityModule is Ownable, ERC165, ISecurityModule {
         uint64 newWeight
     ) external onlyOwner returns (uint64 nonce, bytes32 messageID) {
         return balancerValidatorManager.initiateValidatorWeightUpdate(validationID, newWeight);
-    }
-
-    function resendValidatorWeightUpdate(
-        bytes32 validationID
-    ) external {
-        balancerValidatorManager.resendValidatorWeightUpdate(validationID);
     }
 
     function completeValidatorWeightUpdate(
