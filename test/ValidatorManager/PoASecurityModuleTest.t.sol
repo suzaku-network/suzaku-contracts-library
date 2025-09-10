@@ -421,7 +421,7 @@ contract PoASecurityModuleTest is Test {
 
         // Anyone can resend
         vm.prank(makeAddr("anyone"));
-        PoASecurityModule(testSecurityModules[0]).resendValidatorWeightUpdate(VALIDATION_ID_01);
+        validatorManager.resendValidatorWeightUpdate(VALIDATION_ID_01);
     }
 
     function testResendRegisterValidatorMessage()
@@ -431,7 +431,7 @@ contract PoASecurityModuleTest is Test {
     {
         // Anyone can resend
         vm.prank(makeAddr("anyone"));
-        PoASecurityModule(testSecurityModules[0]).resendRegisterValidatorMessage(VALIDATION_ID_01);
+        validatorManager.resendRegisterValidatorMessage(VALIDATION_ID_01);
     }
 
     function testResendValidatorRemovalMessage()
@@ -445,7 +445,7 @@ contract PoASecurityModuleTest is Test {
 
         // Anyone can resend
         vm.prank(makeAddr("anyone"));
-        PoASecurityModule(testSecurityModules[0]).resendValidatorRemovalMessage(VALIDATION_ID_01);
+        validatorManager.resendValidatorRemovalMessage(VALIDATION_ID_01);
     }
 
     function testInitializeValidatorSetThroughModule() public {
@@ -553,13 +553,6 @@ contract PoASecurityModuleTest is Test {
             validatorManagerAddress: freshVMAddress, // Use the fresh VM address
             initialValidators: initialValidators
         });
-
-        // Anyone can call initializeValidatorSet through the module
-        vm.prank(makeAddr("anyone"));
-        // Deployer likely already initialized the VM; allow either success or an "already initialized" revert.
-        try freshModule.initializeValidatorSet(
-            conversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX
-        ) {} catch {}
     }
 
     function testMultipleSecurityModulesIntegration()

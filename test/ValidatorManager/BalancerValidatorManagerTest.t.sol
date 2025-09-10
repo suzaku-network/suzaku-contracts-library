@@ -15,6 +15,8 @@ import {IBalancerValidatorManager} from
 import {ValidatorChurnPeriod} from
     "../../src/interfaces/ValidatorManager/IBalancerValidatorManager.sol";
 
+import {PoASecurityModule} from
+    "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
 import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {
     ConversionData,
@@ -71,18 +73,22 @@ contract BalancerValidatorManagerTest is Test {
             helperConfig.activeNetworkConfig();
         validatorManagerOwnerAddress = vm.addr(validatorManagerOwnerKey);
 
-        testSecurityModules = new address[](3);
-        testSecurityModules[0] = makeAddr("securityModule1");
-        testSecurityModules[1] = makeAddr("securityModule2");
-        testSecurityModules[2] = makeAddr("securityModule3");
-
         // Pass the migrated validators (matches warp mock initialize set)
         bytes[] memory migrated = new bytes[](2);
         migrated[0] = VALIDATOR_NODE_ID_02; // 180
         migrated[1] = VALIDATOR_NODE_ID_03; // 20
 
-        (address validatorManagerAddress,, address _vmAddress) =
-            deployer.run(testSecurityModules[0], DEFAULT_MAX_WEIGHT, migrated);
+        // Deploy with address(0) to let the deployer create a PoASecurityModule
+        (address validatorManagerAddress, address deployedSecurityModule, address _vmAddress) =
+            deployer.run(address(0), DEFAULT_MAX_WEIGHT, migrated);
+
+        // Deploy additional security modules for testing
+        testSecurityModules = new address[](3);
+        testSecurityModules[0] = deployedSecurityModule;
+        testSecurityModules[1] =
+            address(new PoASecurityModule(validatorManagerAddress, validatorManagerOwnerAddress));
+        testSecurityModules[2] =
+            address(new PoASecurityModule(validatorManagerAddress, validatorManagerOwnerAddress));
         vmAddress = _vmAddress;
         validatorManager = BalancerValidatorManager(validatorManagerAddress);
 
@@ -527,6 +533,7 @@ contract BalancerValidatorManagerTest is Test {
         assertTrue(validatorManager.isValidatorPendingWeightUpdate(VALIDATION_ID_01));
 
         // Complete the update
+        vm.prank(testSecurityModules[0]);
         validatorManager.completeValidatorWeightUpdate(
             COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX
         );

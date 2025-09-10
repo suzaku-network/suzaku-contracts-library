@@ -26,8 +26,10 @@ import {
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.2/contracts/interfaces/IWarpMessenger.sol";
 
+import {ISecurityModule} from "../../interfaces/ValidatorManager/ISecurityModule.sol";
 import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+import {IERC165} from "@openzeppelin/contracts@5.0.2/utils/introspection/IERC165.sol";
 import {EnumerableMap} from "@openzeppelin/contracts@5.0.2/utils/structs/EnumerableMap.sol";
 
 /**
@@ -178,6 +180,15 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
                 revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
             }
         } else {
+            // require ERC-165 support for the security-module interface
+            try IERC165(securityModule).supportsInterface(type(ISecurityModule).interfaceId)
+            returns (bool ok) {
+                if (!ok) {
+                    revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
+                }
+            } catch {
+                revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
+            }
             $.securityModules.set(securityModule, uint256(maxWeight));
         }
         emit SetUpSecurityModule(securityModule, maxWeight);
@@ -216,6 +227,13 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         bytes32 validationID
     ) internal view returns (bool) {
         Validator memory validator = VALIDATOR_MANAGER.getValidator(validationID);
+        // Only treat Active or PendingRemoved as eligible for "pending".
+        if (
+            validator.status != ValidatorStatus.Active
+                && validator.status != ValidatorStatus.PendingRemoved
+        ) {
+            return false;
+        }
         return validator.sentNonce > validator.receivedNonce;
     }
 
@@ -228,8 +246,9 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
 
     function completeValidatorRegistration(
         uint32 messageIndex
-    ) external returns (bytes32) {
+    ) external onlySecurityModule returns (bytes32) {
         bytes32 validationID = VALIDATOR_MANAGER.completeValidatorRegistration(messageIndex);
+        _requireOwned(validationID, msg.sender);
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         delete $.registrationInitWeight[validationID];
         return validationID;
@@ -371,9 +390,10 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
 
     function completeValidatorRemoval(
         uint32 messageIndex
-    ) external returns (bytes32 validationID) {
+    ) external onlySecurityModule returns (bytes32 validationID) {
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         validationID = VALIDATOR_MANAGER.completeValidatorRemoval(messageIndex);
+        _requireOwned(validationID, msg.sender);
 
         // Case A (normal removal): we already freed the weight in initiateValidatorRemoval() → nothing to do.
         // Case B (expired-before-activation): no initiateValidatorRemoval() happened, so undo the init add once.
@@ -421,7 +441,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
     /// @inheritdoc IBalancerValidatorManager
     function completeValidatorWeightUpdate(
         uint32 messageIndex
-    ) external returns (bytes32 validationID, uint64 nonce) {
+    ) external onlySecurityModule returns (bytes32 validationID, uint64 nonce) {
         // Get warp message to extract validationID and nonce
         (WarpMessage memory warpMessage, bool valid) =
             WARP_MESSENGER.getVerifiedWarpMessage(messageIndex);
@@ -431,6 +451,8 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
 
         (bytes32 vid, uint64 receivedNonce, /*weight*/ ) =
             ValidatorMessages.unpackL1ValidatorWeightMessage(warpMessage.payload);
+
+        _requireOwned(vid, msg.sender);
 
         // guard: monotonic nonce (block duplicates/stale messages)
         Validator memory validator = VALIDATOR_MANAGER.getValidator(vid);
