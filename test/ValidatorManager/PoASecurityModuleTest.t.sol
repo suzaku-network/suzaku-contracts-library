@@ -553,13 +553,6 @@ contract PoASecurityModuleTest is Test {
             validatorManagerAddress: freshVMAddress, // Use the fresh VM address
             initialValidators: initialValidators
         });
-
-        // Anyone can call initializeValidatorSet through the module
-        vm.prank(makeAddr("anyone"));
-        // Deployer likely already initialized the VM; allow either success or an "already initialized" revert.
-        try freshModule.initializeValidatorSet(
-            conversionData, INITIALIZE_VALIDATOR_SET_MESSAGE_INDEX
-        ) {} catch {}
     }
 
     function testMultipleSecurityModulesIntegration()
