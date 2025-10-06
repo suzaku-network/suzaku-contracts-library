@@ -70,10 +70,36 @@ For PoA-based validator management, deploy a `PoASecurityModule` instance and re
 ### Architecture
 
 The BalancerValidatorManager acts as a wrapper around the ICM ValidatorManager contract:
+
 - The BalancerValidatorManager owns the underlying ValidatorManager
 - Security modules interact with the BalancerValidatorManager, not directly with the ValidatorManager
 - All validator operations are tracked and attributed to their managing security module
 - Weight limits are enforced at the BalancerValidatorManager level
+
+```mermaid
+graph TB
+    subgraph "BalancerValidatorManager"
+        BVM[BalancerValidatorManager]
+        BVM_OWNER[Owner]
+    end
+
+    subgraph "ValidatorManager v2.1.0"
+        VM[ValidatorManager]
+    end
+
+    subgraph "PoASecurityModule"
+        POA[PoASecurityModule]
+        POA_OWNER[Owner]
+    end
+
+    %% Ownership and Control
+    BVM_OWNER -->|"owns"| BVM
+    POA_OWNER -->|"owns"| POA
+    BVM -->|"owns"| VM
+
+    %% Security Module Registration
+    BVM -->|"registers"| POA
+```
 
 ### Migration Support
 
@@ -83,12 +109,11 @@ When wrapping an existing ValidatorManager that already has active validators, t
 - List all validator node IDs in the `migratedValidators` array
 - The total weight of migrated validators must match exactly
 
-
 ## Security Modules
 
 ### PoA Security Module
 
-The `PoASecurityModule` is an implementation of a security module that provides Proof of Authority (PoA) style validator management. 
+The `PoASecurityModule` is an implementation of a security module that provides Proof of Authority (PoA) style validator management.
 
 #### Key Characteristics:
 
@@ -106,17 +131,20 @@ constructor(
     address initialOwner
 )
 ```
+
 - `balancerValidatorManagerAddress`: The BalancerValidatorManager contract to interact with
 - `initialOwner`: The address that will have exclusive control over validator operations
 
 #### Key Functions:
 
 **Owner-restricted functions (initiation):**
+
 - `initiateValidatorRegistration(nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, weight)`: Registers new validators with P-Chain owners. Returns `validationID`
 - `initiateValidatorRemoval(validationID)`: Removes validators by their validation ID
 - `initiateValidatorWeightUpdate(validationID, newWeight)`: Updates validator weights. Returns `nonce` and `messageID`
 
 **Permissionless functions (completion):**
+
 - `completeValidatorRegistration(messageIndex)`: Returns `validationID`
 - `completeValidatorRemoval(messageIndex)`: Returns `validationID`
 - `completeValidatorWeightUpdate(messageIndex)`: Returns `validationID` and `nonce`
