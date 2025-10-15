@@ -840,6 +840,8 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     // L-3: Security module removal can brick validator removal completion
+    // Original unfixed test (commented out to show the vulnerability)
+    /*
     function testSecurityModuleRemovalBricksValidatorRemoval_cyfrin_unfixed() public {
         // Following the audit's pseudocode exactly
         vm.prank(validatorManagerOwnerAddress);
@@ -879,6 +881,50 @@ contract BalancerValidatorManagerTest is Test {
             )
         );
         validatorManager.completeValidatorRemoval(VALIDATOR_REGISTRATION_EXPIRED_MESSAGE_INDEX);
+    }
+    */
+
+    // L-3: Security module removal can brick validator removal completion (FIXED)
+    function testSecurityModuleRemovalBricksValidatorRemoval_cyfrin_fixed() public {
+        // Following the audit's pseudocode exactly
+        vm.prank(validatorManagerOwnerAddress);
+        validatorManager.setUpSecurityModule(testSecurityModules[1], DEFAULT_MAX_WEIGHT);
+
+        // Register a single validator to this module
+        vm.prank(testSecurityModules[1]);
+        bytes32 lastValidator = validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            VALIDATOR_WEIGHT
+        );
+
+        vm.prank(testSecurityModules[1]);
+        validatorManager.completeValidatorRegistration(
+            COMPLETE_VALIDATOR_REGISTRATION_MESSAGE_INDEX
+        );
+
+        // 1) Initiate removal; weight drops to 0 but validator mapping remains.
+        vm.prank(testSecurityModules[1]);
+        validatorManager.initiateValidatorRemoval(lastValidator);
+
+        // 2) Owner tries to remove the module while cleanup is still pending.
+        // After fix: This should revert with CannotRemoveModuleWithAssignedValidators
+        vm.prank(validatorManagerOwnerAddress);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager
+                    .BalancerValidatorManager__CannotRemoveModuleWithAssignedValidators
+                    .selector,
+                testSecurityModules[1],
+                1 // One validator still assigned
+            )
+        );
+        validatorManager.setUpSecurityModule(testSecurityModules[1], 0);
+
+        // The module removal is prevented, so the validator removal can still be completed
+        // successfully after the fix
     }
 
     // L-4: BalancerValidatorManager::initialize omits registrationInitWeight filling

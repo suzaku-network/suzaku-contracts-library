@@ -76,6 +76,9 @@ interface IBalancerValidatorManager is IValidatorManager {
         bytes32 validationID, ValidatorStatus status
     );
     error BalancerValidatorManager__InvalidValidatorWeight(bytes32 validationID);
+    error BalancerValidatorManager__CannotRemoveModuleWithAssignedValidators(
+        address securityModule, uint64 remainingValidators
+    );
     /**
      * @notice Returns the ValidatorManager churn period in seconds
      * @return churnPeriodSeconds The churn period in seconds

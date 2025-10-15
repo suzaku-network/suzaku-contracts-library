@@ -54,6 +54,8 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         mapping(bytes32 validationID => address securityModule) validatorSecurityModule;
         /// @notice Tracks initial weight for registrations in progress (temporary state)
         mapping(bytes32 validationID => uint64 weight) registrationInitWeight;
+        /// @notice Number of validators currently assigned to each module (incl. pending removals)
+        mapping(address securityModule => uint64 count) securityModuleValidatorCount;
     }
 
     // keccak256(abi.encode(uint256(keccak256("suzaku.storage.BalancerValidatorManager")) - 1)) & ~bytes32(uint256(0xff));
@@ -161,6 +163,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
                 }
 
                 $.validatorSecurityModule[validationID] = settings.initialSecurityModule;
+                $.securityModuleValidatorCount[settings.initialSecurityModule] += 1;
 
                 if (validator.status == ValidatorStatus.PendingAdded) {
                     $.registrationInitWeight[validationID] = validator.weight;
@@ -194,6 +197,12 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
             // Forbid removal while weight > 0
             if (currentWeight != 0) {
                 revert BalancerValidatorManager__CannotRemoveModuleWithWeight(securityModule);
+            }
+            // Forbid removal while any validator IDs are still owned by this module
+            if ($.securityModuleValidatorCount[securityModule] != 0) {
+                revert BalancerValidatorManager__CannotRemoveModuleWithAssignedValidators(
+                    securityModule, $.securityModuleValidatorCount[securityModule]
+                );
             }
             if (!$.securityModules.remove(securityModule)) {
                 revert BalancerValidatorManager__SecurityModuleNotRegistered(securityModule);
@@ -383,6 +392,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
 
         BalancerValidatorManagerStorage storage $ = _getBalancerValidatorManagerStorage();
         $.validatorSecurityModule[validationID] = msg.sender;
+        $.securityModuleValidatorCount[msg.sender] += 1;
         $.registrationInitWeight[validationID] = weight;
         _updateSecurityModuleWeight(msg.sender, $.securityModuleWeight[msg.sender] + weight);
     }
@@ -426,6 +436,14 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
             uint64 updatedWeight = (weight > registrationWeight) ? (weight - registrationWeight) : 0;
             _updateSecurityModuleWeight(securityModule, updatedWeight);
             delete $.registrationInitWeight[validationID];
+        }
+        // Decrement refcount and clear ownership
+        address securityModule_ = $.validatorSecurityModule[validationID];
+        if (securityModule_ != address(0)) {
+            uint64 currentCount = $.securityModuleValidatorCount[securityModule_];
+            if (currentCount != 0) {
+                $.securityModuleValidatorCount[securityModule_] = currentCount - 1;
+            }
         }
         delete $.validatorSecurityModule[validationID];
     }
