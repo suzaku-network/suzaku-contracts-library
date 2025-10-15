@@ -13,7 +13,8 @@ import {
 
 import {
     PChainOwner,
-    Validator
+    Validator,
+    ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
 /**
@@ -71,6 +72,10 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__InconsistentNonce();
     error BalancerValidatorManager__MigratedNodeIDNotFound(bytes nodeID);
     error BalancerValidatorManager__VMValidatorSetNotInitialized();
+    error BalancerValidatorManager__InvalidValidatorStatus(
+        bytes32 validationID, ValidatorStatus status
+    );
+    error BalancerValidatorManager__InvalidValidatorWeight(bytes32 validationID);
     /**
      * @notice Returns the ValidatorManager churn period in seconds
      * @return churnPeriodSeconds The churn period in seconds

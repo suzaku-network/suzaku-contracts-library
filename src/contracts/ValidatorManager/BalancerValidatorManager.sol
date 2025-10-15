@@ -146,8 +146,27 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
                 if ($.validatorSecurityModule[validationID] != address(0)) {
                     revert BalancerValidatorManager__ValidatorAlreadyMigrated(validationID);
                 }
+
+                Validator memory validator = VALIDATOR_MANAGER.getValidator(validationID);
+                if (
+                    validator.status != ValidatorStatus.Active
+                        && validator.status != ValidatorStatus.PendingAdded
+                ) {
+                    revert BalancerValidatorManager__InvalidValidatorStatus(
+                        validationID, validator.status
+                    );
+                }
+                if (validator.weight == 0) {
+                    revert BalancerValidatorManager__InvalidValidatorWeight(validationID);
+                }
+
                 $.validatorSecurityModule[validationID] = settings.initialSecurityModule;
-                migratedValidatorsTotalWeight += VALIDATOR_MANAGER.getValidator(validationID).weight;
+
+                if (validator.status == ValidatorStatus.PendingAdded) {
+                    $.registrationInitWeight[validationID] = validator.weight;
+                }
+
+                migratedValidatorsTotalWeight += validator.weight;
             }
             if (migratedValidatorsTotalWeight != totalWeight) {
                 revert BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
