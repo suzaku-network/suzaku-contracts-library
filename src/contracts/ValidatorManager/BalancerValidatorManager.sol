@@ -230,7 +230,9 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
                 securityModule, newWeight, maxWeight
             );
         }
+        uint64 oldWeight = $.securityModuleWeight[securityModule];
         $.securityModuleWeight[securityModule] = newWeight;
+        emit SecurityModuleWeightUpdated(securityModule, oldWeight, newWeight, maxWeight);
     }
 
     modifier onlySecurityModule() {
@@ -528,7 +530,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         VALIDATOR_MANAGER.transferOwnership(newOwner);
     }
 
-    function migrateFromV1(bytes32 validationID, uint32 receivedNonce) external onlyOwner {
+    function migrateFromV1(bytes32 validationID, uint32 receivedNonce) external {
         VALIDATOR_MANAGER.migrateFromV1(validationID, receivedNonce);
     }
 

@@ -42,6 +42,20 @@ interface IBalancerValidatorManager is IValidatorManager {
      */
     event SetUpSecurityModule(address indexed securityModule, uint64 maxWeight);
 
+    /**
+     * @notice Emitted when a security module's weight changes
+     * @param securityModule The address of the security module
+     * @param oldWeight The previous weight
+     * @param newWeight The new weight
+     * @param maxWeight The maximum weight allocation for this module
+     */
+    event SecurityModuleWeightUpdated(
+        address indexed securityModule,
+        uint64 oldWeight,
+        uint64 newWeight,
+        uint64 maxWeight
+    );
+
     error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
         uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
     );
