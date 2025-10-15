@@ -374,6 +374,9 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
         PChainOwner memory disableOwner,
         uint64 weight
     ) external onlySecurityModule returns (bytes32 validationID) {
+        if (weight == 0) {
+            revert BalancerValidatorManager__NewWeightIsZero();
+        }
         validationID = VALIDATOR_MANAGER.initiateValidatorRegistration(
             nodeID, blsPublicKey, remainingBalanceOwner, disableOwner, weight
         );

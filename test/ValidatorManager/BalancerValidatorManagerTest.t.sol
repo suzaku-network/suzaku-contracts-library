@@ -791,6 +791,8 @@ contract BalancerValidatorManagerTest is Test {
     }
 
     // L-2: Zero-weight validators can be registered
+    // Original unfixed test (commented out to show the vulnerability)
+    /*
     function testZeroWeightValidatorRegistration_cyfrin_unfixed() public validatorSetInitialized {
         // Try to register a validator with zero weight
         vm.prank(testSecurityModules[0]);
@@ -814,6 +816,27 @@ contract BalancerValidatorManagerTest is Test {
         assertEq(
             uint8(validator.status), uint8(ValidatorStatus.Active), "Validator should be active"
         );
+    }
+    */
+
+    // L-2: Zero-weight validators can be registered (FIXED)
+    function testZeroWeightValidatorRegistration_cyfrin_fixed() public validatorSetInitialized {
+        // Try to register a validator with zero weight
+        vm.prank(testSecurityModules[0]);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBalancerValidatorManager.BalancerValidatorManager__NewWeightIsZero.selector
+            )
+        );
+        validatorManager.initiateValidatorRegistration(
+            VALIDATOR_NODE_ID_01,
+            VALIDATOR_01_BLS_PUBLIC_KEY,
+            pChainOwner,
+            pChainOwner,
+            0 // Zero weight
+        );
+
+        // The registration should have been rejected, preventing zero-weight validators
     }
 
     // L-3: Security module removal can brick validator removal completion
