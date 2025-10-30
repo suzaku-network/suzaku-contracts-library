@@ -37,7 +37,7 @@ Functions inherited from `ValidatorManager`:
 - `initializeValidatorSet`: initialize the validator set with conversion data
 - `resendRegisterValidatorMessage`: resend validator registration message
 - `resendValidatorRemovalMessage`: resend validator removal message
-- `migrateFromV1`: pass-through to ValidatorManager's internal storage migration function
+- `migrateFromV1`: pass-through to ValidatorManager's internal storage migration function (permissionless)
 - `transferValidatorManagerOwnership`: transfer ownership of the underlying ValidatorManager
 
 ### Getters

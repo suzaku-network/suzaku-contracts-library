@@ -13,7 +13,8 @@ import {
 
 import {
     PChainOwner,
-    Validator
+    Validator,
+    ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
 
 /**
@@ -40,6 +41,20 @@ interface IBalancerValidatorManager is IValidatorManager {
      * @param maxWeight The maximum total weight allowed for validators managed by this module
      */
     event SetUpSecurityModule(address indexed securityModule, uint64 maxWeight);
+
+    /**
+     * @notice Emitted when a security module's weight changes
+     * @param securityModule The address of the security module
+     * @param oldWeight The previous weight
+     * @param newWeight The new weight
+     * @param maxWeight The maximum weight allocation for this module
+     */
+    event SecurityModuleWeightUpdated(
+        address indexed securityModule,
+        uint64 oldWeight,
+        uint64 newWeight,
+        uint64 maxWeight
+    );
 
     error BalancerValidatorManager__MigratedValidatorsTotalWeightMismatch(
         uint64 migratedValidatorsTotalWeight, uint64 currentL1TotalWeight
@@ -71,6 +86,13 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__InconsistentNonce();
     error BalancerValidatorManager__MigratedNodeIDNotFound(bytes nodeID);
     error BalancerValidatorManager__VMValidatorSetNotInitialized();
+    error BalancerValidatorManager__InvalidValidatorStatus(
+        bytes32 validationID, ValidatorStatus status
+    );
+    error BalancerValidatorManager__InvalidValidatorWeight(bytes32 validationID);
+    error BalancerValidatorManager__CannotRemoveModuleWithAssignedValidators(
+        address securityModule, uint64 remainingValidators
+    );
     /**
      * @notice Returns the ValidatorManager churn period in seconds
      * @return churnPeriodSeconds The churn period in seconds
