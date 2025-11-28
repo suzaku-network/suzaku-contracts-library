@@ -81,7 +81,7 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
     }
 
     // Underlying ValidatorManager (composed, owned by this Balancer)
-    ValidatorManager internal VALIDATOR_MANAGER;
+    ValidatorManager public VALIDATOR_MANAGER;
 
     /**
      * @notice Initialize the Balancer Validator Manager
