@@ -79,7 +79,6 @@ interface IBalancerValidatorManager is IValidatorManager {
     error BalancerValidatorManager__InvalidNonce(uint64 nonce);
     error BalancerValidatorManager__ValidatorAlreadyMigrated(bytes32 validationID);
     error BalancerValidatorManager__ZeroValidatorManagerAddress();
-    error BalancerValidatorManager__ValidatorManagerNotOwnedByBalancer();
     error BalancerValidatorManager__InitialSecurityModuleRequiredForMigration();
     error BalancerValidatorManager__MigratedValidatorsRequired();
     error BalancerValidatorManager__InvalidWarpMessage();
