@@ -28,6 +28,7 @@ import {
     Validator,
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
+import {IPoAManager} from "@avalabs/icm-contracts/validator-manager/interfaces/IPoAManager.sol";
 import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
@@ -180,17 +181,29 @@ contract MigratePoAToBalancerTest is Test {
             maximumChurnPercentage: MAX_CHURN_PERCENTAGE
         });
 
-        // Execute migration
+        // Execute migration (deploys and initializes, but does NOT transfer ownership)
         MigratePoAToBalancer _migrator = new MigratePoAToBalancer();
         (address balancerProxy, address poaSecurityModule, address vmAddress) = _migrator
             .executeMigratePoAToBalancer(cfg, MIGRATION_DEPLOYER_KEY, VALIDATOR_MANAGER_OWNER_KEY);
 
-        // ValidatorManager ownership moved to Balancer
         assertEq(vmAddress, validatorManager, "returned VM address should match");
+
+        // Ownership still with PoAManager after script
+        assertEq(
+            ValidatorManager(vmAddress).owner(),
+            poaManager,
+            "ValidatorManager owner should still be PoAManager"
+        );
+
+        // Manually transfer ownership (simulating what user does after verifying config)
+        vm.prank(owner);
+        IPoAManager(poaManager).transferValidatorManagerOwnership(balancerProxy);
+
+        // Now ValidatorManager ownership is with Balancer
         assertEq(
             ValidatorManager(vmAddress).owner(),
             balancerProxy,
-            "ValidatorManager owner must be Balancer"
+            "ValidatorManager owner must be Balancer after manual transfer"
         );
 
         // Balancer registered the PoA module
