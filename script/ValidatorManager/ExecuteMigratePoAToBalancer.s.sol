@@ -18,7 +18,6 @@ import {
     Validator,
     ValidatorStatus
 } from "@avalabs/icm-contracts/validator-manager/interfaces/IACP99Manager.sol";
-import {IPoAManager} from "@avalabs/icm-contracts/validator-manager/interfaces/IPoAManager.sol";
 import {UnsafeUpgrades} from "@openzeppelin/foundry-upgrades/Upgrades.sol";
 import {Script, console} from "forge-std/Script.sol";
 
@@ -41,14 +40,19 @@ contract MigratePoAToBalancer is Script {
         }
     }
 
+    /**
+     * @notice Deploy BalancerValidatorManager + PoASecurityModule and initialize
+     * @param config Migration configuration
+     * @param proxyAdminOwnerKey Private key for proxy admin
+     * @param validatorManagerOwnerKey Private key for validator manager owner
+     * @dev Ownership transfer must be done manually after verifying configuration
+     */
     function executeMigratePoAToBalancer(
         BalancerMigrationConfig memory config,
         uint256 proxyAdminOwnerKey,
         uint256 validatorManagerOwnerKey
     ) external returns (address proxyAddress, address securityModuleAddress, address vmAddress) {
-        // Get ValidatorManager and PoAManager addresses from config
         address validatorManager = config.validatorManagerProxy;
-        address poaManager = config.poaManager;
 
         // 0) Sanity: Balancer cap must cover current total weight
         uint64 totalWeight = ValidatorManager(validatorManager).l1TotalWeight();
@@ -61,13 +65,13 @@ contract MigratePoAToBalancer is Script {
         uint64 listed = _sumMigratedWeight(validatorManager, config.migratedValidators);
         require(listed == totalWeight, "migrated list weight != l1TotalWeight");
 
-        // 1) Deploy Balancer proxy (NO initializer here; Transparent proxy admin cannot call it)
+        // 1) Deploy Balancer proxy
         vm.startBroadcast(proxyAdminOwnerKey);
         BalancerValidatorManager balancerImplementation = new BalancerValidatorManager();
         proxyAddress = UnsafeUpgrades.deployTransparentProxy(
             address(balancerImplementation),
             config.proxyAdminOwnerAddress,
-            "" // do not initialize here
+            ""
         );
         vm.stopBroadcast();
 
@@ -78,13 +82,7 @@ contract MigratePoAToBalancer is Script {
         securityModuleAddress = address(poaSecurityModule);
         vm.stopBroadcast();
 
-        // 3) Transfer ValidatorManager ownership from PoAManager -> Balancer
-        //    Must be done BEFORE Balancer.initialize (Balancer checks it owns ValidatorManager)
-        vm.startBroadcast(validatorManagerOwnerKey);
-        IPoAManager(poaManager).transferValidatorManagerOwnership(proxyAddress);
-        vm.stopBroadcast();
-
-        // 4) Initialize Balancer (from NON-admin key) with PoA module & migrated validators
+        // 3) Initialize Balancer
         BalancerValidatorManagerSettings memory settings = BalancerValidatorManagerSettings({
             baseSettings: ValidatorManagerSettings({
                 admin: address(0), // Will be set by ValidatorManager initialization
@@ -102,14 +100,10 @@ contract MigratePoAToBalancer is Script {
         BalancerValidatorManager(proxyAddress).initialize(settings, validatorManager);
         vm.stopBroadcast();
 
-        // 5) Post-checks
-        require(
-            ValidatorManager(validatorManager).owner() == proxyAddress,
-            "ValidatorManager owner != Balancer"
-        );
         console.log("Balancer:", proxyAddress);
         console.log("PoA module:", securityModuleAddress);
-        console.log("ValidatorManager owner:", ValidatorManager(validatorManager).owner());
+        console.log("ValidatorManager:", validatorManager);
+        console.log("Balancer owner:", BalancerValidatorManager(proxyAddress).owner());
         vmAddress = validatorManager;
 
         return (proxyAddress, securityModuleAddress, vmAddress);

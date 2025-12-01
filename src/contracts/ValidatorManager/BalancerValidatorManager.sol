@@ -97,9 +97,6 @@ contract BalancerValidatorManager is IBalancerValidatorManager, OwnableUpgradeab
             revert BalancerValidatorManager__ZeroValidatorManagerAddress();
         }
         VALIDATOR_MANAGER = ValidatorManager(validatorManagerAddress);
-        if (VALIDATOR_MANAGER.owner() != address(this)) {
-            revert BalancerValidatorManager__ValidatorManagerNotOwnedByBalancer();
-        }
         if (!VALIDATOR_MANAGER.isValidatorSetInitialized()) {
             revert BalancerValidatorManager__VMValidatorSetNotInitialized();
         }
